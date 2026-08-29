@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormatsImport from "ajv-formats";
 import { COMMAND_CONTRACTS } from "../../src/contract/registry.js";
@@ -13,6 +13,11 @@ const exec = promisify(execFile);
 const cli = path.resolve("dist/cli.js");
 const fixtures = path.resolve("tests/fixtures");
 const temporary: string[] = [];
+/**
+ * A cache home of its own, so no case reads or writes whatever this machine has
+ * cached for real. `usage index` reports on that directory directly.
+ */
+const cacheHome = fs.mkdtempSync(path.join(os.tmpdir(), "contract-cache-"));
 const addFormats = addFormatsImport as unknown as (instance: Ajv2020) => Ajv2020;
 
 interface Run {
@@ -24,7 +29,9 @@ interface Run {
 async function run(...args: string[]): Promise<Run> {
   // A non-zero exit arrives as a rejection, so the exit code comes from here.
   try {
-    const result = await exec("node", [cli, ...args], { env: { ...process.env, CI: "1" } });
+    const result = await exec("node", [cli, ...args], {
+      env: { ...process.env, CI: "1", XDG_CACHE_HOME: cacheHome },
+    });
     return { ...result, exitCode: 0 };
   } catch (error) {
     const result = error as { stdout?: string; stderr?: string; code?: number };
@@ -102,6 +109,14 @@ function publishedBundle(): string {
   );
 }
 
+/**
+ * `usage` reads logs outside the workspace, so every case points it at a fixture
+ * corpus and bypasses the scan cache: a contract test must not depend on, or
+ * write to, whatever this machine happens to have in its real log root.
+ */
+const USAGE_FIXTURE = ["--logs", path.join(fixtures, "usage-logs"), "-fj"];
+const USAGE_LOGS = [...USAGE_FIXTURE, "--no-index"];
+
 function validate(schemaId: string, payload: unknown, label: string): void {
   const entry = SCHEMA_BY_ID.get(schemaId);
   expect(entry, `${label}: schema ${schemaId} is not published`).toBeDefined();
@@ -113,6 +128,10 @@ function validate(schemaId: string, payload: unknown, label: string): void {
 
 afterEach(() => {
   for (const root of temporary.splice(0)) fs.rmSync(root, { recursive: true, force: true });
+});
+
+afterAll(() => {
+  fs.rmSync(cacheHome, { recursive: true, force: true });
 });
 
 describe("describe", () => {
@@ -139,7 +158,7 @@ describe("describe", () => {
       commands: Array<{ id: string; stability: string }>;
     };
     // Leaf commands are the ones a contract applies to; groups are containers.
-    const groups = new Set(["md", "agent", "scripts"]);
+    const groups = new Set(["md", "agent", "scripts", "usage"]);
     const walked = described.commands
       .map((command) => command.id)
       .filter((id) => !groups.has(id))
@@ -592,10 +611,88 @@ describe("declared output schemas match real output", () => {
       outcome: "success",
       exitCode: 0,
     },
+    {
+      label: "usage summary",
+      schema: "usage-summary",
+      args: () => ["usage", "summary", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage tokens",
+      schema: "usage-rollup",
+      args: () => ["usage", "tokens", "--by", "day", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage tools",
+      schema: "usage-rollup",
+      args: () => ["usage", "tools", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage sessions",
+      schema: "usage-rollup",
+      args: () => ["usage", "sessions", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage projects",
+      schema: "usage-rollup",
+      args: () => ["usage", "projects", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage skills",
+      schema: "usage-rollup",
+      args: () => ["usage", "skills", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage agents",
+      schema: "usage-rollup",
+      args: () => ["usage", "agents", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage hooks",
+      schema: "usage-rollup",
+      args: () => ["usage", "hooks", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage commands",
+      schema: "usage-rollup",
+      args: () => ["usage", "commands", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage providers",
+      schema: "usage-providers",
+      // `usage providers` never scans, so it has no --no-index to give.
+      args: () => ["usage", "providers", ...USAGE_FIXTURE],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage index",
+      schema: "usage-index",
+      args: () => ["usage", "index", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
   ];
 
   // Groups whose id is two tokens.
-  const GROUPS = new Set(["md", "agent", "scripts"]);
+  const GROUPS = new Set(["md", "agent", "scripts", "usage"]);
 
   it.each(cases)("$label", async (testCase) => {
     const context = {

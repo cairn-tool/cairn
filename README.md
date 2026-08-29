@@ -1190,6 +1190,43 @@ is declared by name in a tracked file inside the workspace rather than discovere
 being analyzed — the registry sits at the same trust level as a `Makefile`. See
 [`scripts run`](docs/commands/scripts-run.md) for the full boundary.
 
+### Usage reporting
+
+Claude Code leaves a structured record of every session on disk. The `usage` toolset reads those
+transcripts and reports on them — tokens, tools, skills, subagents, hooks, slash commands — so
+"where is my context actually going" is a question with an answer. Nothing is sent anywhere, and
+nothing outside the scan cache is written.
+
+```bash
+claude-cli usage summary                        # headline totals across every project
+claude-cli usage summary --since 7d --project . # this week, this repository
+claude-cli usage tokens --by day --since 30d    # spend over time
+claude-cli usage tools --by server --kind mcp   # which MCP servers get used
+claude-cli usage sessions --sort tokens --top 10
+claude-cli usage agents                         # what delegation really costs
+claude-cli usage hooks                          # hook latency and failures
+```
+
+Two things make the numbers trustworthy, and both are easy to get wrong. One API response is
+written to the transcript as several lines, each carrying an identical copy of that response's
+token usage, so summing the lines over-counts by roughly a factor of two; counts here
+deduplicate by response. And a subagent's cost is recorded in the parent only as its _final_
+message, understating the real figure several-fold, so subagent tokens are read from the
+subagent's own transcript. Subagents are included by default — on a real corpus they account for
+more tokens than the main thread — and `--no-subagents` excludes them.
+
+Each transcript is reduced once and cached under `XDG_CACHE_HOME`, keyed on its size and
+modification time. Transcripts are append-only, so only files that grew are ever reopened: a
+first scan of a multi-gigabyte corpus takes tens of seconds and every later one is immediate.
+`usage index` inspects, rebuilds, or clears that cache.
+
+`--provider` selects the log source and `usage providers` lists what is registered. What a
+provider can answer is data it declares rather than a branch in the reports, so a second
+assistant's logs are one new module away from joining the same subcommands.
+
+See [shared usage command behavior](docs/commands/usage-common.md) for the full option set, the
+time-window and project-selection rules, and what the totals do and do not cover.
+
 ## Checks
 
 - **markdownlint** - Markdown structural and formatting rules (opt-in via `--style`)

@@ -13,7 +13,13 @@ async function run(
   ...args: string[]
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   try {
-    const result = await exec("node", [cli, ...args], { env: { ...process.env, CI: "1" } });
+    // The fish script is close to a megabyte: every `complete` line repeats the whole
+    // subcommand guard, so it outgrows the default capture buffer well before
+    // it becomes a problem for a shell redirect.
+    const result = await exec("node", [cli, ...args], {
+      env: { ...process.env, CI: "1" },
+      maxBuffer: 32 * 1024 * 1024,
+    });
     return { ...result, exitCode: 0 };
   } catch (error) {
     const result = error as { stdout?: string; stderr?: string; code?: number };
@@ -117,7 +123,9 @@ describe("completion", () => {
       .trim()
       .split("\n");
 
-    expect(top.split(" ")).toEqual(expect.arrayContaining(["md", "agent", "completion"]));
+    expect(top.split(" ")).toEqual(
+      expect.arrayContaining(["md", "agent", "scripts", "usage", "completion"]),
+    );
     expect(prefix).toBe("graph");
     expect(output).toBe("report mermaid dot");
     // --format values come from the contract, so they differ per command.

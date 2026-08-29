@@ -18,6 +18,12 @@ import {
 } from "./markdown.js";
 import { checkUpdateSchema, describeSchema, envelopeSchema, schemaListSchema } from "./meta.js";
 import { scriptListSchema, scriptRunSchema, scriptWhichSchema } from "./scripts.js";
+import {
+  usageIndexSchema,
+  usageProvidersSchema,
+  usageRollupSchema,
+  usageSummarySchema,
+} from "./usage.js";
 
 /**
  * Every published schema.
@@ -45,6 +51,10 @@ export const SCHEMAS: readonly SchemaEntry[] = [
   scriptRunSchema,
   scriptWhichSchema,
   scriptListSchema,
+  usageSummarySchema,
+  usageRollupSchema,
+  usageProvidersSchema,
+  usageIndexSchema,
   checkUpdateSchema,
   describeSchema,
   schemaListSchema,

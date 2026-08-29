@@ -11,6 +11,15 @@ const exec = promisify(execFile);
 const cli = path.resolve("dist/cli.js");
 const fixtures = path.resolve("tests/fixtures");
 const temporary: string[] = [];
+const usageFixture = ["--logs", path.join(fixtures, "usage-logs")];
+/**
+ * Scanning cases bypass the index as well.
+ *
+ * The two spawns share a cache directory, so the first would populate it and
+ * the second would report itself as a cache hit — a real difference in the
+ * `scan` counters that has nothing to do with `--envelope`.
+ */
+const usageLogs = [...usageFixture, "--no-index"];
 
 /**
  * A cache directory of this run's own.
@@ -104,6 +113,19 @@ describe("--envelope", () => {
     },
     { label: "agent inspect", args: (c) => ["agent", "inspect", c.bundle] },
     { label: "agent specs", args: () => ["agent", "specs", "--target", "all"] },
+    // `usage` reads logs outside the workspace, so it is pointed at a fixture
+    // corpus.
+    { label: "usage summary", args: () => ["usage", "summary", ...usageLogs] },
+    { label: "usage tokens", args: () => ["usage", "tokens", "--by", "day", ...usageLogs] },
+    { label: "usage tools", args: () => ["usage", "tools", ...usageLogs] },
+    { label: "usage sessions", args: () => ["usage", "sessions", ...usageLogs] },
+    { label: "usage projects", args: () => ["usage", "projects", ...usageLogs] },
+    { label: "usage skills", args: () => ["usage", "skills", ...usageLogs] },
+    { label: "usage agents", args: () => ["usage", "agents", ...usageLogs] },
+    { label: "usage hooks", args: () => ["usage", "hooks", ...usageLogs] },
+    { label: "usage commands", args: () => ["usage", "commands", ...usageLogs] },
+    { label: "usage providers", args: () => ["usage", "providers", ...usageFixture] },
+    { label: "usage index", args: () => ["usage", "index", ...usageFixture] },
   ];
 
   it.each(cases)("$label wraps without changing the payload", async (testCase) => {

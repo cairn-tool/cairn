@@ -68,6 +68,20 @@ import {
   scriptsWhichAction,
   type ScriptsOptions,
 } from "./commands/scripts.js";
+import {
+  usageAgentsAction,
+  usageCommandsAction,
+  usageHooksAction,
+  usageIndexAction,
+  usageProjectsAction,
+  usageProvidersAction,
+  usageSessionsAction,
+  usageSkillsAction,
+  usageSummaryAction,
+  usageTokensAction,
+  usageToolsAction,
+  type UsageOptions,
+} from "./commands/usage.js";
 
 // Pre-process argv to expand -fh/-fj shorthands into --format values
 // before Commander sees them (Commander doesn't support multi-char short flags).
@@ -585,6 +599,146 @@ scriptsCommon(scripts.command("list"))
     "\nNearest definition wins, so a name declared in a nested registry hides the one above\nit. Files that could not be parsed are reported rather than skipped silently.\n\nExit codes:\n  0  Listing written to stdout\n  1  Invocation error\n  2  A consulted configuration file could not be read",
   )
   .action((opts: Record<string, unknown>) => scriptsListAction(opts as ScriptsOptions));
+
+const usage = program
+  .command("usage")
+  .description("Report on Claude Code usage from its own session logs")
+  .addHelpText(
+    "after",
+    "\nReads the session transcripts an assistant leaves on disk and reports on them:\ntokens by model and day, tool and MCP calls, skills, subagents, hooks, and slash\ncommands. Nothing is sent anywhere and nothing outside the scan cache is written.\n\nEvery transcript is reduced once and cached under XDG_CACHE_HOME, keyed on each\nfile's size and modification time, so the first scan is slow and later ones are not.\n\nProviders:\n  --provider selects the log source; `usage providers` lists what is registered.\n\nWindows:\n  --since and --until take a relative span (7d, 2w, 3m, 1y) or an ISO date, and are\n  inclusive day bounds.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+  );
+
+/**
+ * Options every `usage` subcommand shares.
+ *
+ * `--project` uses the unwrapped `collect` because `src/contract/describe.ts`
+ * detects a repeatable option by comparing its coercion against that function by
+ * identity.
+ */
+const usageCommon = (command: Command): Command =>
+  command
+    .option("--format <fmt>", "Output format: llm, human, json", "llm")
+    .option("--envelope", "Wrap --format json output in the versioned result envelope")
+    .option("--provider <name>", "Log source to report on", "claude-code")
+    .option("--project <path>", "Limit to a project path, slug, or name (repeatable)", collect)
+    .option("--since <spec>", "Earliest day: a span such as 7d, 2w, 3m, 1y, or an ISO date")
+    .option("--until <spec>", "Latest day, same forms as --since")
+    .option("--last <n>", "Keep only the n most recently active sessions")
+    .option("--top <n>", "Rows to show; 0 for all", "20")
+    .option("--logs <dir>", "Read logs from this directory instead of the discovered one")
+    .option("--no-subagents", "Exclude subagent transcripts")
+    .option("--no-index", "Bypass the scan cache; neither read it nor write it")
+    .option("--strict", "Exit 2 when a transcript could not be fully read");
+
+const usageExitCodes =
+  "\n\nExit codes:\n  0  Report written to stdout\n  1  Invocation error, or no logs found\n  2  --strict was given and a transcript could not be fully read";
+
+usageCommon(usage.command("summary"))
+  .description("Headline totals: sessions, tokens, tools, and features")
+  .addHelpText(
+    "after",
+    "\nToken counts deduplicate the per-response fan-out in the source transcripts, where\none API response is written as several lines each carrying an identical copy of its\nusage. Subagent transcripts are included; --no-subagents excludes them." +
+      usageExitCodes,
+  )
+  .action((opts: Record<string, unknown>) => usageSummaryAction(opts as UsageOptions));
+
+usageCommon(usage.command("tokens"))
+  .description("Token usage rolled up by model, time, project, or session")
+  .option("--by <dimension>", "model, day, week, month, project, session", "model")
+  .addHelpText(
+    "after",
+    "\nCache writes report an authoritative total alongside a best-effort split by TTL,\nwhich the oldest records do not carry." +
+      usageExitCodes,
+  )
+  .action((opts: Record<string, unknown>) => usageTokensAction(opts as UsageOptions));
+
+usageCommon(usage.command("tools"))
+  .description("Tool calls rolled up by name, kind, server, day, or session")
+  .option("--by <dimension>", "name, kind, server, day, session", "name")
+  .option("--kind <kind>", "Limit to builtin, mcp, agent, or skill calls")
+  .addHelpText(
+    "after",
+    "\nAn MCP tool named mcp__<server>__<tool> is split into its server and tool halves,\nso --by server and --kind mcp are how that surface is queried." +
+      usageExitCodes,
+  )
+  .action((opts: Record<string, unknown>) => usageToolsAction(opts as UsageOptions));
+
+usageCommon(usage.command("sessions"))
+  .description("One row per session, with its subagent transcripts folded in")
+  .option("--sort <order>", "recent, tokens, tools, duration", "recent")
+  .addHelpText(
+    "after",
+    "\n--last n selects the n most recently active sessions rather than the n most recent\nfiles, so a session's subagent spend is never dropped from its own row." +
+      usageExitCodes,
+  )
+  .action((opts: Record<string, unknown>) => usageSessionsAction(opts as UsageOptions));
+
+usageCommon(usage.command("projects"))
+  .description("Usage rolled up by the directory each session ran in")
+  .addHelpText(
+    "after",
+    "\nProject identity is the working directory recorded inside the transcripts, not the\nlog directory name, whose separator substitution is not reliably invertible." +
+      usageExitCodes,
+  )
+  .action((opts: Record<string, unknown>) => usageProjectsAction(opts as UsageOptions));
+
+usageCommon(usage.command("skills"))
+  .description("Skill invocations by name")
+  .addHelpText(
+    "after",
+    "\nCounted from every surface that records one: the Skill tool, the invoked-skill\nattachments, and the slash-command form." +
+      usageExitCodes,
+  )
+  .action((opts: Record<string, unknown>) => usageSkillsAction(opts as UsageOptions));
+
+usageCommon(usage.command("agents"))
+  .description("Subagent activity by agent type, with real token cost")
+  .addHelpText(
+    "after",
+    "\nSpawn counts come from the parent's tool calls; tokens come from the subagent\ntranscripts themselves. The parent's own tool result records only the subagent's\nfinal message and understates its spend several-fold, so it is not used." +
+      usageExitCodes,
+  )
+  .action((opts: Record<string, unknown>) => usageAgentsAction(opts as UsageOptions));
+
+usageCommon(usage.command("hooks"))
+  .description("Hook executions by event and tool, with failures and latency")
+  .addHelpText(
+    "after",
+    "\nKeyed by <Event>:<Tool>. Stop hooks report through a session summary record rather\nthan a per-execution one and are counted under Stop." +
+      usageExitCodes,
+  )
+  .action((opts: Record<string, unknown>) => usageHooksAction(opts as UsageOptions));
+
+usageCommon(usage.command("commands"))
+  .description("Slash command usage by name")
+  .addHelpText(
+    "after",
+    "\nSlash commands are not a field in the logs; they are a marker block inside the\nuser's message text, and are extracted from it." +
+      usageExitCodes,
+  )
+  .action((opts: Record<string, unknown>) => usageCommandsAction(opts as UsageOptions));
+
+usage
+  .command("providers")
+  .description("List the log sources usage can report on")
+  .option("--format <fmt>", "Output format: llm, human, json", "llm")
+  .option("--envelope", "Wrap --format json output in the versioned result envelope")
+  .option("--logs <dir>", "Test discovery against this directory")
+  .addHelpText(
+    "after",
+    "\nReports whether each provider has left anything on this machine and what its logs\ncan answer. Reports read those capabilities rather than branching on a provider\nname, so registering a second assistant is one module and one registry line.\n\nExit codes:\n  0  Listing written to stdout\n  1  Invocation error",
+  )
+  .action((opts: Record<string, unknown>) => usageProvidersAction(opts as UsageOptions));
+
+usageCommon(usage.command("index"))
+  .description("Show, rebuild, or clear the scan cache")
+  .option("--rebuild", "Re-parse every transcript and rewrite the cache")
+  .option("--clear", "Delete the cache")
+  .addHelpText(
+    "after",
+    "\nThe cache keys on each transcript's path, size, and modification time. Transcripts\nare append-only, so an unchanged file cannot hold a record the stored aggregate is\nmissing, and only files that grew are reopened.\n\nThe cache is private and self-invalidating: nothing outside the cache directory is\nwritten, and its internal format can change without a contract bump.\n\nExit codes:\n  0  Status written, or the cache was rebuilt or cleared\n  1  Invocation error",
+  )
+  .action((opts: Record<string, unknown>) => usageIndexAction(opts as UsageOptions));
 
 // Internal: refreshes the cached latest version. Spawned detached by the notifier.
 program

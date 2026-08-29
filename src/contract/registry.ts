@@ -2,6 +2,9 @@ import { BASE_FORMATS, agentFormatsFor, formatsFor } from "../formats.js";
 import { SARIF_SCHEMA_URI } from "./version.js";
 import type { CommandContract, ExitCodeMeaning } from "./types.js";
 
+const STRICT_NOTE =
+  "A scan over thousands of transcripts routinely meets a file removed mid-walk or a truncated final line in a session still being appended to. Those are counted under `scan` and reported, never fatal, because failing by default would make the command useless in the automated context it is most wanted in. `--strict` is how a caller opts into exit 2.";
+
 const OK = (meaning: string): ExitCodeMeaning => ({ code: 0, meaning });
 const USAGE: ExitCodeMeaning = { code: 1, meaning: "Invocation, I/O, or configuration error" };
 const FINDINGS = (meaning: string): ExitCodeMeaning => ({ code: 2, meaning });
@@ -59,6 +62,33 @@ function agentCommand(name: string, extra: Partial<CommandContract> = {}): Comma
 }
 
 const AUTOMATION = { jsonlSchema: "diagnostic-record", sarifSchema: SARIF_SCHEMA_URI };
+
+/**
+ * A `usage` subcommand.
+ *
+ * Every one of them is read-only over logs outside the workspace, so `writes`
+ * is false even for `usage index`, whose only effect is on its own private scan
+ * cache. Exit `2` exists solely for `--strict`: see the note on the individual
+ * entries.
+ */
+function usageCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+  return {
+    id: `usage ${name}`,
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "usage-rollup",
+    exitCodes: [
+      OK("Report written"),
+      USAGE,
+      FINDINGS("--strict was given and a transcript could not be fully read"),
+    ],
+    stream: { success: "stdout", findings: "stderr" },
+    writes: false,
+    stability: "experimental",
+    ...extra,
+  };
+}
 
 const CONTRACTS: CommandContract[] = [
   // Top level
@@ -201,6 +231,69 @@ const CONTRACTS: CommandContract[] = [
     notes:
       "One entry per visible name after nearest-definition-wins is applied; a shadowed definition is recorded on the winner rather than listed separately. Unlike `scripts which`, an unreadable file is reported and the listing still prints, because a listing that silently omitted a file would read as complete.",
   },
+
+  // Usage
+  {
+    ...usageCommand("summary"),
+    outputSchema: "usage-summary",
+    notes:
+      "Headline totals over the selection. Token counts deduplicate the per-content-block fan-out in the source transcripts: one API response is written as several lines, each carrying an identical copy of its usage, so summing lines over-counts output tokens roughly two and a half fold. " +
+      STRICT_NOTE,
+  },
+  usageCommand("tokens", {
+    notes:
+      "Rows are keyed by `--by`; time dimensions are ordered chronologically and everything else by token total. Cache writes report an authoritative total alongside a best-effort TTL split, which the oldest records do not carry. " +
+      STRICT_NOTE,
+  }),
+  usageCommand("tools", {
+    notes:
+      "Counts tool-use blocks, including MCP. An MCP tool named `mcp__<server>__<tool>` is split into its server and tool halves rather than given a subcommand of its own; `--by server` and `--kind mcp` are how that surface is queried. " +
+      STRICT_NOTE,
+  }),
+  usageCommand("sessions", {
+    notes:
+      "One row per session, with its subagent transcripts folded in. `--last n` selects the n most recently active sessions rather than the n most recent files, so a session's subagent spend is never silently dropped. " +
+      STRICT_NOTE,
+  }),
+  usageCommand("projects", {
+    notes:
+      "Project identity is the working directory recorded inside the transcripts, not the log directory name, whose separator substitution is not reliably invertible. " +
+      STRICT_NOTE,
+  }),
+  usageCommand("skills", {
+    notes:
+      "Skill invocations are counted from every surface that records one: the `Skill` tool, the invoked-skill attachments, and the slash-command form. " +
+      STRICT_NOTE,
+  }),
+  usageCommand("agents", {
+    notes:
+      "Spawn counts come from the parent's subagent tool calls; token counts come from the subagent transcripts themselves. The parent's own tool result records only the subagent's final message and understates its real spend several-fold, so it is deliberately not used. " +
+      STRICT_NOTE,
+  }),
+  usageCommand("hooks", {
+    notes:
+      "Keyed by `<Event>:<Tool>`. Stop hooks report through a session summary record rather than a per-execution one, and are counted there under `Stop`, so neither surface double-counts the other. " +
+      STRICT_NOTE,
+  }),
+  usageCommand("commands", {
+    notes:
+      "Slash commands are not a field in the source logs; they are a marker block inside the user's message text, and are extracted from it. " +
+      STRICT_NOTE,
+  }),
+  usageCommand("providers", {
+    outputSchema: "usage-providers",
+    exitCodes: [OK("Listing written"), USAGE],
+    stream: { success: "stdout" },
+    notes:
+      "Lists every registered log source and what it can answer. A report a provider cannot serve is decided by reading these capabilities, never by branching on the provider name, which is what keeps adding a second LLM to one new module plus one registry line.",
+  }),
+  usageCommand("index", {
+    outputSchema: "usage-index",
+    exitCodes: [OK("Status written, or the cache was rebuilt or cleared"), USAGE],
+    stream: { success: "stdout" },
+    notes:
+      "The scan cache keys on each transcript's path, size, and modification time; transcripts are append-only, so an unchanged file cannot hold a record the stored aggregate is missing. The cache is private and self-invalidating: its internal version is not part of the published contract, and `writes` stays false because nothing outside the cache directory is touched.",
+  }),
 
   // Agent
   agentCommand("convert", {

@@ -16,11 +16,13 @@ src/agent/targets/*.ts versioned per-target capability profiles
 src/agent/test/*.ts    bundle contract-test parsing, assertion evaluation, and digests
 src/contract/*.ts      published JSON Schemas + the per-command contract registry
 src/scripts/*.ts       named-script registry parsing, chain resolution, and execution
+src/usage/*.ts         transcript parsing, day-bucketed aggregates, scan index
+src/usage/providers/*.ts  per-LLM log-source profiles
 src/config-schema.ts   validators shared by the config loader and the script registry
 tests/{unit,integration,e2e}
 ```
 
-There are three toolsets, `md`, `agent`, and `scripts`, plus the top-level `check-update`,
+There are four toolsets, `md`, `agent`, `scripts`, and `usage`, plus the top-level `check-update`,
 `describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
 `command(...)` registration in `src/cli.ts`, a `src/contract/registry.ts` entry, a
 `docs/commands/<name>.md` page with entries in `docs/commands.md` and `docs/_contents.md`, a
@@ -220,6 +222,43 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   spawns the CLI with the repo as cwd while operating on temporary workspaces, and every one of
   those cases fails with "Directory is outside configured workspace root". Dogfooding the
   `scripts:` block means insulating that suite first.
+- **`usage` counts responses, not transcript lines.** Claude Code writes one JSONL line per
+  content block, each carrying an identical full copy of `message.usage`. Summing lines
+  over-counts output tokens by roughly 2.5x, so `src/usage/providers/claude-code.ts` dedupes on
+  `message.id` before adding anything. Tool-use blocks really are one per line and are counted
+  per line. Records with `model: "<synthetic>"` are locally generated and carry no usable
+  counters. `session_id` (snake) also appears alongside `sessionId` with a _different, stale_
+  value — never key on it. `tests/unit/usage-parse.test.ts` pins each of these.
+- **Subagent tokens come from the subagent transcript, never the parent's summary.** The
+  parent's `toolUseResult.totalTokens` is the subagent's _final message only_ and understates
+  real spend several-fold. `subagents/agent-*.jsonl` outnumbers main transcripts about 6:1 and
+  holds more bytes, so they are scanned by default; `--no-subagents` prunes discovery.
+- **A filtered `usage` scan must merge into the cache shard, not rebuild it.** `--since` and
+  `--no-subagents` prune discovery, so rebuilding a shard from what such a walk found evicts
+  every entry it never looked at and makes the next full scan re-parse everything. Only a
+  complete walk may drop entries — that is the `partial` flag in `src/usage/scan.ts`, and
+  `tests/e2e/usage.test.ts` guards it.
+- **The `usage` index `CACHE_VERSION` is not a hand-owned contract version.** It is private and
+  self-invalidating like `src/url-cache.ts`'s: bump it freely, a mismatch costs a re-parse. Do
+  not add it to `docs/contract.md` alongside `CONTRACT_VERSION`, `PROFILE_SCHEMA_VERSION`, or
+  the two bundle `schemaVersion`s.
+- **`usage --since`/`--until` are day-granular, deliberately.** The index stores per-day buckets
+  per file, which is what makes `tokens --by day` possible without keeping raw events; accepting
+  an instant would promise a precision the store cannot keep. The lower bound also prunes the
+  walk by file mtime before anything is opened.
+- **`usage` provider capability is data, and the reports read that data.** Same rule as
+  `src/agent/targets/*.ts`: `src/commands/usage.ts` must never branch on `provider.name`.
+  Registering a second LLM is a module under `src/usage/providers/` plus a line in its
+  `index.ts`.
+- **`usage` exits 2 only under `--strict`.** Over thousands of transcripts a removed file or a
+  truncated final line is routine, so those are counted under `scan` in the payload rather than
+  made fatal — blocking by default would make the command useless in CI. `usage` is also absent
+  from `COMMAND_OPTIONS` on purpose, like `scripts`: it reads logs outside the workspace, so a
+  checked-in config file has no business steering it.
+- **The fish completion script is close to 1 MB and grows with every subcommand.** Each `complete` line
+  repeats the whole subcommand guard. That is fine for a shell redirect but exceeds Node's
+  default `maxBuffer`, so `tests/e2e/completion.test.ts` raises it. Adding another toolset makes
+  this worse; shrinking the generator would change byte-stable output a test asserts.
 - **No published schema may set `additionalProperties: false` or `$ref` another document.**
   The first would make every additive change break validating consumers; the second would make
   `claude-cli schema <id>` return something that cannot be compiled on its own.

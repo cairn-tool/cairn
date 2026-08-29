@@ -2,6 +2,9 @@ import type { Command } from "commander";
 import { walkCommands, type DescribedCommand, type DescribedOption } from "../contract/describe.js";
 import { COMMAND_CONTRACTS } from "../contract/registry.js";
 import { TARGETS } from "../agent/types.js";
+import { TOOL_KINDS } from "../usage/events.js";
+import { SESSION_SORTS, TOKEN_DIMENSIONS, TOOL_DIMENSIONS } from "../usage/aggregate.js";
+import { PROVIDERS } from "../usage/providers/index.js";
 
 /** The shells a script can be generated for. */
 export const SHELLS = ["bash", "zsh", "fish", "powershell"] as const;
@@ -64,6 +67,11 @@ const CHOICES: Record<string, string[]> = {
   "agent install|--scope": ["user", "project"],
   "agent uninstall|--scope": ["user", "project"],
   "agent installed|--scope": ["user", "project"],
+  "|--provider": PROVIDERS.map((provider) => provider.name),
+  "usage tokens|--by": [...TOKEN_DIMENSIONS],
+  "usage tools|--by": [...TOOL_DIMENSIONS],
+  "usage tools|--kind": [...TOOL_KINDS],
+  "usage sessions|--sort": [...SESSION_SORTS],
 };
 
 /** Positional arguments whose values are a fixed vocabulary. */

@@ -1,6 +1,6 @@
 # Complete command listing
 
-`claude-cli` contains three toolsets plus update and contract commands. Angle brackets in usage
+`claude-cli` contains four toolsets plus update and contract commands. Angle brackets in usage
 signatures are required arguments; square brackets are optional arguments.
 
 ## Global interface
@@ -17,6 +17,7 @@ signatures are required arguments; square brackets are optional arguments.
 | `claude-cli agent`                                        | Convert, validate, and inspect portable agent bundles.                 |
 | `claude-cli md`                                           | Validate, query, analyze, and modify Markdown workspaces.              |
 | `claude-cli scripts`                                      | Resolve and run named scripts declared in `.claude-cli.yml`.           |
+| `claude-cli usage`                                        | Report on Claude Code usage from its own session logs.                 |
 
 ## Script commands
 
@@ -29,6 +30,31 @@ to the registry that declared it, so a hook keeps working after the caller chang
 | [`scripts run <name>`](commands/scripts-run.md)     | Run a named script from anywhere in the tree.             |
 | [`scripts which <name>`](commands/scripts-which.md) | Show which registry defines a script, without running it. |
 | [`scripts list`](commands/scripts-list.md)          | List every script visible from the working directory.     |
+
+## Usage commands
+
+Reads the session transcripts an assistant leaves on disk and reports on them. Nothing is sent
+anywhere and nothing outside the scan cache is written. A provider registry selects the log
+source, so a second assistant's logs join the same reports rather than needing their own.
+
+Counts deduplicate the per-response fan-out in the source transcripts, and a subagent's tokens
+come from its own transcript rather than from the parent's understated summary of it. See
+[shared usage command behavior](commands/usage-common.md) for the options, the scan cache, and
+what the totals do and do not cover.
+
+| Command                                          | Description                                                    |
+| ------------------------------------------------ | -------------------------------------------------------------- |
+| [`usage summary`](commands/usage-summary.md)     | Headline totals: sessions, tokens, tools, and features.        |
+| [`usage tokens`](commands/usage-tokens.md)       | Token usage by model, day, week, month, project, or session.   |
+| [`usage tools`](commands/usage-tools.md)         | Tool calls by name, kind, MCP server, day, or session.         |
+| [`usage sessions`](commands/usage-sessions.md)   | One row per session, with its subagent transcripts folded in.  |
+| [`usage projects`](commands/usage-projects.md)   | Usage by the directory each session ran in.                    |
+| [`usage skills`](commands/usage-skills.md)       | Skill invocations by name.                                     |
+| [`usage agents`](commands/usage-agents.md)       | Subagent activity by type, with the tokens each actually cost. |
+| [`usage hooks`](commands/usage-hooks.md)         | Hook executions by event and tool, with failures and latency.  |
+| [`usage commands`](commands/usage-commands.md)   | Slash command usage by name.                                   |
+| [`usage providers`](commands/usage-providers.md) | The log sources `usage` can report on, and what each answers.  |
+| [`usage index`](commands/usage-index.md)         | Show, rebuild, or clear the scan cache.                        |
 
 ## Agent commands
 

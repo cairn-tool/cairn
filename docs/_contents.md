@@ -8,6 +8,7 @@ This directory is the reference documentation for `claude-cli`.
 - [Machine-readable result contract](contract.md)
 - [Project configuration schema](configuration.md)
 - [Shared Markdown command behavior](commands/md-common.md)
+- [Shared usage command behavior](commands/usage-common.md)
 
 ## Contract commands
 
@@ -38,6 +39,20 @@ This directory is the reference documentation for `claude-cli`.
 - [`scripts run`](commands/scripts-run.md)
 - [`scripts which`](commands/scripts-which.md)
 - [`scripts list`](commands/scripts-list.md)
+
+## Usage commands
+
+- [`usage summary`](commands/usage-summary.md)
+- [`usage tokens`](commands/usage-tokens.md)
+- [`usage tools`](commands/usage-tools.md)
+- [`usage sessions`](commands/usage-sessions.md)
+- [`usage projects`](commands/usage-projects.md)
+- [`usage skills`](commands/usage-skills.md)
+- [`usage agents`](commands/usage-agents.md)
+- [`usage hooks`](commands/usage-hooks.md)
+- [`usage commands`](commands/usage-commands.md)
+- [`usage providers`](commands/usage-providers.md)
+- [`usage index`](commands/usage-index.md)
 
 ## Other top-level commands
 
