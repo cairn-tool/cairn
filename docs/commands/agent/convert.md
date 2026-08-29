@@ -22,7 +22,7 @@ are reported. Hard validation errors and strict-mode findings do not write.
 
 | Option                | Default  | Description                                                                        |
 | --------------------- | -------- | ---------------------------------------------------------------------------------- |
-| `--target <target>`   | Required | Repeatable target: `claude-code`, `codex`, `cursor`, or `all`.                     |
+| `--target <target>`   | Required | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, or `all`.      |
 | `--output <dir>`      | Required | Output root for all generated target/profile directories and the report.           |
 | `--profile <profile>` | `both`   | Generate `plugin`, `project`, or `both` profiles.                                  |
 | `--strict`            | Off      | Treat approximate or unsupported mappings as blocking findings.                    |

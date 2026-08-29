@@ -1,11 +1,10 @@
 # Antigravity
 
-Google's Antigravity CLI. The mirror image of Cursor: it is a usage log source and an archive
-source, and not a conversion target.
+Google's Antigravity CLI, and the first assistant to fill all three roles.
 
 | Role              | Supported | Identifier    | Declared in                          |
 | ----------------- | --------- | ------------- | ------------------------------------ |
-| Conversion target | **no**    | —             | no target profile exists             |
+| Conversion target | yes       | `antigravity` | `src/agent/targets/antigravity.ts`   |
 | Usage log source  | yes       | `antigravity` | `src/usage/providers/antigravity.ts` |
 | Archive source    | yes       | `antigravity` | `src/archive/sets.ts`                |
 
@@ -46,12 +45,14 @@ read. Only the CLI's store is.
 
 ## Host profile
 
-There is none — Antigravity is not a conversion target, so no `TargetProfile` exists for it and
-`agent specs` does not list it. See [Agent bundles](agent-bundles.md).
+`src/agent/targets/antigravity.ts`, published by `agent specs`. It is the first shipped profile
+written against a **known host version** — `agy` 1.1.18 — and the first written from the host's
+own embedded documentation rather than reconstructed. See [Agent bundles](agent-bundles.md),
+which lists the rows that are still unverified.
 
 ## Pages
 
-- [Agent bundles](agent-bundles.md) — why there is no target profile
+- [Agent bundles](agent-bundles.md) — the conversion target profile
 - [Usage logs](usage-logs.md) — the two-store format and the protobuf guard
 - [Archiving](archiving.md) — the artifact sets
 

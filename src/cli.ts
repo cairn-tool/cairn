@@ -2,6 +2,7 @@
 
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
+import { TARGETS } from "./agent/types.js";
 import { lintAction } from "./commands/lint.js";
 import { lintDirAction } from "./commands/lint-dir.js";
 import { refsAction } from "./commands/refs.js";
@@ -182,7 +183,7 @@ const agent = program
   .description("Convert and inspect portable agent bundles")
   .addHelpText(
     "after",
-    "\nTargets: claude-code, codex, cursor, or all\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+    `\nTargets: ${TARGETS.join(", ")}, or all\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json`,
   );
 
 agent
@@ -422,7 +423,7 @@ agent
   .command("install")
   .description("Install a bundle into a host plugin or project directory")
   .argument("<source>", "Bundle root")
-  .requiredOption("--target <target>", "Target: claude-code, codex, or cursor", collect)
+  .requiredOption("--target <target>", `Target: ${TARGETS.join(", ")}`, collect)
   .option("--scope <scope>", "Install scope: user or project", "user")
   .option("--into <dir>", "Override the install root declared by the target profile")
   .option("--profile <profile>", "Must match the location's profile when given")
@@ -446,7 +447,7 @@ agent
   .command("uninstall")
   .description("Remove a previously installed bundle")
   .argument("<name>", "Installed bundle name")
-  .requiredOption("--target <target>", "Target: claude-code, codex, or cursor", collect)
+  .requiredOption("--target <target>", `Target: ${TARGETS.join(", ")}`, collect)
   .option("--scope <scope>", "Install scope: user or project")
   .option("--into <dir>", "Override the install root declared by the target profile")
   .option("--dry-run", "Report the removal without writing")

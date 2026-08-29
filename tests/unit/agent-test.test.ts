@@ -53,7 +53,7 @@ describe("parseTestFile", () => {
     const parsed = parseTestFile(testFile("  - name: a case\n"), "tests/a.test.yaml");
     expect(parsed.diagnostics).toEqual([]);
     expect(parsed.cases).toHaveLength(1);
-    expect(parsed.cases[0].targets).toEqual(["claude-code", "codex", "cursor"]);
+    expect(parsed.cases[0].targets).toEqual(["claude-code", "codex", "cursor", "antigravity"]);
     expect(parsed.cases[0].profiles).toEqual(["plugin", "project"]);
     expect(parsed.cases[0].file).toBe("tests/a.test.yaml");
   });

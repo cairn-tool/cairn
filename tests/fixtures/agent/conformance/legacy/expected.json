@@ -26,6 +26,13 @@
     "cursor/project": [
       ".cursor/agents/legacy-agent.md",
       ".cursor/skills/legacy/SKILL.md"
+    ],
+    "antigravity/plugin": [
+      "plugin.json",
+      "skills/legacy/SKILL.md"
+    ],
+    "antigravity/project": [
+      ".agents/skills/legacy/SKILL.md"
     ]
   },
   "diagnostics": [

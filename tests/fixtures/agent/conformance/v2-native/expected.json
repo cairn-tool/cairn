@@ -24,6 +24,13 @@
     ],
     "cursor/project": [
       ".cursor/skills/hello/SKILL.md"
+    ],
+    "antigravity/plugin": [
+      "plugin.json",
+      "skills/hello/SKILL.md"
+    ],
+    "antigravity/project": [
+      ".agents/skills/hello/SKILL.md"
     ]
   },
   "diagnostics": [

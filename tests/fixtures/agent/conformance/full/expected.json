@@ -75,6 +75,26 @@
       ".cursor/skills/deploy/SKILL.md",
       "assets/readme.md",
       "assets/sub/blob.bin"
+    ],
+    "antigravity/plugin": [
+      "assets/readme.md",
+      "assets/sub/blob.bin",
+      "hooks.json",
+      "hooks/done.sh",
+      "hooks/guard.sh",
+      "plugin.json",
+      "skills/build/NOTES.md",
+      "skills/build/SKILL.md",
+      "skills/deploy/SKILL.md"
+    ],
+    "antigravity/project": [
+      ".agents/rules/manual.md",
+      ".agents/rules/style.md",
+      ".agents/skills/build/NOTES.md",
+      ".agents/skills/build/SKILL.md",
+      ".agents/skills/deploy/SKILL.md",
+      "assets/readme.md",
+      "assets/sub/blob.bin"
     ]
   },
   "diagnostics": [
@@ -97,6 +117,8 @@
     "codex/plugin/hooks/done.sh": "0755",
     "codex/plugin/hooks/guard.sh": "0755",
     "cursor/plugin/hooks/done.sh": "0755",
-    "cursor/plugin/hooks/guard.sh": "0755"
+    "cursor/plugin/hooks/guard.sh": "0755",
+    "antigravity/plugin/hooks/done.sh": "0755",
+    "antigravity/plugin/hooks/guard.sh": "0755"
   }
 }

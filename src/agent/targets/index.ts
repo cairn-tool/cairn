@@ -1,6 +1,7 @@
 import type { AgentTarget } from "../types.js";
 import { TARGETS } from "../types.js";
 import { packageName, packageVersion } from "../../version.js";
+import { antigravityProfile } from "./antigravity.js";
 import { claudeCodeProfile } from "./claude-code.js";
 import { codexProfile } from "./codex.js";
 import { cursorProfile } from "./cursor.js";
@@ -17,6 +18,7 @@ export const TARGET_PROFILES: Record<AgentTarget, TargetProfile> = {
   "claude-code": claudeCodeProfile,
   codex: codexProfile,
   cursor: cursorProfile,
+  antigravity: antigravityProfile,
 };
 
 export function profileFor(target: AgentTarget): TargetProfile {

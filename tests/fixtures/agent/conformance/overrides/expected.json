@@ -26,6 +26,13 @@
     ],
     "cursor/project": [
       ".cursor/skills/shared/SKILL.md"
+    ],
+    "antigravity/plugin": [
+      "plugin.json",
+      "skills/shared/SKILL.md"
+    ],
+    "antigravity/project": [
+      ".agents/skills/shared/SKILL.md"
     ]
   },
   "diagnostics": [

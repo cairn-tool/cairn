@@ -271,6 +271,7 @@ export function normalizeTree(
     normalizeHooks(
       claims,
       "hooks" in roots ? roots.hooks : null,
+      "hooksFile" in roots ? roots.hooksFile : null,
       target,
       take,
       artifacts,
@@ -539,6 +540,7 @@ function normalizeRules(
 function normalizeHooks(
   claims: Claim[],
   root: string | null,
+  documentPath: string | null,
   target: AgentTarget,
   take: Take,
   artifacts: Artifact[],
@@ -546,9 +548,19 @@ function normalizeHooks(
   diagnostics: AgentDiagnostic[],
 ): void {
   const targetProfile = profileFor(target);
-  for (const claim of under(claims, root)) {
+  // The hook *document* need not live inside the hook *script* root: a host may
+  // put it at the plugin root while its scripts sit in a subdirectory. Without
+  // this, the document is never claimed, the bundle ends up with no hooks, and
+  // the scripts are then dropped too because nothing emits them.
+  const document = documentPath
+    ? claims.filter((claim) => claim.relative === documentPath && !under([claim], root).length)
+    : [];
+  for (const claim of [...document, ...under(claims, root)]) {
     if (consumed.has(claim.relative)) continue;
-    const relative = strip(claim.relative, root!);
+    const relative =
+      claim.relative === documentPath && !under([claim], root).length
+        ? path.basename(claim.relative)
+        : strip(claim.relative, root!);
     if (!/^hooks\.(json|ya?ml)$/.test(relative)) {
       // A hook script travels with the hooks directory unchanged.
       const destination = `hooks/${relative}`;
@@ -571,14 +583,24 @@ function normalizeHooks(
       continue;
     }
     // Unwrap the `{ version, hooks }` envelope some targets emit.
-    const inner =
-      targetProfile.hooks.envelope === "versioned" &&
-      parsed.hooks &&
-      typeof parsed.hooks === "object"
+    let inner =
+      parsed.hooks && typeof parsed.hooks === "object"
         ? (parsed.hooks as Record<string, unknown>)
-        : parsed.hooks && typeof parsed.hooks === "object"
-          ? (parsed.hooks as Record<string, unknown>)
-          : parsed;
+        : parsed;
+    // A `named` document is a map of hook *name* to that name's events, and a
+    // host merges several of them. Flatten one level so the event names below
+    // are reached; the bundle name itself carries no portable meaning.
+    if (targetProfile.hooks.envelope === "named" && inner === parsed) {
+      const merged: Record<string, unknown> = {};
+      for (const events of Object.values(parsed)) {
+        if (!events || typeof events !== "object" || Array.isArray(events)) continue;
+        for (const [event, handlers] of Object.entries(events as Record<string, unknown>)) {
+          // `enabled` is a switch on the named set, not an event.
+          if (HOOK_EVENT_ALIASES[event]) merged[event] = handlers;
+        }
+      }
+      if (Object.keys(merged).length) inner = merged;
+    }
 
     const portable: Record<string, unknown> = {};
     for (const [event, handlers] of Object.entries(inner)) {

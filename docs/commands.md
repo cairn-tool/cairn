@@ -109,7 +109,7 @@ written twice. See [shared archive command behavior](commands/archive/common.md)
 | [`agent doctor [source]`](commands/agent/doctor.md)     | Check a bundle and generated output against the target conformance profiles.    |
 | [`agent specs`](commands/agent/specs.md)                | Print the versioned target conformance profiles.                                |
 
-Agent targets are `claude-code`, `codex`, `cursor`, and `all`.
+Agent targets are `claude-code`, `codex`, `cursor`, `antigravity`, and `all`.
 
 ## Markdown commands
 

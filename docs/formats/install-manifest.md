@@ -43,19 +43,19 @@ one. Widening those would be noise, not safety.
 }
 ```
 
-| Field          | Required | Meaning                                           |
-| -------------- | -------- | ------------------------------------------------- |
-| `generator`    | yes      | which build wrote it                              |
-| `bundle`       | yes      | name and version of the installed bundle          |
-| `target`       | yes      | `claude-code`, `codex`, or `cursor`               |
-| `profile`      | yes      | `plugin` or `project`                             |
-| `scope`        | yes      | `user` or `project`                               |
-| `layout`       | yes      | `plugin-dir`, `merge`, or `marketplace`           |
-| `mode`         | yes      | `copy` or `link`                                  |
-| `destination`  | yes      | absolute path of the installed tree               |
-| `files`        | yes      | the inventory; see below                          |
-| `materialized` | no       | present in `link` mode: where the real files live |
-| `registration` | no       | present when host config was edited               |
+| Field          | Required | Meaning                                            |
+| -------------- | -------- | -------------------------------------------------- |
+| `generator`    | yes      | which build wrote it                               |
+| `bundle`       | yes      | name and version of the installed bundle           |
+| `target`       | yes      | `claude-code`, `codex`, `cursor`, or `antigravity` |
+| `profile`      | yes      | `plugin` or `project`                              |
+| `scope`        | yes      | `user` or `project`                                |
+| `layout`       | yes      | `plugin-dir`, `merge`, or `marketplace`            |
+| `mode`         | yes      | `copy` or `link`                                   |
+| `destination`  | yes      | absolute path of the installed tree                |
+| `files`        | yes      | the inventory; see below                           |
+| `materialized` | no       | present in `link` mode: where the real files live  |
+| `registration` | no       | present when host config was edited                |
 
 A document missing any required field, or with the wrong type for one, reads as `malformed`
 rather than being partially trusted.

@@ -341,8 +341,8 @@ is known about each assistant's own formats.
 
 ### Agent bundle conversion
 
-The top-level `agent` toolset converts one neutral bundle into Claude Code, Codex, and
-Cursor artifacts. Agent-bundle defaults deliberately live in `agent-bundle.yaml`; the
+The top-level `agent` toolset converts one neutral bundle into Claude Code, Codex, Cursor,
+and Antigravity artifacts. Agent-bundle defaults deliberately live in `agent-bundle.yaml`; the
 `.cairn.yml` configuration described above remains scoped to `md` commands.
 
 ```bash
@@ -387,7 +387,7 @@ the renderer's own selection predicate and the target conformance profiles, so i
 disagree with `agent convert`, and it reports what it excluded under `bundle.filter`. Without
 either flag the payload is unchanged.
 
-`--target` is repeatable and accepts `claude-code`, `codex`, `cursor`, or `all`.
+`--target` is repeatable and accepts `claude-code`, `codex`, `cursor`, `antigravity`, or `all`.
 `--profile` accepts `plugin`, `project`, or `both` (the default). Existing nonempty selected
 destinations require `--force`; conversion never prompts. `--strict` blocks writes when an
 approximate or unsupported mapping is found. `--dry-run` performs the complete render in
@@ -437,6 +437,7 @@ Every conversion uses this deterministic layout:
   claude-code/{plugin,project}/
   codex/{plugin,project}/
   cursor/{plugin,project}/
+  antigravity/{plugin,project}/
   conversion-report.json
 ```
 
@@ -540,21 +541,22 @@ recognized during migration.
 
 #### Compatibility and migration
 
-| Component      | Claude Code                     | Codex                                   | Cursor                                        |
-| -------------- | ------------------------------- | --------------------------------------- | --------------------------------------------- |
-| Skills         | Plugin and `.claude/skills`     | Plugin and `.agents/skills`             | Namespaced plugin and `.cursor/skills`        |
-| Agents         | Plugin and `.claude/agents`     | `.codex/agents/*.toml` project fallback | Plugin and `.cursor/agents`                   |
-| Hooks          | PascalCase portable events      | Portable native events                  | camelCase portable events                     |
-| Rules          | `.claude/rules` project         | `AGENTS.md` project layer               | `.cursor/rules/*.mdc`                         |
-| Command policy | `.claude/settings.json` project | `.codex/rules/*.rules` project          | Unsupported without an explicit hook override |
-| MCP/assets     | Normalized/pass-through         | Normalized/pass-through                 | Normalized/pass-through                       |
+| Component      | Claude Code                     | Codex                                   | Cursor                                        | Antigravity                              |
+| -------------- | ------------------------------- | --------------------------------------- | --------------------------------------------- | ---------------------------------------- |
+| Skills         | Plugin and `.claude/skills`     | Plugin and `.agents/skills`             | Namespaced plugin and `.cursor/skills`        | Plugin and `.agents/skills`              |
+| Agents         | Plugin and `.claude/agents`     | `.codex/agents/*.toml` project fallback | Plugin and `.cursor/agents`                   | Not emitted; native layout unconfirmed   |
+| Hooks          | PascalCase portable events      | Portable native events                  | camelCase portable events                     | Named sets; no session-start event       |
+| Rules          | `.claude/rules` project         | `AGENTS.md` project layer               | `.cursor/rules/*.mdc`                         | `.agents/rules/*.md` with `trigger`      |
+| Command policy | `.claude/settings.json` project | `.codex/rules/*.rules` project          | Unsupported without an explicit hook override | Unsupported; no native format documented |
+| MCP/assets     | Normalized/pass-through         | Normalized/pass-through                 | Normalized/pass-through                       | Normalized/pass-through                  |
 
 This table is a summary. `cairn agent specs --format json` is the authoritative,
 machine-readable form, and is generated from the same profiles the renderer uses. The prose form,
 target by target, is under [docs/providers.md](docs/providers.md):
 [Claude Code](docs/providers/claude-code/agent-bundles.md),
-[Codex](docs/providers/codex/agent-bundles.md), and
-[Cursor](docs/providers/cursor/agent-bundles.md).
+[Codex](docs/providers/codex/agent-bundles.md),
+[Cursor](docs/providers/cursor/agent-bundles.md), and
+[Antigravity](docs/providers/antigravity/agent-bundles.md).
 
 Point `agent convert` directly at an existing Claude plugin containing
 `.claude-plugin/plugin.json` to migrate it. The importer retains manifest metadata, skills,

@@ -78,10 +78,16 @@ export function scoreLayouts(root: string, files: SourceFile[]): DetectionCandid
         distinctiveMatches.push(entry.pattern);
     }
     const manifest = targetProfile.manifest;
+    // `directory` is null for a host whose plugin manifest sits at the plugin
+    // root. Requiring a directory here would make such a layout undetectable by
+    // its manifest — the one signal that settles a plugin layout outright.
     const hasManifest =
       profile === "plugin" &&
-      manifest.directory !== null &&
-      fs.existsSync(path.join(root, manifest.directory, manifest.file));
+      fs.existsSync(
+        manifest.directory
+          ? path.join(root, manifest.directory, manifest.file)
+          : path.join(root, manifest.file),
+      );
 
     candidates.push({
       target,

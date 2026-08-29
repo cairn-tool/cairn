@@ -129,7 +129,7 @@ function validateBlocks(body: string, file: string, diagnostics: AgentDiagnostic
       diagnostics.push({
         ...diagnostic("AB120", `Unknown target block '${target}'`, "unsupported", {
           path: file,
-          remediation: "Use claude-code, codex, or cursor.",
+          remediation: `Use ${TARGETS.join(", ")}.`,
         }),
         severity: "error",
       });

@@ -21,11 +21,11 @@ check a bundle and its generated output against them use [`agent doctor`](doctor
 
 ## Options
 
-| Option              | Default                | Description                                                    |
-| ------------------- | ---------------------- | -------------------------------------------------------------- |
-| `--target <target>` | All applicable targets | Repeatable target: `claude-code`, `codex`, `cursor`, or `all`. |
-| `--strict`          | Off                    | Treat approximations as blocking findings.                     |
-| `--format <fmt>`    | `llm`                  | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`. |
-| `-h`, `--help`      | —                      | Show help.                                                     |
+| Option              | Default                | Description                                                                   |
+| ------------------- | ---------------------- | ----------------------------------------------------------------------------- |
+| `--target <target>` | All applicable targets | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, or `all`. |
+| `--strict`          | Off                    | Treat approximations as blocking findings.                                    |
+| `--format <fmt>`    | `llm`                  | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                |
+| `-h`, `--help`      | —                      | Show help.                                                                    |
 
 Compatibility findings use exit `2`; invocation and I/O errors use exit `1`.

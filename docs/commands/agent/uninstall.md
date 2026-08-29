@@ -20,16 +20,16 @@ neighboring files the host or another tool may have added.
 
 ## Options
 
-| Option              | Default  | Description                                                                 |
-| ------------------- | -------- | --------------------------------------------------------------------------- |
-| `--target <target>` | Required | One target: `claude-code`, `codex`, or `cursor`. Not repeatable, not `all`. |
-| `--scope <scope>`   | Search   | `user` or `project`. When omitted, both scopes are searched.                |
-| `--into <dir>`      | Profile  | Override the install root the profile declares.                             |
-| `--dry-run`         | Off      | Report the removal without writing.                                         |
-| `--check`           | Off      | Exit 2 when the named install is still present; exit 0 when already absent. |
-| `--format <fmt>`    | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.              |
-| `--envelope`        | Off      | Wrap `--format json` output in the versioned result envelope.               |
-| `-h`, `--help`      | —        | Show help.                                                                  |
+| Option              | Default  | Description                                                                                |
+| ------------------- | -------- | ------------------------------------------------------------------------------------------ |
+| `--target <target>` | Required | One target: `claude-code`, `codex`, `cursor`, or `antigravity`. Not repeatable, not `all`. |
+| `--scope <scope>`   | Search   | `user` or `project`. When omitted, both scopes are searched.                               |
+| `--into <dir>`      | Profile  | Override the install root the profile declares.                                            |
+| `--dry-run`         | Off      | Report the removal without writing.                                                        |
+| `--check`           | Off      | Exit 2 when the named install is still present; exit 0 when already absent.                |
+| `--format <fmt>`    | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                             |
+| `--envelope`        | Off      | Wrap `--format json` output in the versioned result envelope.                              |
+| `-h`, `--help`      | —        | Show help.                                                                                 |
 
 `--check` and `--dry-run` cannot be combined.
 

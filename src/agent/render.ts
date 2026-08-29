@@ -306,7 +306,16 @@ function transformedHooks(
               },
             ),
           );
-        if (profileFor(target).hooks.handlerShape === "flat")
+        // A host may nest only some of its events: Antigravity accepts a
+        // tool-name `matcher` on its two tool events and a bare handler list on
+        // the rest, so the shape is decided per portable event rather than once
+        // for the whole document.
+        const hookProfile = profileFor(target).hooks;
+        const nested =
+          hookProfile.handlerShape === "claude-nested" ||
+          (hookProfile.handlerShape === "nested-for-matcher-events" &&
+            (hookProfile.matcherEvents as string[]).includes(neutral));
+        if (!nested)
           return Object.fromEntries(
             Object.entries(handler).filter(
               ([key]) =>
@@ -335,9 +344,12 @@ function transformedHooks(
     };
     hooks[targetName] = rewrite(normalizeHandlers(handlers));
   }
-  return profileFor(target).hooks.envelope === "versioned" && !bundle.legacy
-    ? { version: 1, hooks }
-    : { hooks };
+  const envelope = profileFor(target).hooks.envelope;
+  if (envelope === "versioned" && !bundle.legacy) return { version: 1, hooks };
+  // `named` keys the whole document by the bundle, which is how a host that
+  // merges several hook sets tells them apart and can disable one wholesale.
+  if (envelope === "named" && !bundle.legacy) return { [bundle.name]: hooks };
+  return { hooks };
 }
 
 function manifest(bundle: AgentBundle, target: AgentTarget): Record<string, unknown> {
@@ -671,6 +683,19 @@ function renderRules(
       });
     } else if (targetProfile.rules.form === "markdown") {
       const metadata = rule.globs.length ? { paths: rule.globs } : {};
+      artifacts.push({
+        path: `${ruleRoot}/${rule.name}.md`,
+        content: Buffer.from(yamlFrontmatter(metadata, body)),
+        mode: 0o644,
+      });
+    } else if (targetProfile.rules.form === "trigger-frontmatter") {
+      // Antigravity loads `always_on` rules unconditionally and defers the rest
+      // to the model, which is the distinction its `trigger` key expresses.
+      const metadata: Record<string, unknown> = {
+        description: rule.description,
+        trigger: rule.activation === "always" ? "always_on" : "model_decision",
+      };
+      if (rule.globs.length) metadata.globs = rule.globs;
       artifacts.push({
         path: `${ruleRoot}/${rule.name}.md`,
         content: Buffer.from(yamlFrontmatter(metadata, body)),

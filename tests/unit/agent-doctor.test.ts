@@ -75,9 +75,22 @@ describe("hostVersionStatus", () => {
 
   it("keeps every shipped target useful with no version data", () => {
     for (const profile of Object.values(TARGET_PROFILES)) {
+      // An unknown host version is never a finding, whatever the profile records.
       expect(hostVersionStatus(profile.host, null)).toBe("unknown");
-      expect(hostVersionStatus(profile.host, "1.0.0")).toBe("unverified");
+      // A profile that records no bounds cannot classify anything, and must
+      // still report `unverified` rather than a confident answer.
+      if (profile.host.minimumVersion === null && profile.host.verifiedThrough === null)
+        expect(hostVersionStatus(profile.host, "1.0.0")).toBe("unverified");
     }
+  });
+
+  it("uses the bounds a profile does record", () => {
+    // Antigravity is the first shipped profile written against a known host
+    // version, so it is the one that exercises this path for real.
+    const antigravity = TARGET_PROFILES.antigravity.host;
+    expect(antigravity.verifiedThrough).toBe("1.1.18");
+    expect(hostVersionStatus(antigravity, "1.1.18")).toBe("verified");
+    expect(hostVersionStatus(antigravity, "1.2.0")).toBe("newer");
   });
 });
 

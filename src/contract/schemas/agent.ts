@@ -2,7 +2,7 @@ import { schemaUri } from "../version.js";
 import type { SchemaEntry } from "../types.js";
 import { DRAFT, stringArray } from "./shared.js";
 
-const TARGETS = ["claude-code", "codex", "cursor"];
+const TARGETS = ["claude-code", "codex", "cursor", "antigravity"];
 const PROFILES = ["plugin", "project"];
 
 export const agentResultSchema: SchemaEntry = {

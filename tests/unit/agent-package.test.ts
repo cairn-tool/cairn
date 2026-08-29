@@ -185,7 +185,15 @@ describe("catalogs", () => {
   it("emits one catalog per target, in the profile's declared location", () => {
     const result = buildCatalogs(loadBundle(bundle(FULL)), [...TARGETS], PROFILES, "repo");
     for (const target of TARGETS) {
-      const spec = profileFor(target).marketplace!;
+      const spec = profileFor(target).marketplace;
+      // A target with no catalog spec is skipped rather than given an invented
+      // one, so the absence of an entry is the assertion for that case.
+      if (!spec) {
+        expect(result.entries.map((entry) => entry.path)).not.toContain(
+          expect.stringContaining(`${target}/plugin/`),
+        );
+        continue;
+      }
       expect(result.entries.map((entry) => entry.path)).toContain(
         `${target}/plugin/${spec.catalog.repo!.directory}/${spec.catalog.repo!.file}`,
       );

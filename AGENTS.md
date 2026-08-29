@@ -125,6 +125,24 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   `PROFILE_SCHEMA_VERSION`. Schema 2 is a strict superset of 1: it adds `marketplace:` and
   `native:` and changes nothing else, which is why `agent upgrade` can verify byte-identical
   rendering before and after and refuse (AB224) if that ever stops holding.
+- **Antigravity and Codex both write project skills to `.agents/skills`, and that makes some
+  imported trees genuinely ambiguous.** `distinctivePatterns()` derives its signals from the
+  profile matrix, so a pattern two cells declare stops deciding anything. A project tree holding
+  only `.agents/skills/<name>/` therefore scores equally for both and `agent import` throws
+  naming the candidates, which is the designed behavior — it never guesses silently. A tree with
+  rules or MCP alongside is unambiguous, because `.agents/rules/{name}.md` and
+  `.agents/mcp_config.json` are Antigravity's alone.
+
+- **A plugin manifest may sit at the plugin root, and the hook document may sit outside the hook
+  script root.** Antigravity is the first target doing either: `manifest.directory` is `null` and
+  `paths.plugin.hooksFile` is `hooks.json` beside `hooks/`. Both required import fixes rather
+  than profile data alone — `detect.ts` required a manifest _directory_ before it would treat a
+  layout as a plugin, which is the one signal that settles a plugin layout outright, and
+  `normalizeHooks` only looked for the document _under_ the script root, so the document went
+  unclaimed, the bundle ended up with no hooks, and the scripts were then dropped too because
+  nothing emits them. `normalize.ts` also has to unwrap the `named` hook envelope, whose top
+  level is the bundle name rather than an event.
+
 - **Native overlay paths are deliberately undeclared.** `TargetProfile.outputs` describes what
   the _renderer_ emits; an overlay is user-supplied content whose whole purpose is a surface the
   portable profile does not describe. `agent doctor` and the conformance suite skip artifacts

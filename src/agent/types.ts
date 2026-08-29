@@ -6,7 +6,7 @@ import type { AuditReport } from "./audit/index.js";
 import type { TestReport } from "./test/index.js";
 import type { InstallReport } from "./install/index.js";
 
-export const TARGETS = ["claude-code", "codex", "cursor"] as const;
+export const TARGETS = ["claude-code", "codex", "cursor", "antigravity"] as const;
 export type AgentTarget = (typeof TARGETS)[number];
 export type AgentProfile = "plugin" | "project";
 export type MappingQuality = "exact" | "approximate" | "unsupported";
