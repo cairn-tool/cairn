@@ -104,18 +104,18 @@ as a short list:
 | ------- | ------------ | ------------------------------------------------------------------- |
 | `AB170` | —            | duplicate output path                                               |
 | `AB302` | placeholders | no portable `$ARGUMENTS` substitution; explanatory text emitted     |
-| `AB310` | skills       | Cursor skill invocation policy is advisory                          |
+| `AB310` | skills       | this target's skill invocation policy is advisory                   |
 | `AB320` | hooks        | a hook event is not portable to this target                         |
 | `AB321` | hooks        | a Windows-specific hook command requires a target override          |
 | `AB322` | hooks        | a hook protocol is not portable                                     |
 | `AB330` | agents       | the model is not a stable semantic class; the target inherits       |
 | `AB331` | agents       | tool capabilities cannot be restricted exactly                      |
 | `AB332` | agents       | capability-based tool restrictions require a target override        |
-| `AB340` | agents       | this target's custom agents are project-only                        |
+| `AB340` | agents       | this target emits no custom agents for the profile being rendered   |
 | `AB350` | rules        | this target's instruction rules are project-only                    |
 | `AB351` | rules        | a rule activation is not exact on this target                       |
 | `AB360` | policies     | command policies are emitted only in project profiles               |
-| `AB361` | policies     | Cursor has no native command-policy format                          |
+| `AB361` | policies     | this target has no native command-policy format                     |
 | `AB370` | mcp          | Codex project MCP requires TOML and cannot be translated losslessly |
 
 The overlay codes are declared by every target's `native` feature:

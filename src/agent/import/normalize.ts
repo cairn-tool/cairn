@@ -9,6 +9,7 @@ import type {
   SourceFile,
 } from "../types.js";
 import { diagnostic } from "../types.js";
+import type { HookProfile } from "../targets/index.js";
 import { HOOK_EVENT_ALIASES, outputPatternToRegExp, profileFor } from "../targets/index.js";
 import { CURRENT_BUNDLE_SCHEMA } from "../manifest.js";
 import { YAML_OPTIONS, sortArtifacts } from "../scaffold.js";
@@ -600,9 +601,15 @@ function normalizeHooks(
   }
 }
 
-/** Flattens the `{ matcher, hooks: [...] }` nesting Claude-shaped targets use. */
-function unwrapHandlers(handlers: unknown, shape: "claude-nested" | "flat"): unknown {
-  if (shape !== "claude-nested" || !Array.isArray(handlers)) return handlers;
+/**
+ * Flattens the `{ matcher, hooks: [...] }` nesting Claude-shaped targets use.
+ *
+ * `nested-for-matcher-events` nests only some of its events, and a flat handler
+ * carries no inner `hooks` array, so the per-entry test below already tells the
+ * two apart without the shape having to say which event this was.
+ */
+function unwrapHandlers(handlers: unknown, shape: HookProfile["handlerShape"]): unknown {
+  if (shape === "flat" || !Array.isArray(handlers)) return handlers;
   const flattened: unknown[] = [];
   for (const entry of handlers) {
     if (

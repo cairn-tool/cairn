@@ -6,10 +6,18 @@ rule form, its catalog spec, its install locations, and the complete set of outp
 produce.
 
 The renderer reads that data rather than branching on the target. That is the load-bearing
-rule: `src/agent/render.ts` contains no `if (target === …)` for anything tabular, and the
-conformance fixtures fail the build if a rendered path is one no profile declares. What
+rule, and the conformance fixtures enforce the half of it that matters most: they fail the
+build if a rendered path is one no profile declares. What
 [`agent specs`](../commands/agent/specs.md) publishes therefore cannot drift from what
 `agent convert` produces.
+
+**Two branches on the target name remain in `src/agent/render.ts`**, and it is worth knowing
+which: Codex renders a custom agent as TOML rather than Markdown, and Cursor inlines a skill
+into its agent documents. Both are document _shapes_ rather than tabular facts, and neither has
+a second target to generalize against yet. Everything else — paths, manifest location, hook
+document name and shape, the command-policy form, the skill invocation form, the MCP
+destination — is read from the profile. Adding a branch for anything in that second list is how
+the next target quietly inherits some other host's output.
 
 Profiles live at `src/agent/targets/<id>.ts` as **TypeScript modules, not JSON**. `tsconfig`
 sets `rootDir: "src"` with no `resolveJsonModule`, so a top-level data directory would never
@@ -19,7 +27,7 @@ reach `dist` and the published package would silently lack it.
 
 `PROFILE_SCHEMA_VERSION` is a **hand-owned** version of the profile structure itself,
 independent of the package version, the contract version, the bundle version, and the test-file
-version. It is currently `"1"`. A profile whose `schemaVersion` does not match is reported as
+version. It is currently `"2"`. A profile whose `schemaVersion` does not match is reported as
 invalid.
 
 ## Structure
@@ -37,6 +45,8 @@ interface TargetProfile {
   models: ModelProfile;
   tools: ToolProfile;
   rules: RuleProfile;
+  policies: PolicyProfile;
+  skills: SkillProfile;
   outputs: Record<AgentProfile, OutputPattern[]>;
   features: Record<FeatureKey, FeatureProfile>;
   marketplace?: MarketplaceProfile; // optional so adding it stayed additive
@@ -95,7 +105,7 @@ Omitting them is what makes `agents/` and `hooks/hooks.json` load.
 
 ```ts
 interface PathProfile {
-  plugin: { skills; agents: string | null; hooks; assets; mcp: string | null };
+  plugin: { skills; hooks; hooksFile; agents: string | null; assets; mcp: string | null };
   project: { skills; agents; rules; policies; mcp; assets };
   namespacePluginSkills: boolean;
 }
@@ -104,6 +114,15 @@ interface PathProfile {
 A `null` root means the target cannot host that component in that profile — Codex's
 `plugin.agents` is `null`, and rendering an agent into a Codex plugin is refused with `AB340`
 rather than written somewhere the host will never look.
+
+`plugin.hooks` is the directory hook _scripts_ are written into; `plugin.hooksFile` is the hook
+_declaration_ document, relative to the plugin root. They are separate because a host may put
+the document at the plugin root while its scripts live in a subdirectory.
+
+`plugin.mcp` and `project.mcp` are the MCP destinations, and the renderer reads them. It used to
+hardcode `.mcp.json` with one special case for Cursor, which meant any new target emitted a path
+its own profile did not declare — a conformance failure at best and a silently ignored file at
+worst.
 
 `namespacePluginSkills` is `true` only for Cursor, where a plugin skill directory is
 `skills/<bundle>-<skill>/`.
@@ -131,8 +150,9 @@ interface PlaceholderProfile {
 ```ts
 interface HookProfile {
   events: Record<PortableHookEvent, string | null>; // null = inexpressible
-  envelope: "hooks" | "versioned";
-  handlerShape: "claude-nested" | "flat";
+  envelope: "hooks" | "versioned" | "named";
+  handlerShape: "claude-nested" | "flat" | "nested-for-matcher-events";
+  matcherEvents: PortableHookEvent[];
   supportedProtocols: string[];
 }
 ```
@@ -144,6 +164,35 @@ unless a target override supplies one.
 `envelope: "versioned"` wraps handlers in `{ version: 1, hooks }`; `"hooks"` emits `{ hooks }`.
 `handlerShape: "claude-nested"` wraps each handler in `{ matcher, hooks: [{ type: "command", … }] }`;
 `"flat"` emits it as-is with the transport keys stripped.
+
+## `policies` and `skills`
+
+Both name a _form_ rather than a path, and both accept `null` for a host that has no such
+surface at all.
+
+```ts
+interface PolicyProfile {
+  form: "claude-permissions" | "codex-prefix-rules" | "cursor-hooks" | "opencode-permission" | null;
+}
+interface SkillProfile {
+  invocationPolicy: "frontmatter-flag" | "openai-yaml" | "advisory" | null;
+}
+```
+
+`policies.form` decides how a command policy is written, into the surface
+`paths.project.policies` names. The forms disagree about what that surface is — Claude Code and
+Cursor name a file, Codex names the directory its rules file lives in — and each form reads it
+the way its own host does.
+
+`null` is not a gap to be filled in later; it is the honest answer for a host with no native
+command-policy format, and it emits `AB361`. Before this was profile data the renderer picked
+the form by target name with an unguarded `else`, which handed every target that was neither
+Claude Code nor Cursor a `.codex/rules/bundle.rules` it does not read — output that looks right
+and does nothing, at a path its own profile does not declare.
+
+`skills.invocationPolicy` decides how "do not invoke this implicitly" is expressed:
+`frontmatter-flag` sets a key on the skill document, `openai-yaml` writes a sidecar policy file,
+and `advisory` can only say so in prose and emits `AB310`. `null` behaves as `advisory`.
 
 ## `models`, `tools`, `rules`
 
@@ -303,6 +352,9 @@ suite fails on a non-empty result. It checks:
 - no output pattern is absolute, uses backslashes, or contains `..`
 - host versions parse as semantic versions, and `minimumVersion <= verifiedThrough`
 - install layouts, profiles, roots, and activation forms are known and in-scope
+- `policies.form` and `skills.invocationPolicy` are a known form or `null`
+- `hooks.matcherEvents` names only portable events, and is non-empty whenever `handlerShape`
+  is `nested-for-matcher-events`
 
 ## Related
 

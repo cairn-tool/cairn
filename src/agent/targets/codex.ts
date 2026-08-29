@@ -33,6 +33,7 @@ export const codexProfile: TargetProfile = {
       // declares an agents root and renderAgent refuses with AB340.
       agents: null,
       hooks: "hooks",
+      hooksFile: "hooks/hooks.json",
       assets: "assets",
       mcp: ".mcp.json",
     },
@@ -60,6 +61,7 @@ export const codexProfile: TargetProfile = {
     },
     envelope: "hooks",
     handlerShape: "claude-nested",
+    matcherEvents: [],
     supportedProtocols: ["json", "stdio-json"],
   },
   models: {
@@ -75,6 +77,8 @@ export const codexProfile: TargetProfile = {
     approximateActivation: ["files"],
     form: "aggregated-agents-md",
   },
+  policies: { form: "codex-prefix-rules" },
+  skills: { invocationPolicy: "openai-yaml" },
   marketplace: {
     catalog: {
       repo: { directory: ".codex-plugin", file: "marketplace.json" },

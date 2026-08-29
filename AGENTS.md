@@ -93,11 +93,18 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   around jsdom globals, and `any` at the `JSON.parse`/YAML boundary. Adopting it means
   fixing those first, not just flipping the preset.
 - **Target behavior is data, and the renderer reads that data.** `src/agent/targets/*.ts` holds
-  the hook events, path roots, manifest directories, model and tool maps, rule activations, and
-  declared output patterns; `src/agent/render.ts` looks them up rather than branching on the
-  target. Do not reintroduce an `if (target === …)` for anything tabular — the conformance
-  fixtures assert that every emitted path is one the profile declares, so an undeclared
-  hardcoded path fails the build.
+  the hook events, path roots and document names, manifest directories, model and tool maps,
+  rule activations, the command-policy form, the skill invocation form, and the declared output
+  patterns; `src/agent/render.ts` looks them up rather than branching on the target. Do not
+  reintroduce an `if (target === …)` for anything tabular — the conformance fixtures assert that
+  every emitted path is one the profile declares, so an undeclared hardcoded path fails the
+  build. **Two branches remain on purpose**: Codex renders an agent as TOML and Cursor inlines a
+  skill into its agents. Both are document shapes with no second target to generalize against.
+  Everything that was tabular and still branched has been moved into the profile, and the two
+  that mattered were load-bearing bugs — `renderPolicies` fell through to
+  `.codex/rules/bundle.rules` for any target that was neither Claude Code nor Cursor, and the
+  project MCP writer hardcoded `.mcp.json`. Both emitted a path the target's own profile did not
+  declare.
 - **Every visible command needs a `src/contract/registry.ts` entry.** `describe` merges the
   registry into the walked command tree, and `tests/e2e/contract.test.ts` fails on any command
   reported as `stability: "undeclared"` and on any registry id that no longer maps to a command.

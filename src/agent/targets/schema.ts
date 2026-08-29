@@ -5,7 +5,7 @@ import type { AgentProfile, AgentTarget, BundleRule, MappingQuality } from "../t
  * semantic-release-managed package version. Bump only when the profile
  * structure changes in a way consumers must react to.
  */
-export const PROFILE_SCHEMA_VERSION = "1";
+export const PROFILE_SCHEMA_VERSION = "2";
 
 export const PORTABLE_HOOK_EVENTS = [
   "session-start",
@@ -114,8 +114,11 @@ export interface ManifestProfile {
 
 export interface PluginRoots {
   skills: string;
-  agents: string | null;
+  /** Directory for hook *scripts*. */
   hooks: string;
+  /** The hook *declaration* document, relative to the plugin root. */
+  hooksFile: string;
+  agents: string | null;
   assets: string;
   mcp: string | null;
 }
@@ -151,10 +154,20 @@ export interface PlaceholderProfile {
 export interface HookProfile {
   /** Portable event to native name; `null` means the target cannot express it. */
   events: Record<PortableHookEvent, string | null>;
-  /** `versioned` wraps handlers in `{ version: 1, hooks }`; `hooks` emits `{ hooks }`. */
-  envelope: "hooks" | "versioned";
-  /** `claude-nested` wraps handlers in `{ matcher, hooks: [...] }`; `flat` does not. */
-  handlerShape: "claude-nested" | "flat";
+  /**
+   * `versioned` wraps handlers in `{ version: 1, hooks }`, `hooks` emits
+   * `{ hooks }`, and `named` keys the whole document by the bundle's name.
+   */
+  envelope: "hooks" | "versioned" | "named";
+  /**
+   * `claude-nested` wraps handlers in `{ matcher, hooks: [...] }` and `flat`
+   * does not. `nested-for-matcher-events` wraps only the events listed in
+   * {@link matcherEvents}, which is a host that accepts a tool-name matcher on
+   * its tool events and nothing on the rest.
+   */
+  handlerShape: "claude-nested" | "flat" | "nested-for-matcher-events";
+  /** Events that take a matcher. Empty unless `handlerShape` names it. */
+  matcherEvents: PortableHookEvent[];
   supportedProtocols: string[];
 }
 
@@ -174,7 +187,41 @@ export interface RuleProfile {
   exactActivation: RuleActivation[];
   /** Activations that render, but not faithfully. Everything else is unsupported. */
   approximateActivation: RuleActivation[];
-  form: "mdc" | "markdown" | "aggregated-agents-md" | null;
+  form: "mdc" | "markdown" | "aggregated-agents-md" | "trigger-frontmatter" | null;
+}
+
+/**
+ * How a target expresses a command policy.
+ *
+ * This exists because the renderer used to pick the form by target name, with
+ * an unguarded `else` that emitted Codex's `prefix_rule` DSL to a Codex path
+ * for every target that was not Claude Code or Cursor. Naming the form here
+ * makes a host with no policy surface declare `null` and get a diagnostic,
+ * rather than silently inheriting someone else's format.
+ */
+export type PolicyForm =
+  | "claude-permissions"
+  | "codex-prefix-rules"
+  | "cursor-hooks"
+  /** Reserved: a `permission` block inside a config file the MCP writer also owns. */
+  | "opencode-permission";
+
+export interface PolicyProfile {
+  /** `null` when the host has no native command-policy format. */
+  form: PolicyForm | null;
+}
+
+/**
+ * How a target expresses "do not invoke this skill implicitly".
+ *
+ * `frontmatter-flag` sets a key on the skill document, `openai-yaml` writes a
+ * sidecar policy file, and `advisory` can only say so in prose.
+ */
+export type SkillInvocationForm = "frontmatter-flag" | "openai-yaml" | "advisory";
+
+export interface SkillProfile {
+  /** `null` when the host offers no way to say it at all. */
+  invocationPolicy: SkillInvocationForm | null;
 }
 
 /** Where a catalog entry's value comes from. */
@@ -248,6 +295,8 @@ export interface TargetProfile {
   models: ModelProfile;
   tools: ToolProfile;
   rules: RuleProfile;
+  policies: PolicyProfile;
+  skills: SkillProfile;
   outputs: Record<AgentProfile, OutputPattern[]>;
   features: Record<FeatureKey, FeatureProfile>;
   /** Catalog shape for `agent package`. Optional so adding it stayed additive. */
@@ -405,6 +454,30 @@ export function validateProfile(profile: TargetProfile): string[] {
         problems.push(`output pattern '${entry.pattern}' escapes the target root`);
     }
   }
+  const policyForms = [
+    "claude-permissions",
+    "codex-prefix-rules",
+    "cursor-hooks",
+    "opencode-permission",
+  ];
+  if (profile.policies.form !== null && !policyForms.includes(profile.policies.form))
+    problems.push(`policies.form '${profile.policies.form}' is not a known form`);
+  const invocationForms = ["frontmatter-flag", "openai-yaml", "advisory"];
+  if (
+    profile.skills.invocationPolicy !== null &&
+    !invocationForms.includes(profile.skills.invocationPolicy)
+  )
+    problems.push(
+      `skills.invocationPolicy '${profile.skills.invocationPolicy}' is not a known form`,
+    );
+  for (const event of profile.hooks.matcherEvents)
+    if (!PORTABLE_HOOK_EVENTS.includes(event))
+      problems.push(`hooks.matcherEvents names unknown event '${event}'`);
+  if (
+    profile.hooks.handlerShape === "nested-for-matcher-events" &&
+    !profile.hooks.matcherEvents.length
+  )
+    problems.push("hooks.handlerShape is 'nested-for-matcher-events' but matcherEvents is empty");
   for (const version of [profile.host.minimumVersion, profile.host.verifiedThrough])
     if (version !== null && !parseSemver(version))
       problems.push(`host version '${version}' is not a valid semantic version`);

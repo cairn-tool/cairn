@@ -306,7 +306,7 @@ describe("agent CLI", () => {
     const result = await run("agent", "specs", "--target", "all", "-fj");
     expect(result.exitCode).toBe(0);
     const specs = JSON.parse(result.stdout).specs;
-    expect(specs.schemaVersion).toBe("1");
+    expect(specs.schemaVersion).toBe("2");
     expect(Object.keys(specs.targets)).toEqual(["claude-code", "codex", "cursor"]);
     expect(specs.targets.cursor.paths.namespacePluginSkills).toBe(true);
   });

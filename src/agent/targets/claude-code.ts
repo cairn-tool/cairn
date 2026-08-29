@@ -34,6 +34,7 @@ export const claudeCodeProfile: TargetProfile = {
       skills: "skills",
       agents: "agents",
       hooks: "hooks",
+      hooksFile: "hooks/hooks.json",
       assets: "assets",
       mcp: ".mcp.json",
     },
@@ -61,6 +62,7 @@ export const claudeCodeProfile: TargetProfile = {
     },
     envelope: "hooks",
     handlerShape: "claude-nested",
+    matcherEvents: [],
     supportedProtocols: ["json", "stdio-json"],
   },
   models: {
@@ -81,6 +83,8 @@ export const claudeCodeProfile: TargetProfile = {
     approximateActivation: [],
     form: "markdown",
   },
+  policies: { form: "claude-permissions" },
+  skills: { invocationPolicy: "frontmatter-flag" },
   marketplace: {
     catalog: {
       repo: { directory: ".claude-plugin", file: "marketplace.json" },

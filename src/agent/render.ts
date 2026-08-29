@@ -120,13 +120,13 @@ function rewritePlaceholders(
     diagnostics.push(
       diagnostic(
         "AB302",
-        "Codex has no portable $ARGUMENTS substitution; emitted explanatory text",
+        `${target} has no portable $ARGUMENTS substitution; emitted explanatory text`,
         "approximate",
         {
           component: component?.name,
           path: component?.path,
           target,
-          remediation: "Provide targets.codex instructions when exact argument handling matters.",
+          remediation: `Provide targets.${target} instructions when exact argument handling matters.`,
         },
       ),
     );
@@ -292,7 +292,7 @@ function transformedHooks(
             ),
           );
         const protocol = handler.protocol ?? handler.inputProtocol ?? handler.outputProtocol;
-        if (protocol && !["json", "stdio-json"].includes(String(protocol)))
+        if (protocol && !profileFor(target).hooks.supportedProtocols.includes(String(protocol)))
           diagnostics.push(
             diagnostic(
               "AB322",
@@ -466,13 +466,14 @@ function renderSkill(
   );
   let renderedComponent = component;
   if (["explicit", "manual"].includes(invocation)) {
-    if (target === "claude-code")
+    const form = profileFor(target).skills.invocationPolicy;
+    if (form === "frontmatter-flag")
       renderedComponent = {
         ...component,
         metadata: { ...component.metadata, "disable-model-invocation": true },
       };
     else if (
-      target === "codex" &&
+      form === "openai-yaml" &&
       !component.files.some((file) => file.path.split(path.sep).join("/") === "agents/openai.yaml")
     ) {
       artifacts.push({
@@ -480,15 +481,14 @@ function renderSkill(
         content: Buffer.from("policy:\n  allow_implicit_invocation: false\n"),
         mode: 0o644,
       });
-    } else if (target === "cursor")
+    } else if (form === "advisory" || form === null)
       diagnostics.push(
-        diagnostic("AB310", "Cursor skill invocation policy is advisory", "approximate", {
+        diagnostic("AB310", `${target} skill invocation policy is advisory`, "approximate", {
           component: component.name,
           path: component.path,
           target,
           profile,
-          remediation:
-            "Provide targets.cursor invocation instructions if implicit activation must be prevented.",
+          remediation: `Provide targets.${target} invocation instructions if implicit activation must be prevented.`,
         }),
       );
   }
@@ -533,13 +533,20 @@ function renderAgent(
   const targetProfile = profileFor(target);
   if (!targetProfile.features.agents.profiles.includes(profile)) {
     diagnostics.push(
-      diagnostic("AB340", `${target} custom agents are project-only`, "unsupported", {
-        component: component.name,
-        path: component.path,
-        target,
-        profile,
-        remediation: "Generate the project profile as well.",
-      }),
+      diagnostic(
+        "AB340",
+        `${target} custom agents are not emitted for the ${profile} profile`,
+        "unsupported",
+        {
+          component: component.name,
+          path: component.path,
+          target,
+          profile,
+          remediation: targetProfile.features.agents.profiles.length
+            ? `Generate the ${targetProfile.features.agents.profiles.join(" or ")} profile as well.`
+            : `${target} has no custom-agent surface; express the behavior as a skill.`,
+        },
+      ),
     );
     return;
   }
@@ -735,7 +742,8 @@ function renderPolicies(
     );
     return;
   }
-  if (target === "cursor") {
+  const form = profileFor(target).policies.form;
+  if (form === "cursor-hooks") {
     const hookOverrides = entries.flatMap((entry) => {
       const targets = entry.targets;
       if (!targets || typeof targets !== "object" || Array.isArray(targets)) return [];
@@ -757,16 +765,34 @@ function renderPolicies(
       return;
     }
     diagnostics.push(
-      diagnostic("AB361", "Cursor has no native command-policy format", "unsupported", {
+      diagnostic("AB361", `${target} has no native command-policy format`, "unsupported", {
         target,
         profile,
-        remediation:
-          "Provide an explicit Cursor hook override; prompt rules are not security policy.",
+        remediation: `Provide an explicit ${target} hook override; prompt rules are not security policy.`,
       }),
     );
     return;
   }
-  if (target === "claude-code") {
+  // A host with no policy surface says so and emits nothing. This used to be an
+  // unguarded `else`, which handed every target that was neither Claude Code
+  // nor Cursor a `.codex/rules/bundle.rules` it does not read — a path its own
+  // profile does not declare, and output that looks right and does nothing.
+  if (form === null) {
+    diagnostics.push(
+      diagnostic("AB361", `${target} has no native command-policy format`, "unsupported", {
+        target,
+        profile,
+        remediation: `Express the policy natively for ${target}; prompt rules are not security policy.`,
+      }),
+    );
+    return;
+  }
+  // `paths.project.policies` is the surface each form writes into, and the
+  // forms disagree about what that means: Claude Code and Cursor name a file,
+  // Codex names the directory its rules file lives in. Each form reads it the
+  // way its own host does rather than the field being normalized to one shape.
+  const policyPath = profileFor(target).paths.project.policies;
+  if (form === "claude-permissions") {
     const permissions: Record<string, string[]> = { allow: [], ask: [], deny: [] };
     for (const entry of entries) {
       const action = String(entry.action ?? entry.decision ?? "prompt");
@@ -776,8 +802,12 @@ function renderPolicies(
         : String(rawPattern);
       permissions[action === "prompt" ? "ask" : action]?.push(`Bash(${pattern} *)`);
     }
-    artifacts.push({ path: ".claude/settings.json", content: json({ permissions }), mode: 0o644 });
-  } else {
+    artifacts.push({
+      path: policyPath ?? ".claude/settings.json",
+      content: json({ permissions }),
+      mode: 0o644,
+    });
+  } else if (form === "codex-prefix-rules") {
     const lines = entries.map((entry) => {
       const rawPattern = entry.pattern ?? entry.prefix ?? entry.command ?? [];
       const pattern = Array.isArray(rawPattern)
@@ -800,7 +830,7 @@ function renderPolicies(
       return `prefix_rule(\n${fields.join("\n")}\n)`;
     });
     artifacts.push({
-      path: ".codex/rules/bundle.rules",
+      path: `${policyPath ?? ".codex/rules"}/bundle.rules`,
       content: Buffer.from(lines.join("\n") + "\n"),
       mode: 0o644,
     });
@@ -821,8 +851,10 @@ export function renderBundle(
       const overlay = bundle.overlays.find((item) => item.target === target);
       if (profile === "plugin") {
         const { directory: manifestDir, file: manifestFile } = profileFor(target).manifest;
+        // `directory` is declared nullable for a host whose manifest sits at
+        // the plugin root; `import/detect.ts` already honours that.
         local.push({
-          path: `${manifestDir}/${manifestFile}`,
+          path: manifestDir ? `${manifestDir}/${manifestFile}` : manifestFile,
           content: json(
             applyOverlayManifest(manifest(bundle, target), overlay?.manifest, target, diagnostics),
           ),
@@ -835,11 +867,15 @@ export function renderBundle(
         renderAgent(agent, target, profile, bundle, diagnostics, local);
       renderRules(bundle, target, profile, diagnostics, local);
       renderPolicies(bundle, target, profile, diagnostics, local);
-      if (bundle.hooks && profile === "plugin") {
+      if (bundle.hooks && profileFor(target).features.hooks.profiles.includes(profile)) {
+        const hookRoots = profileFor(target).paths.plugin;
         const hooks = transformedHooks(bundle, target, profile, diagnostics);
-        if (hooks) local.push({ path: "hooks/hooks.json", content: json(hooks), mode: 0o644 });
+        if (hooks) local.push({ path: hookRoots.hooksFile, content: json(hooks), mode: 0o644 });
         for (const file of bundle.hookFiles)
-          local.push({ ...file, path: `hooks/${file.path.split(path.sep).join("/")}` });
+          local.push({
+            ...file,
+            path: `${hookRoots.hooks}/${file.path.split(path.sep).join("/")}`,
+          });
       }
       if (bundle.mcp && profile === "plugin") {
         const targetMcp = structuredTargetValue(bundle.mcp.value, target);
@@ -851,7 +887,8 @@ export function renderBundle(
           undefined,
           profile,
         );
-        local.push({ path: ".mcp.json", content: json(JSON.parse(rewritten)), mode: 0o644 });
+        const pluginMcp = profileFor(target).paths.plugin.mcp ?? ".mcp.json";
+        local.push({ path: pluginMcp, content: json(JSON.parse(rewritten)), mode: 0o644 });
       } else if (bundle.mcp && profile === "project") {
         const targetMcp = structuredTargetValue(bundle.mcp.value, target);
         const rewritten = rewritePlaceholders(
@@ -862,7 +899,7 @@ export function renderBundle(
           undefined,
           profile,
         );
-        const mcpPath = target === "cursor" ? ".cursor/mcp.json" : ".mcp.json";
+        const mcpPath = profileFor(target).paths.project.mcp ?? ".mcp.json";
         if (target === "codex" && typeof targetMcp.configToml === "string")
           local.push({
             path: ".codex/config.toml",

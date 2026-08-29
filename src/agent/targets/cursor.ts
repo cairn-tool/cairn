@@ -32,6 +32,7 @@ export const cursorProfile: TargetProfile = {
       skills: "skills",
       agents: "agents",
       hooks: "hooks",
+      hooksFile: "hooks/hooks.json",
       assets: "assets",
       mcp: ".mcp.json",
     },
@@ -60,6 +61,7 @@ export const cursorProfile: TargetProfile = {
     },
     envelope: "versioned",
     handlerShape: "flat",
+    matcherEvents: [],
     supportedProtocols: ["json", "stdio-json"],
   },
   models: {
@@ -75,6 +77,8 @@ export const cursorProfile: TargetProfile = {
     approximateActivation: [],
     form: "mdc",
   },
+  policies: { form: "cursor-hooks" },
+  skills: { invocationPolicy: "advisory" },
   marketplace: {
     catalog: {
       repo: { directory: ".cursor-plugin", file: "marketplace.json" },
