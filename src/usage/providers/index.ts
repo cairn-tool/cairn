@@ -1,6 +1,7 @@
 import { antigravityProvider } from "./antigravity.js";
 import { claudeCodeProvider } from "./claude-code.js";
 import { codexProvider } from "./codex.js";
+import { geminiCliProvider } from "./gemini-cli.js";
 import type { UsageProvider } from "./types.js";
 
 /**
@@ -15,6 +16,9 @@ export const PROVIDERS: readonly UsageProvider[] = [
   claudeCodeProvider,
   codexProvider,
   antigravityProvider,
+  // Appended, never inserted: `usage providers` reports in registry order and
+  // the e2e suite pins the earlier entries by position.
+  geminiCliProvider,
 ];
 
 export const DEFAULT_PROVIDER = claudeCodeProvider.name;

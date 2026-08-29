@@ -20,11 +20,12 @@ machine, and what its logs can answer.
 
 ## Registered providers
 
-| Provider      | Source                              | Notes                                                                  |
-| ------------- | ----------------------------------- | ---------------------------------------------------------------------- |
-| `claude-code` | `$CLAUDE_CONFIG_DIR` or `~/.claude` | The default. Records every surface.                                    |
-| `codex`       | `$CODEX_HOME` or `~/.codex`         | No hook executions are written to the transcripts.                     |
-| `antigravity` | `~/.gemini/antigravity-cli`         | CLI only; the IDE store is encrypted. No cache detail, skills, or MCP. |
+| Provider      | Source                              | Notes                                                                                                |
+| ------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `claude-code` | `$CLAUDE_CONFIG_DIR` or `~/.claude` | The default. Records every surface.                                                                  |
+| `codex`       | `$CODEX_HOME` or `~/.codex`         | No hook executions are written to the transcripts.                                                   |
+| `antigravity` | `~/.gemini/antigravity-cli`         | CLI only; the IDE store is encrypted. No cache detail, skills, or MCP.                               |
+| `gemini-cli`  | `~/.gemini`                         | No environment override. Slash commands come from a per-project `logs.json`; no MCP or hook records. |
 
 Cursor is not registered. It keeps its chat history in a SQLite store whose shape is undocumented,
 and adding it needs a machine with real data to write and verify a parser against.

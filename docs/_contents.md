@@ -63,6 +63,13 @@ What is known about each assistant Cairn renders for, reads logs from, or archiv
 - [Usage logs](providers/antigravity/usage-logs.md)
 - [Archiving](providers/antigravity/archiving.md)
 
+### Gemini CLI
+
+- [Overview](providers/gemini-cli/overview.md)
+- [Agent bundles](providers/gemini-cli/agent-bundles.md)
+- [Usage logs](providers/gemini-cli/usage-logs.md)
+- [Archiving](providers/gemini-cli/archiving.md)
+
 ## Contract commands
 
 - [`describe`](commands/describe.md)

@@ -46,6 +46,7 @@ because they are three orders of magnitude larger.
 | `claude-code` | `plans/*.md`                                | `projects/**/tool-results/**`, `**/memory/*.md`   | `projects/**/*.jsonl` and subagent meta | `history.jsonl`, `daemon.log`, shell snapshots     |
 | `codex`       | — (Codex writes none)                       | `computer-use/**`                                 | `sessions/**/rollout-*.jsonl`           | `history.jsonl`, `*.sqlite`                        |
 | `antigravity` | `brain/*/**.md` outside `.system_generated` | other `brain/` output outside `.system_generated` | `**/logs/transcript.jsonl`              | `log/*.log`, `history.jsonl`, `conversations/*.db` |
+| `gemini-cli`  | `tmp/*/*/plans/*.md`                        | `tmp/*/tool-outputs/**`                           | `tmp/*/chats/**/*.jsonl`                | `tmp/*/logs.json`                                  |
 
 Antigravity's plans and artifacts are told apart from its machinery by one directory name,
 `.system_generated`, rather than by a list of filenames. Its `transcript_full.jsonl` is

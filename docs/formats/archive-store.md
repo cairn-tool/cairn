@@ -153,8 +153,9 @@ on the command line and singular is what a row reports.
 
 What each provider contributes is declared per provider; see the archiving page for
 [Claude Code](../providers/claude-code/archiving.md),
-[Codex](../providers/codex/archiving.md), and
-[Antigravity](../providers/antigravity/archiving.md).
+[Codex](../providers/codex/archiving.md),
+[Antigravity](../providers/antigravity/archiving.md), and
+[Gemini CLI](../providers/gemini-cli/archiving.md).
 
 ## SQLite snapshotting
 

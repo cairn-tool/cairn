@@ -1,6 +1,6 @@
 # Providers
 
-Cairn touches four assistants, in three different roles, and no assistant fills all three.
+Cairn touches five assistants, in three different roles, and no assistant fills all three.
 This directory records what is currently known about each one: where it keeps its files, what
 those files contain, which parts Cairn reads or writes, and the caveats that were expensive
 enough to discover that they are worth writing down.
@@ -29,6 +29,7 @@ different answers and only one of them is a bug.
 | [Codex](providers/codex/overview.md)             | yes               | yes              | yes            |
 | [Cursor](providers/cursor/overview.md)           | yes               | no               | no             |
 | [Antigravity](providers/antigravity/overview.md) | no                | yes              | yes            |
+| [Gemini CLI](providers/gemini-cli/overview.md)   | no                | yes              | yes            |
 
 ## Pages
 
@@ -67,6 +68,13 @@ Each provider directory holds the same four pages, so a fact is always in the sa
 - [Usage logs](providers/antigravity/usage-logs.md)
 - [Archiving](providers/antigravity/archiving.md)
 
+### Gemini CLI
+
+- [Overview](providers/gemini-cli/overview.md)
+- [Agent bundles](providers/gemini-cli/agent-bundles.md)
+- [Usage logs](providers/gemini-cli/usage-logs.md)
+- [Archiving](providers/gemini-cli/archiving.md)
+
 ## Where a provider's behavior is declared
 
 Nothing in this project branches on a provider's name. Each of the three roles reads a data
@@ -82,7 +90,7 @@ That rule is what makes these pages maintainable: a table here corresponds to a 
 module, not to a condition scattered across a renderer. It is also enforced — the conformance
 fixtures fail the build if the renderer emits a path the profile does not declare.
 
-Adding a fifth assistant is therefore a new module plus a registry line in each role it fills,
+Adding a sixth assistant is therefore a new module plus a registry line in each role it fills,
 and a directory here.
 
 ## Related documentation

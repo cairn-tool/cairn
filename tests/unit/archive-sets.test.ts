@@ -129,6 +129,33 @@ describe("artifact sets", () => {
       expect(set.match("2026/08/22/notes.jsonl")).toBe(false);
     });
   });
+
+  describe("gemini-cli", () => {
+    it("never sweeps the helper binaries that sit beside the projects", () => {
+      // ~/.gemini/tmp/bin/rg is 3.2 MB of downloaded ripgrep. Every matcher
+      // requires a named directory segment so that nothing here can match.
+      for (const set of profileFor("gemini-cli")!.sets) {
+        expect(set.match("bin/rg")).toBe(false);
+      }
+    });
+
+    it("tells a plan from a tool output from a transcript", () => {
+      expect(matcher("gemini-cli", "plans").match("alpha/session-uuid/plans/design.md")).toBe(true);
+      expect(matcher("gemini-cli", "plans").match("alpha/chats/session-x.jsonl")).toBe(false);
+      expect(
+        matcher("gemini-cli", "tool-outputs").match("alpha/tool-outputs/session-u/read_1.txt"),
+      ).toBe(true);
+      expect(
+        matcher("gemini-cli", "transcripts").match("alpha/chats/parent-uuid/ab12cd.jsonl"),
+      ).toBe(true);
+    });
+
+    it("takes the project history and not a logs.json written deeper", () => {
+      const set = matcher("gemini-cli", "history");
+      expect(set.match("alpha/logs.json")).toBe(true);
+      expect(set.match("alpha/chats/parent-uuid/logs.json")).toBe(false);
+    });
+  });
 });
 
 describe("parseClasses", () => {

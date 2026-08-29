@@ -144,7 +144,7 @@ CREATE TABLE event(
 
 Token counts on a `response` event are **already corrected for each provider's distortions** —
 Claude Code deduplicated by response id, Codex differenced and cache-adjusted, Antigravity
-summed. See the per-provider usage pages under [Providers](../providers.md).
+summed, Gemini CLI deduplicated _and_ summed _and_ cache-adjusted. See the per-provider usage pages under [Providers](../providers.md).
 
 `hook_error` exists because Claude Code's `stop_hook_summary` reports failures with no matching
 execution record, so a hook's failure count and its execution count legitimately diverge.
@@ -242,4 +242,5 @@ that command's page rather than quietly fixed, because changing them is breaking
   [`usage migrate`](../commands/usage/migrate.md)
 - Per-provider parsing: [Claude Code](../providers/claude-code/usage-logs.md),
   [Codex](../providers/codex/usage-logs.md),
-  [Antigravity](../providers/antigravity/usage-logs.md)
+  [Antigravity](../providers/antigravity/usage-logs.md),
+  [Gemini CLI](../providers/gemini-cli/usage-logs.md)

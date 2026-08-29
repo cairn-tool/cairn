@@ -288,7 +288,13 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   reports a **per-request context size that is not cumulative** (sum it — it falls whenever
   context is trimmed, so differencing produces nonsense). Codex also counts cache reads _inside_
   `input_tokens`, so the cached part is subtracted out or its input reads several times high.
-  `tests/unit/usage-{codex,antigravity}.test.ts` pin each.
+  `tests/unit/usage-{codex,antigravity}.test.ts` pin each. Gemini CLI needs **all three
+  corrections at once**: it writes one assistant turn two to five times under a single `id`
+  (dedupe on `id`), reports a per-request context size (sum it), and counts the cached prefix
+  inside `input` (subtract it out). Its tool calls need a _second, different_ dedupe — the
+  `toolCalls` array grows across those repeats and never shrinks, so the rule there is
+  last-occurrence-wins, buffered and flushed at EOF. `tests/unit/usage-gemini-cli.test.ts` pins
+  each of them.
 - **Antigravity's tokens come from schema-less protobuf, and are guarded.**
   `src/usage/providers/protobuf.ts` is a hand-rolled wire reader because Google ships no
   `.proto`; the field numbers are reverse-engineered. `antigravity.ts` asserts
@@ -305,8 +311,17 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
 - **A session id is unique only within its provider.** `sessionKey()` in `src/usage/events.ts`
   qualifies it; counting or grouping sessions on the bare id merges two providers' sessions when
   they mint the same UUID, which they do.
-- **Only `claude-code` can prune subagents at discovery.** The others record the thread source
-  inside the file, so `scan.ts` filters on the parsed `kind` as well. Both filters must stay.
+- **Only `claude-code` and `gemini-cli` can prune subagents at discovery.** They record the
+  thread source in the transcript's path; `codex` and `antigravity` record it inside the file, so
+  `scan.ts` filters on the parsed `kind` as well. Both filters must stay.
+
+- **`gemini-cli` and `antigravity` share `~/.gemini` and must never claim each other's tree.**
+  The former roots at `~/.gemini` guarded on `tmp/`, the latter at `~/.gemini/antigravity-cli`
+  guarded on `conversations/`. Every `gemini-cli` archive set is rooted at `tmp` for the same
+  reason — it is what keeps the other provider's corpus, the encrypted IDE store, and
+  `oauth_creds.json` out of reach. A `gemini-cli` prompt count taken over subagent transcripts is
+  wrong by a factor of fourteen: a subagent's `user` record is the instruction its parent
+  injected, so prompts are counted in main transcripts only.
 - **Cursor is deliberately unregistered.** There is no local corpus to write or verify a parser
   against; `~/.cursor` on a machine without Cursor holds only third-party hook config.
 - **Every pre-rename identifier is still a read path, and the `LEGACY_*` constants are why.**

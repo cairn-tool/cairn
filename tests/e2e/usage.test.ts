@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 import { SCHEMA_BY_ID } from "../../src/contract/schemas/index.js";
 import { ANTIGRAVITY_FIXTURE, buildAntigravityLogs } from "../helpers/antigravity-fixture.js";
+import { GEMINI_FIXTURE, buildGeminiLogs } from "../helpers/gemini-cli-fixture.js";
 
 const exec = promisify(execFile);
 const cli = path.resolve("dist/cli.js");
@@ -25,13 +26,20 @@ const CODEX = ["--provider", "codex", "--logs", path.resolve("tests/fixtures/usa
 let antigravityRoot = "";
 const ANTIGRAVITY = (): string[] => ["--provider", "antigravity", "--logs", antigravityRoot];
 
+/** Generated for the same reason, minus the protobuf: it is a whole log tree. */
+let geminiRoot = "";
+const GEMINI = (): string[] => ["--provider", "gemini-cli", "--logs", geminiRoot];
+
 beforeAll(() => {
   antigravityRoot = fs.mkdtempSync(path.join(os.tmpdir(), "usage-e2e-antigravity-"));
   buildAntigravityLogs(antigravityRoot, ANTIGRAVITY_FIXTURE);
+  geminiRoot = fs.mkdtempSync(path.join(os.tmpdir(), "usage-e2e-gemini-"));
+  buildGeminiLogs(geminiRoot, GEMINI_FIXTURE);
 });
 
 afterAll(() => {
   fs.rmSync(antigravityRoot, { recursive: true, force: true });
+  fs.rmSync(geminiRoot, { recursive: true, force: true });
 });
 
 /** The CSI introducer, so the styling assertions do not embed a raw control byte. */
@@ -514,6 +522,66 @@ describe("the antigravity provider", () => {
   });
 });
 
+describe("the gemini-cli provider", () => {
+  it("counts one response per turn however many times the turn was written", async () => {
+    const payload = json(
+      await run("usage", "tokens", "--by", "model", ...GEMINI(), "--no-index", "-fj"),
+    );
+    validate("usage-rollup", payload);
+    const rows = payload.rows as Array<{ key: string; tokens: Record<string, number> }>;
+    const pro = rows.find((row) => row.key === "gemini-3.1-pro-preview")!;
+    // The fixture writes one turn three times under a single id, and a second
+    // turn in the subagent. Counting copies would report four requests here.
+    expect(pro.tokens.requests).toBe(2);
+    // Input is reported net of the cached prefix, which is reported separately.
+    expect(pro.tokens.input).toBe(1000);
+    expect(pro.tokens.cacheRead).toBe(500);
+  });
+
+  it("keeps its own tool names, and still fills the skill and agent reports", async () => {
+    const tools = json(await run("usage", "tools", ...GEMINI(), "--no-index", "-fj"))
+      .rows as Array<{
+      key: string;
+      kind: string;
+    }>;
+    const invoke = tools.find((row) => row.key === "invoke_agent")!;
+    // `kind` is Claude Code's vocabulary; another assistant's own spawning
+    // builtin is a builtin there, and the agents report is what sees it.
+    expect(invoke.kind).toBe("builtin");
+
+    const skills = json(await run("usage", "skills", ...GEMINI(), "--no-index", "-fj"))
+      .rows as Array<{ key: string }>;
+    expect(skills.map((row) => row.key)).toContain("docs-lint");
+    const agents = json(await run("usage", "agents", ...GEMINI(), "--no-index", "-fj"))
+      .rows as Array<{ key: string }>;
+    expect(agents.map((row) => row.key)).toContain("writer");
+  });
+
+  it("names slash commands from the history the transcript drops", async () => {
+    const rows = json(await run("usage", "commands", ...GEMINI(), "--no-index", "-fj"))
+      .rows as Array<{ key: string }>;
+    // `/deploy prod` reaches the transcript as `prod`; only logs.json keeps the name.
+    expect(rows.map((row) => row.key)).toContain("/deploy");
+  });
+
+  it("reports no hooks, because none of their executions is recorded", async () => {
+    const hooks = await run("usage", "hooks", ...GEMINI(), "--no-index");
+    expect(hooks.exitCode).toBe(0);
+    expect(hooks.stdout).toContain("does not record hook executions");
+  });
+
+  it("drops subagents from the walk rather than after reading them", async () => {
+    const all = json(await run("usage", "summary", ...GEMINI(), "--no-index", "-fj")).summary as {
+      transcripts: number;
+    };
+    const main = json(
+      await run("usage", "summary", ...GEMINI(), "--no-subagents", "--no-index", "-fj"),
+    ).summary as { transcripts: number };
+    expect(all.transcripts).toBe(3);
+    expect(main.transcripts).toBe(2);
+  });
+});
+
 describe("--provider all", () => {
   /**
    * A home directory of its own holding all three layouts.
@@ -532,6 +600,9 @@ describe("--provider all", () => {
       recursive: true,
     });
     buildAntigravityLogs(path.join(home, ".gemini", "antigravity-cli"), ANTIGRAVITY_FIXTURE);
+    // Both Gemini providers live under ~/.gemini, and neither may claim the
+    // other's tree: this one lands in `tmp/`, beside `antigravity-cli/`.
+    buildGeminiLogs(path.join(home, ".gemini"), GEMINI_FIXTURE);
   });
 
   afterAll(() => {
@@ -569,14 +640,22 @@ describe("--provider all", () => {
     validate("usage-rollup", payload);
     const scope = payload.scope as { provider: string; providers: string[] };
     expect(scope.provider).toBe("all");
-    expect(scope.providers).toEqual(["claude-code", "codex", "antigravity"]);
+    expect(scope.providers).toEqual(["claude-code", "codex", "antigravity", "gemini-cli"]);
     const rows = payload.rows as Array<{ key: string; tokens: { requests: number } }>;
-    expect(rows.map((row) => row.key).sort()).toEqual(["antigravity", "claude-code", "codex"]);
+    expect(rows.map((row) => row.key).sort()).toEqual([
+      "antigravity",
+      "claude-code",
+      "codex",
+      "gemini-cli",
+    ]);
     // Each provider's own figure, unchanged by being reported alongside others.
     const byName = Object.fromEntries(rows.map((row) => [row.key, row.tokens.requests]));
     expect(byName["claude-code"]).toBe(6);
     expect(byName.codex).toBe(4);
     expect(byName.antigravity).toBe(3);
+    // One turn written three times, one more in the second transcript, one in
+    // the subagent — three responses, not the five records that carry them.
+    expect(byName["gemini-cli"]).toBe(3);
   });
 
   it("sums the same activity into one headline", async () => {
@@ -584,9 +663,10 @@ describe("--provider all", () => {
       sessions: number;
       tokens: { requests: number };
     };
-    expect(summary.tokens.requests).toBe(13);
-    // Two Claude Code and Codex sessions each, two Antigravity trajectories.
-    expect(summary.sessions).toBe(5);
+    expect(summary.tokens.requests).toBe(16);
+    // Two Claude Code and Codex sessions each, two Antigravity trajectories,
+    // and three Gemini transcripts.
+    expect(summary.sessions).toBe(8);
   });
 
   it("keeps a capability the others lack available to the one that has it", async () => {
@@ -615,9 +695,11 @@ describe("--provider all", () => {
   });
 
   it("names an unknown provider's alternatives, including all", async () => {
-    const result = await run("usage", "summary", "--provider", "gemini-cli", ...FIXTURE);
+    // A name no assistant will ever take, so registering a real provider does
+    // not quietly turn this case into a success.
+    const result = await run("usage", "summary", "--provider", "nonesuch", ...FIXTURE);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("claude-code, codex, antigravity, all");
+    expect(result.stderr).toContain("claude-code, codex, antigravity, gemini-cli, all");
   });
 
   it("reports every registered provider and what each can answer", async () => {
@@ -631,9 +713,13 @@ describe("--provider all", () => {
       "claude-code",
       "codex",
       "antigravity",
+      "gemini-cli",
     ]);
+    // Positional, and it stays valid only because the registry is appended to.
     expect(providers[1].capabilities.hooks).toBe(false);
     expect(providers[2].capabilities.cacheTokens).toBe(false);
+    expect(providers[3].capabilities.slashCommands).toBe(true);
+    expect(providers[3].capabilities.mcp).toBe(false);
   });
 
   it("reports a cache per provider", async () => {
@@ -641,6 +727,11 @@ describe("--provider all", () => {
     const payload = json(await runWith(cache, "usage", "index", "--provider", "all", "-fj"));
     validate("usage-index", payload);
     const caches = payload.caches as Array<{ provider: string }>;
-    expect(caches.map((entry) => entry.provider)).toEqual(["claude-code", "codex", "antigravity"]);
+    expect(caches.map((entry) => entry.provider)).toEqual([
+      "claude-code",
+      "codex",
+      "antigravity",
+      "gemini-cli",
+    ]);
   });
 });

@@ -1248,7 +1248,8 @@ those transcripts and reports on them — tokens, tools, skills, subagents, hook
 so "where is my context actually going" is a question with an answer. Nothing is sent anywhere,
 and nothing outside the usage store is written.
 
-Three log sources are registered: **Claude Code**, **Codex CLI**, and **Antigravity CLI**.
+Four log sources are registered: **Claude Code**, **Codex CLI**, **Antigravity CLI**, and
+**Gemini CLI**.
 
 ```bash
 cairn usage summary                        # headline totals across every project
@@ -1308,8 +1309,9 @@ See [shared usage command behavior](docs/commands/usage/common.md) for the full 
 time-window and project-selection rules, and what the totals do and do not cover. Each provider's
 transcript format and counting caveats are documented separately:
 [Claude Code](docs/providers/claude-code/usage-logs.md),
-[Codex](docs/providers/codex/usage-logs.md), and
-[Antigravity](docs/providers/antigravity/usage-logs.md).
+[Codex](docs/providers/codex/usage-logs.md),
+[Antigravity](docs/providers/antigravity/usage-logs.md), and
+[Gemini CLI](docs/providers/gemini-cli/usage-logs.md).
 
 ### Long-term archiving
 

@@ -62,15 +62,28 @@ brain/<id>/.system_generated/logs/transcript.jsonl   tools, timeline, prompts, e
 history.jsonl                                        slash commands
 ```
 
+### `gemini-cli`
+
+`~/.gemini`. There is no environment override; only `--logs`. Discovery is confined to `tmp/`,
+which is also what keeps it off `antigravity`'s tree in the same home directory.
+
+```text
+tmp/<slug>/chats/session-<local stamp>-<short id>.jsonl   main transcript
+tmp/<slug>/chats/<parent session uuid>/<short id>.jsonl   subagent transcript
+tmp/<slug>/.project_root                                  the absolute project root
+tmp/<slug>/logs.json                                      prompts and slash commands
+```
+
 ### Subagents
 
 Subagent transcripts are included by default. On a real corpus they routinely outnumber main
 transcripts several times over and account for a large share of all tokens, so excluding them
 with `--no-subagents` makes the headline numbers a main-thread figure rather than a total.
 
-Only `claude-code` records a subagent in the transcript's _path_, so only it can drop them
-before opening anything. The others record it inside the file, so `--no-subagents` filters them
-after reading rather than before — the answer is the same, the saving is not.
+`claude-code` and `gemini-cli` record a subagent in the transcript's _path_, so those two can
+drop them before opening anything. `codex` and `antigravity` record it inside the file, so
+`--no-subagents` filters them after reading rather than before — the answer is the same, the
+saving is not.
 
 ## Counting
 
@@ -78,15 +91,17 @@ Every provider is normalized onto one token model, which means undoing a differe
 each. These are not cosmetic differences: getting any of them wrong changes the answer by a
 factor, not a rounding.
 
-| Provider      | What the log records                                                                                     | What is done with it                                                                       |
-| ------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `claude-code` | One API response written as several lines, each carrying an identical full copy of its usage             | Deduplicated by response; summing the lines over-counts output roughly two and a half fold |
-| `codex`       | A **running total** per thread, alongside a per-request field that is re-emitted unchanged on duplicates | Consecutive totals are differenced; summing the per-request field inflates by about 4%     |
-| `antigravity` | A **per-request** context size that is not a running total — it falls whenever context is trimmed        | Summed; differencing it would produce nonsense                                             |
+| Provider      | What the log records                                                                                                           | What is done with it                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `claude-code` | One API response written as several lines, each carrying an identical full copy of its usage                                   | Deduplicated by response; summing the lines over-counts output roughly two and a half fold      |
+| `codex`       | A **running total** per thread, alongside a per-request field that is re-emitted unchanged on duplicates                       | Consecutive totals are differenced; summing the per-request field inflates by about 4%          |
+| `antigravity` | A **per-request** context size that is not a running total — it falls whenever context is trimmed                              | Summed; differencing it would produce nonsense                                                  |
+| `gemini-cli`  | All three at once: a per-request context size, with the cached part inside it, written two to five times under one response id | Deduplicated by response id, summed rather than differenced, and the cached part subtracted out |
 
-Codex counts cache reads _inside_ its input figure, unlike the others, so the cached part is
-subtracted out and reported as a cache read. Left merged, Codex input reads several times higher
-than the same work under Claude Code.
+Codex and Gemini CLI count cache reads _inside_ their input figure, unlike the others, so the
+cached part is subtracted out and reported as a cache read. Left merged, their input reads
+several times higher than the same work under Claude Code. Gemini CLI records no cache-**write**
+figure at all, so that counter stays at zero.
 
 Records an assistant generated locally rather than by calling a model carry no usable counters
 and are excluded.
@@ -102,20 +117,22 @@ the reports read rather than branching on its name — so a command whose subjec
 not record says so and exits `0`, rather than printing an empty table that would read as "you
 never did this".
 
-|                           | `claude-code` | `codex` | `antigravity` |
-| ------------------------- | ------------- | ------- | ------------- |
-| tokens                    | yes           | yes     | yes           |
-| cache read / write detail | yes           | yes     | no            |
-| tools                     | yes           | yes     | yes           |
-| MCP                       | yes           | yes     | no            |
-| skills                    | yes           | yes     | no            |
-| subagents                 | yes           | yes     | yes           |
-| hooks                     | yes           | no      | no            |
-| slash commands            | yes           | yes     | yes           |
+|                           | `claude-code` | `codex` | `antigravity` | `gemini-cli` |
+| ------------------------- | ------------- | ------- | ------------- | ------------ |
+| tokens                    | yes           | yes     | yes           | yes          |
+| cache read / write detail | yes           | yes     | no            | read only    |
+| tools                     | yes           | yes     | yes           | yes          |
+| MCP                       | yes           | yes     | no            | no           |
+| skills                    | yes           | yes     | no            | yes          |
+| subagents                 | yes           | yes     | yes           | yes          |
+| hooks                     | yes           | no      | no            | no           |
+| slash commands            | yes           | yes     | yes           | yes          |
 
-Codex configures hooks but records no execution of one; Antigravity's only hook appears as prose
-inside a system message, and counting a substring of free text is a guess rather than a
-measurement. Antigravity records no cache breakdown at all, so its input figure is context
+Codex and Gemini CLI configure hooks but record no execution of one; Antigravity's only hook
+appears as prose inside a system message, and counting a substring of free text is a guess rather
+than a measurement. A Gemini CLI tool call records a bare name with no server, so an MCP tool
+cannot be told from a builtin, and its slash commands come from a per-project `logs.json` rather
+than from the transcript, which keeps only the expanded prompt. Antigravity records no cache breakdown at all, so its input figure is context
 processed — a prompt prefix counted once per turn — rather than unique input.
 
 `usage providers` prints this table for the providers actually present on your machine.

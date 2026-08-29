@@ -3,7 +3,8 @@
 **There is no Cursor usage provider, and the omission is deliberate.**
 
 `cairn usage --provider cursor` reports an unknown provider and exits `1`. `--provider all`
-covers `claude-code`, `codex`, and `antigravity`, and does not silently skip a fourth.
+covers `claude-code`, `codex`, `antigravity`, and `gemini-cli`, and does not silently skip a
+fifth.
 
 ## Why not
 
@@ -32,7 +33,7 @@ The work is not the interface. It is establishing, against real files:
 - where the log root is, and how to tell "absent" from "empty"
 - which record identifies a session, and whether that identifier is unique or repeated
 - whether the token figure is per-request, cumulative, or a context size — and which
-  distortion has to be undone, as each of the other three providers has a different one
+  distortion has to be undone, as each of the other registered providers has a different one
 - whether cache reads sit inside or beside the input figure
 - whether a subagent is identifiable from the path or only from inside the file
 - which of tools, skills, hooks, MCP, and slash commands leave a countable record, so

@@ -239,7 +239,68 @@ const ANTIGRAVITY: ArchiveProfile = {
   ],
 };
 
-export const ARCHIVE_PROFILES: readonly ArchiveProfile[] = [CLAUDE_CODE, CODEX, ANTIGRAVITY];
+/**
+ * Gemini CLI, under `~/.gemini`.
+ *
+ * Every set is rooted at `tmp`, and that confinement is the point. `~/.gemini`
+ * is a shared tree: `antigravity-cli/` belongs to the other provider rooted
+ * here and would otherwise be archived twice, `antigravity/` is the IDE's store
+ * and is encrypted at rest, and `oauth_creds.json` is a credential. None of
+ * them is reachable from `tmp`.
+ *
+ * There is deliberately no catch-all under `tmp` either: the CLI downloads
+ * helper binaries into `tmp/bin/` — a 3.2 MB `rg` on this machine — beside the
+ * projects. Every matcher below requires a named directory segment, so nothing
+ * that is not conversation data can match one.
+ */
+const GEMINI_CLI: ArchiveProfile = {
+  provider: "gemini-cli",
+  sets: [
+    {
+      id: "plans",
+      class: "plan",
+      description: "Plan documents",
+      root: "tmp",
+      recursive: true,
+      // <slug>/<session uuid>/plans/<name>.md — the directory name is the whole
+      // distinction, exactly as `.system_generated` is for Antigravity.
+      match: (relative) => under(relative, "plans") && isMarkdown(relative),
+    },
+    {
+      id: "tool-outputs",
+      class: "artifact",
+      description: "Captured tool output",
+      root: "tmp",
+      recursive: true,
+      match: (relative) => under(relative, "tool-outputs"),
+    },
+    {
+      id: "transcripts",
+      class: "transcript",
+      description: "Session and subagent chat transcripts",
+      root: "tmp",
+      recursive: true,
+      match: (relative) => under(relative, "chats") && relative.endsWith(".jsonl"),
+    },
+    {
+      id: "history",
+      class: "log",
+      description: "Prompt and slash-command history",
+      root: "tmp",
+      recursive: true,
+      // Depth-checked rather than matched on the basename, so that a `logs.json`
+      // written deeper in a project cannot be swept in as project history.
+      match: (relative) => segments(relative).length === 2 && segments(relative)[1] === "logs.json",
+    },
+  ],
+};
+
+export const ARCHIVE_PROFILES: readonly ArchiveProfile[] = [
+  CLAUDE_CODE,
+  CODEX,
+  ANTIGRAVITY,
+  GEMINI_CLI,
+];
 
 export function profileFor(provider: string): ArchiveProfile | undefined {
   return ARCHIVE_PROFILES.find((profile) => profile.provider === provider);

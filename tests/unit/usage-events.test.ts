@@ -5,9 +5,11 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { claudeCodeProvider } from "../../src/usage/providers/claude-code.js";
 import { codexProvider } from "../../src/usage/providers/codex.js";
 import { antigravityProvider } from "../../src/usage/providers/antigravity.js";
+import { geminiCliProvider } from "../../src/usage/providers/gemini-cli.js";
 import type { TranscriptFile, UsageProvider } from "../../src/usage/providers/types.js";
 import { foldDays } from "../../src/usage/events.js";
 import { ANTIGRAVITY_FIXTURE, buildAntigravityLogs } from "../helpers/antigravity-fixture.js";
+import { GEMINI_FIXTURE, buildGeminiLogs } from "../helpers/gemini-cli-fixture.js";
 
 /**
  * The contract that makes the event stream trustworthy.
@@ -262,6 +264,28 @@ describe("the event stream folds back into the day buckets", () => {
       const found = antigravityProvider.discover(root, { subagents: true });
       expect(found.length).toBeGreaterThan(0);
       for (const file of found) await expectFoldMatches(antigravityProvider, file);
+    });
+  });
+
+  describe("gemini-cli", () => {
+    let root = "";
+    beforeAll(() => {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), "usage-events-gemini-"));
+      buildGeminiLogs(root, GEMINI_FIXTURE);
+    });
+    afterAll(() => {
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it("reproduces every counter it writes, including the deferred tool flush", async () => {
+      // Two things in this provider make the fold worth pinning. Tool calls are
+      // buffered and replayed at end of file, so an event stamped with the
+      // flush time rather than the record's would land on the wrong day; and
+      // slash commands arrive from `logs.json` on days the transcript never
+      // touched, so their bucket has to be opened on the aggregate side too.
+      const found = geminiCliProvider.discover(root, { subagents: true });
+      expect(found.length).toBeGreaterThan(0);
+      for (const file of found) await expectFoldMatches(geminiCliProvider, file);
     });
   });
 });
