@@ -333,7 +333,9 @@ cairn md graph docs --format json --envelope
 ```
 
 See [docs/contract.md](docs/contract.md) for the versioning rules, the stream guarantees, and
-what does and does not count as a breaking change.
+what does and does not count as a breaking change. [docs/formats.md](docs/formats.md) documents
+the files Cairn itself reads and writes, and [docs/providers.md](docs/providers.md) records what
+is known about each assistant's own formats.
 
 ## Commands
 
@@ -529,7 +531,7 @@ Overlay files are copied verbatim — no placeholder rewriting, no conditional b
 cannot escape their target root. They carry `"origin": "native"` in JSON output, and
 `agent doctor` reports them under `overlays` rather than treating them as undeclared paths.
 `marketplace:` is metadata only; `agent convert` ignores it. See
-[`agent convert`](docs/commands/agent-convert.md#native-overlays) for the full rules.
+[`agent convert`](docs/commands/agent/convert.md#native-overlays) for the full rules.
 
 Canonical `${ARGUMENTS}`, `${BUNDLE_ROOT}`, and `${SKILL_DIR}` placeholders are translated
 to native substitutions where available or explanatory instructions where they are not.
@@ -548,7 +550,11 @@ recognized during migration.
 | MCP/assets     | Normalized/pass-through         | Normalized/pass-through                 | Normalized/pass-through                       |
 
 This table is a summary. `cairn agent specs --format json` is the authoritative,
-machine-readable form, and is generated from the same profiles the renderer uses.
+machine-readable form, and is generated from the same profiles the renderer uses. The prose form,
+target by target, is under [docs/providers.md](docs/providers.md):
+[Claude Code](docs/providers/claude-code/agent-bundles.md),
+[Codex](docs/providers/codex/agent-bundles.md), and
+[Cursor](docs/providers/cursor/agent-bundles.md).
 
 Point `agent convert` directly at an existing Claude plugin containing
 `.claude-plugin/plugin.json` to migrate it. The importer retains manifest metadata, skills,
@@ -1233,7 +1239,7 @@ the boundary explicitly.
 This is the only command that executes anything. What makes that acceptable is that the command
 is declared by name in a tracked file inside the workspace rather than discovered in content
 being analyzed — the registry sits at the same trust level as a `Makefile`. See
-[`scripts run`](docs/commands/scripts-run.md) for the full boundary.
+[`scripts run`](docs/commands/scripts/run.md) for the full boundary.
 
 ### Usage reporting
 
@@ -1298,8 +1304,12 @@ it is migrated forward across versions rather than discarded.
 What a provider can answer is data it declares rather than a branch in the reports, so a further
 assistant's logs are one new module and one registry line away from joining the same subcommands.
 
-See [shared usage command behavior](docs/commands/usage-common.md) for the full option set, the
-time-window and project-selection rules, and what the totals do and do not cover.
+See [shared usage command behavior](docs/commands/usage/common.md) for the full option set, the
+time-window and project-selection rules, and what the totals do and do not cover. Each provider's
+transcript format and counting caveats are documented separately:
+[Claude Code](docs/providers/claude-code/usage-logs.md),
+[Codex](docs/providers/codex/usage-logs.md), and
+[Antigravity](docs/providers/antigravity/usage-logs.md).
 
 ### Long-term archiving
 
@@ -1337,8 +1347,9 @@ by a blocklist that might one day miss something — they are simply never walke
 stores, which all carry `-wal` sidecars, are read through the online backup API so the archived
 copy is a consistent snapshot rather than a possibly torn page image.
 
-See [shared archive command behavior](docs/commands/archive-common.md) for the full set list,
-storage layout, and exit codes.
+See [shared archive command behavior](docs/commands/archive/common.md) for the full set list,
+storage layout, and exit codes, and [docs/formats/archive-store.md](docs/formats/archive-store.md)
+for the on-disk format.
 
 ## Checks
 

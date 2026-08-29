@@ -96,7 +96,7 @@ HTTP-status lists. Every boolean field must be a YAML boolean, not a quoted stri
 ## Script registry
 
 `scripts` is a top-level key, not a `commands.` entry. It declares named scripts for the
-[`scripts` toolset](commands/scripts-run.md), which resolves a name by walking every
+[`scripts` toolset](commands/scripts/run.md), which resolves a name by walking every
 `.cairn.yml` from the working directory to the repository root and taking the nearest file
 that defines it. Markdown commands never read this block, but they do validate it — a typo here
 is an error for every command that loads configuration, rather than a surprise at run time.

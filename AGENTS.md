@@ -30,7 +30,8 @@ tests/{unit,integration,e2e}
 There are five toolsets, `md`, `agent`, `scripts`, `usage`, and `archive`, plus the top-level `check-update`,
 `describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
 `command(...)` registration in `src/cli.ts`, a `src/contract/registry.ts` entry, a
-`docs/commands/<name>.md` page with entries in `docs/commands.md` and `docs/_contents.md`, a
+`docs/commands/<toolset>/<name>.md` page (top-level commands stay directly under
+`docs/commands/`) with entries in `docs/commands.md` and `docs/_contents.md`, a
 README entry, and e2e coverage. For an `agent` subcommand, also widen
 `AgentResult["command"]` in `src/agent/types.ts` and the `command` enum plus `commands` list
 in `src/contract/schemas/agent.ts`. A new toolset group also needs adding to the `groups` set
@@ -162,7 +163,7 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   inside the outer block's `value`, so a fenced example _documenting_ the syntax is unreachable
   rather than merely guarded — unlike the TOC markers, which `synchronizeToc` has to filter
   through `isLineInCodeBlock`. "Optimizing" `src/snippets.ts` into a line scan would make this
-  repo's own `docs/commands/md-check-snippets.md` go live. `tests/e2e/cli.test.ts` runs
+  repo's own `docs/commands/md/check-snippets.md` go live. `tests/e2e/cli.test.ts` runs
   `md check-snippets docs README.md` over this repository and asserts exit 0.
 - **`MdCodeBlock.meta`, `start`, and `end` are internal.** No command projects them into a
   payload. Emitting `meta` unconditionally would change `md code-blocks -fj`, the MCP
@@ -261,7 +262,7 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   the per-project shard files, so `shards` counts something that no longer exists but is a
   required property of the published schema; `removed` now counts transcripts, not files; and
   `bytes` is the whole store's size repeated on every `caches` entry. Recorded in the registry
-  `notes` and `docs/commands/usage-index.md` rather than quietly fixed, the same rule as
+  `notes` and `docs/commands/usage/index.md` rather than quietly fixed, the same rule as
   `md links -fj` and `md lint-dir --summary`.
 - **`usage --since`/`--until` are day-granular, deliberately.** The day rollup is what makes
   `tokens --by day` cheap, and the bounds are pushed into SQL against it; accepting an instant

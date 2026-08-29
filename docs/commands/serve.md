@@ -71,12 +71,12 @@ reports a document's frontmatter as a setext heading exactly as `md outline` doe
 
 There is no write path in the process. Refactor tools are absent rather than gated behind a
 flag, so no configuration turns this server into one that can modify a workspace. Use
-[`md rename-heading`](md-rename-heading.md), [`md rename-file`](md-rename-file.md), or
-[`md fix`](md-fix.md) for that, where `--dry-run` and `--write` are explicit.
+[`md rename-heading`](md/rename-heading.md), [`md rename-file`](md/rename-file.md), or
+[`md fix`](md/fix.md) for that, where `--dry-run` and `--write` are explicit.
 
 The server also leaves the on-disk workspace index alone. It keeps a bounded in-memory cache
 instead, so a long-running session cannot grow without limit and cannot resurrect a snapshot
-that a concurrent [`md index clear`](md-index.md) deleted.
+that a concurrent [`md index clear`](md/index.md) deleted.
 
 ## Path confinement
 
@@ -110,7 +110,7 @@ This command is the only reason `@modelcontextprotocol/sdk` is a dependency. The
 on an HTTP and OAuth stack (`express`, `hono`, `jose`, `pkce-challenge`, and others) that a
 stdio server never loads at runtime but that every install of this package still fetches. That
 is a real supply-chain cost, recorded here rather than left for you to discover — the same
-scrutiny [`agent audit`](agent-audit.md) applies to bundles.
+scrutiny [`agent audit`](agent/audit.md) applies to bundles.
 
 ## Exit codes
 
