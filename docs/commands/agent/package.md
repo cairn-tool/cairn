@@ -25,21 +25,21 @@ checklist; taking an irreversible external action is left to you.
 
 ## Options
 
-| Option                 | Default  | Description                                                                   |
-| ---------------------- | -------- | ----------------------------------------------------------------------------- |
-| `--target <target>`    | Required | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, or `all`. |
-| `--output <dir>`       | Required | Package root. Must not be inside the bundle.                                  |
-| `--profile <profile>`  | `both`   | `plugin`, `project`, or `both`.                                               |
-| `--marketplace <mode>` | `repo`   | Catalog mode: `repo`, `local`, or `none`.                                     |
-| `--archive`            | Off      | Also emit a deterministic `.tar.gz` per target and profile.                   |
-| `--from-dist <dir>`    | None     | Verify an existing `agent convert` tree matches this bundle.                  |
-| `--strict`             | Off      | Treat warnings as blocking findings.                                          |
-| `--force`              | Off      | Replace nonempty selected destinations.                                       |
-| `--dry-run`            | Off      | Build in memory without writing.                                              |
-| `--check`              | Off      | Compare against an existing package without writing.                          |
-| `--format <fmt>`       | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                |
-| `--envelope`           | Off      | Wrap `--format json` output in the versioned result envelope.                 |
-| `-h`, `--help`         | —        | Show help.                                                                    |
+| Option                 | Default  | Description                                                                               |
+| ---------------------- | -------- | ----------------------------------------------------------------------------------------- |
+| `--target <target>`    | Required | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, or `all`. |
+| `--output <dir>`       | Required | Package root. Must not be inside the bundle.                                              |
+| `--profile <profile>`  | `both`   | `plugin`, `project`, or `both`.                                                           |
+| `--marketplace <mode>` | `repo`   | Catalog mode: `repo`, `local`, or `none`.                                                 |
+| `--archive`            | Off      | Also emit a deterministic `.tar.gz` per target and profile.                               |
+| `--from-dist <dir>`    | None     | Verify an existing `agent convert` tree matches this bundle.                              |
+| `--strict`             | Off      | Treat warnings as blocking findings.                                                      |
+| `--force`              | Off      | Replace nonempty selected destinations.                                                   |
+| `--dry-run`            | Off      | Build in memory without writing.                                                          |
+| `--check`              | Off      | Compare against an existing package without writing.                                      |
+| `--format <fmt>`       | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                            |
+| `--envelope`           | Off      | Wrap `--format json` output in the versioned result envelope.                             |
+| `-h`, `--help`         | —        | Show help.                                                                                |
 
 `--check` and `--dry-run` cannot be combined.
 

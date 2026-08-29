@@ -33,6 +33,15 @@
     ],
     "antigravity/project": [
       ".agents/skills/shared/SKILL.md"
+    ],
+    "opencode/plugin": [
+      ".opencode-plugin/plugin.json",
+      "agent/helper.md",
+      "skills/shared/SKILL.md"
+    ],
+    "opencode/project": [
+      ".opencode/agent/helper.md",
+      ".opencode/skills/shared/SKILL.md"
     ]
   },
   "diagnostics": [

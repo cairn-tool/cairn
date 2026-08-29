@@ -5,6 +5,7 @@ import { antigravityProfile } from "./antigravity.js";
 import { claudeCodeProfile } from "./claude-code.js";
 import { codexProfile } from "./codex.js";
 import { cursorProfile } from "./cursor.js";
+import { opencodeProfile } from "./opencode.js";
 import type { PortableHookEvent, TargetProfile } from "./schema.js";
 import { FEATURE_KEYS, PORTABLE_HOOK_EVENTS, PROFILE_SCHEMA_VERSION } from "./schema.js";
 
@@ -19,6 +20,7 @@ export const TARGET_PROFILES: Record<AgentTarget, TargetProfile> = {
   codex: codexProfile,
   cursor: cursorProfile,
   antigravity: antigravityProfile,
+  opencode: opencodeProfile,
 };
 
 export function profileFor(target: AgentTarget): TargetProfile {

@@ -75,6 +75,7 @@ const CHOICES: Record<string, string[]> = {
     "codex",
     "cursor",
     "antigravity",
+    "opencode",
   ],
   "agent package|--marketplace": ["none", "local", "repo"],
   "agent install|--scope": ["user", "project"],

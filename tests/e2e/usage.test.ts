@@ -8,6 +8,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import { SCHEMA_BY_ID } from "../../src/contract/schemas/index.js";
 import { ANTIGRAVITY_FIXTURE, buildAntigravityLogs } from "../helpers/antigravity-fixture.js";
 import { GEMINI_FIXTURE, buildGeminiLogs } from "../helpers/gemini-cli-fixture.js";
+import { OPENCODE_FIXTURE, buildOpencodeStore } from "../helpers/opencode-fixture.js";
 
 const exec = promisify(execFile);
 const cli = path.resolve("dist/cli.js");
@@ -30,16 +31,23 @@ const ANTIGRAVITY = (): string[] => ["--provider", "antigravity", "--logs", anti
 let geminiRoot = "";
 const GEMINI = (): string[] => ["--provider", "gemini-cli", "--logs", geminiRoot];
 
+/** One SQLite store holding every session, so it is generated as well. */
+let opencodeRoot = "";
+const OPENCODE = (): string[] => ["--provider", "opencode", "--logs", opencodeRoot];
+
 beforeAll(() => {
   antigravityRoot = fs.mkdtempSync(path.join(os.tmpdir(), "usage-e2e-antigravity-"));
   buildAntigravityLogs(antigravityRoot, ANTIGRAVITY_FIXTURE);
   geminiRoot = fs.mkdtempSync(path.join(os.tmpdir(), "usage-e2e-gemini-"));
   buildGeminiLogs(geminiRoot, GEMINI_FIXTURE);
+  opencodeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "usage-e2e-opencode-"));
+  buildOpencodeStore(opencodeRoot, OPENCODE_FIXTURE);
 });
 
 afterAll(() => {
   fs.rmSync(antigravityRoot, { recursive: true, force: true });
   fs.rmSync(geminiRoot, { recursive: true, force: true });
+  fs.rmSync(opencodeRoot, { recursive: true, force: true });
 });
 
 /** The CSI introducer, so the styling assertions do not embed a raw control byte. */
@@ -582,6 +590,59 @@ describe("the gemini-cli provider", () => {
   });
 });
 
+describe("the opencode provider", () => {
+  it("reads one grain out of the three the store keeps", async () => {
+    const payload = json(
+      await run("usage", "tokens", "--by", "model", ...OPENCODE(), "--no-index", "-fj"),
+    );
+    validate("usage-rollup", payload);
+    const rows = payload.rows as Array<{ key: string; tokens: Record<string, number> }>;
+    // The same usage is on the message, on its step-finish part, and on the
+    // session rollup. Reading two of them would report 3000 input here.
+    expect(rows.map((row) => row.key)).toEqual(["anthropic/claude-sonnet-5"]);
+    expect(rows[0].tokens.input).toBe(1500);
+    expect(rows[0].tokens.output).toBe(300);
+    // Cache reads sit beside input rather than inside it, unlike Codex.
+    expect(rows[0].tokens.cacheRead).toBe(300);
+  });
+
+  it("splits one database into a session per row", async () => {
+    const all = json(await run("usage", "summary", ...OPENCODE(), "--no-index", "-fj")).summary as {
+      sessions: number;
+      transcripts: number;
+    };
+    expect(all.sessions).toBe(2);
+    const main = json(
+      await run("usage", "summary", ...OPENCODE(), "--no-subagents", "--no-index", "-fj"),
+    ).summary as { transcripts: number };
+    expect(all.transcripts).toBe(2);
+    expect(main.transcripts).toBe(1);
+  });
+
+  it("reports no skills, because the store records none", async () => {
+    const skills = await run("usage", "skills", ...OPENCODE(), "--no-index");
+    expect(skills.exitCode).toBe(0);
+    expect(skills.stdout).toContain("does not record skill invocations");
+  });
+
+  it("keeps stderr clean, which the sqlite experimental warning would not", async () => {
+    // The second provider to open somebody else's database, and the reason the
+    // loader that suppresses that warning is shared rather than copied.
+    const result = await run("usage", "summary", ...OPENCODE(), "--no-index", "-fj");
+    expect(result.stderr).toBe("");
+  });
+
+  it("round-trips a synthetic transcript key through the usage store", async () => {
+    const cache = cacheHome();
+    const warm = json(await runWith(cache, "usage", "summary", ...OPENCODE(), "-fj"));
+    const cached = json(await runWith(cache, "usage", "summary", ...OPENCODE(), "-fj"));
+    // A session has no file of its own, so its `relative` and freshness key are
+    // synthesized. They have to survive a write and a read to be worth anything.
+    expect((cached.scan as { cached: number }).cached).toBe(2);
+    expect(cached.summary).toEqual(warm.summary);
+  });
+});
+
 describe("--provider all", () => {
   /**
    * A home directory of its own holding all three layouts.
@@ -640,6 +701,8 @@ describe("--provider all", () => {
     validate("usage-rollup", payload);
     const scope = payload.scope as { provider: string; providers: string[] };
     expect(scope.provider).toBe("all");
+    // opencode is registered but absent here: it roots at $XDG_DATA_HOME, which
+    // this block points at a fresh cache directory with no store in it.
     expect(scope.providers).toEqual(["claude-code", "codex", "antigravity", "gemini-cli"]);
     const rows = payload.rows as Array<{ key: string; tokens: { requests: number } }>;
     expect(rows.map((row) => row.key).sort()).toEqual([
@@ -699,7 +762,7 @@ describe("--provider all", () => {
     // not quietly turn this case into a success.
     const result = await run("usage", "summary", "--provider", "nonesuch", ...FIXTURE);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("claude-code, codex, antigravity, gemini-cli, all");
+    expect(result.stderr).toContain("claude-code, codex, antigravity, gemini-cli, opencode, all");
   });
 
   it("reports every registered provider and what each can answer", async () => {
@@ -714,12 +777,15 @@ describe("--provider all", () => {
       "codex",
       "antigravity",
       "gemini-cli",
+      "opencode",
     ]);
     // Positional, and it stays valid only because the registry is appended to.
     expect(providers[1].capabilities.hooks).toBe(false);
     expect(providers[2].capabilities.cacheTokens).toBe(false);
     expect(providers[3].capabilities.slashCommands).toBe(true);
     expect(providers[3].capabilities.mcp).toBe(false);
+    expect(providers[4].capabilities.cacheTokens).toBe(true);
+    expect(providers[4].capabilities.skills).toBe(false);
   });
 
   it("reports a cache per provider", async () => {
@@ -732,6 +798,7 @@ describe("--provider all", () => {
       "codex",
       "antigravity",
       "gemini-cli",
+      "opencode",
     ]);
   });
 });

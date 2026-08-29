@@ -127,6 +127,7 @@ describe("native overlay declarations", () => {
       { target: "codex", root: "native/codex" },
       { target: "cursor", root: "native/cursor" },
       { target: "antigravity", root: "native/antigravity" },
+      { target: "opencode", root: "native/opencode" },
     ]);
     expect(defaultOverlayRoot("codex")).toBe("native/codex");
   });

@@ -300,6 +300,7 @@ describe("agent CLI", () => {
       "codex",
       "cursor",
       "antigravity",
+      "opencode",
     ]);
   });
 
@@ -308,7 +309,13 @@ describe("agent CLI", () => {
     expect(result.exitCode).toBe(0);
     const specs = JSON.parse(result.stdout).specs;
     expect(specs.schemaVersion).toBe("2");
-    expect(Object.keys(specs.targets)).toEqual(["claude-code", "codex", "cursor", "antigravity"]);
+    expect(Object.keys(specs.targets)).toEqual([
+      "claude-code",
+      "codex",
+      "cursor",
+      "antigravity",
+      "opencode",
+    ]);
     expect(specs.targets.cursor.paths.namespacePluginSkills).toBe(true);
   });
 
@@ -316,7 +323,7 @@ describe("agent CLI", () => {
     const result = await run("agent", "doctor", "--target", "all", "-fj");
     expect(result.exitCode).toBe(0);
     const doctor = JSON.parse(result.stdout).doctor;
-    expect(doctor.hosts).toHaveLength(4);
+    expect(doctor.hosts).toHaveLength(5);
     expect(doctor.hosts.every((host: { status: string }) => host.status === "unknown")).toBe(true);
     // Reserved for evidence from a host's own validator, which is never run.
     expect(doctor.native).toEqual([]);

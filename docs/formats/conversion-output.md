@@ -14,6 +14,7 @@ selected:
   codex/{plugin,project}/
   cursor/{plugin,project}/
   antigravity/{plugin,project}/
+  opencode/{plugin,project}/
   conversion-report.json
 ```
 
@@ -35,7 +36,7 @@ The full `agent convert` result, plus provenance, written at the output root.
   "command": "convert",
   "ok": true,
   "source": "/abs/path/to/bundle",
-  "targets": ["claude-code", "codex", "cursor", "antigravity"],
+  "targets": ["claude-code", "codex", "cursor", "antigravity", "opencode"],
   "profiles": ["plugin", "project"],
   "artifacts": [
     { "path": "claude-code/plugin/.claude-plugin/plugin.json", "bytes": 214, "mode": "0644" },
@@ -67,6 +68,7 @@ The full `agent convert` result, plus provenance, written at the output root.
     "codex": { "documentationRevision": "2026-08-02" },
     "cursor": { "documentationRevision": "2026-08-02" },
     "antigravity": { "documentationRevision": "2026-08-29" },
+    "opencode": { "documentationRevision": "2026-08-29" },
   },
 }
 ```

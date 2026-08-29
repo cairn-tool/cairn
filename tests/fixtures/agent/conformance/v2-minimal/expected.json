@@ -28,6 +28,13 @@
     ],
     "antigravity/project": [
       ".agents/skills/hello/SKILL.md"
+    ],
+    "opencode/plugin": [
+      ".opencode-plugin/plugin.json",
+      "skills/hello/SKILL.md"
+    ],
+    "opencode/project": [
+      ".opencode/skills/hello/SKILL.md"
     ]
   },
   "diagnostics": [],

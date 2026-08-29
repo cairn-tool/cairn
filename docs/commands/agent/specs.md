@@ -15,11 +15,11 @@ Use `--format json` for the complete structure. The text output is an abridged d
 
 ## Options
 
-| Option              | Default                | Description                                                                   |
-| ------------------- | ---------------------- | ----------------------------------------------------------------------------- |
-| `--target <target>` | All applicable targets | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, or `all`. |
-| `--format <fmt>`    | `llm`                  | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                |
-| `-h`, `--help`      | —                      | Show help.                                                                    |
+| Option              | Default                | Description                                                                               |
+| ------------------- | ---------------------- | ----------------------------------------------------------------------------------------- |
+| `--target <target>` | All applicable targets | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, or `all`. |
+| `--format <fmt>`    | `llm`                  | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                            |
+| `-h`, `--help`      | —                      | Show help.                                                                                |
 
 ## What a profile contains
 

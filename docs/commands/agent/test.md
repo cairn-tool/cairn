@@ -30,16 +30,16 @@ which are reported rather than rewritten.
 
 ## Options
 
-| Option                | Default  | Description                                                            |
-| --------------------- | -------- | ---------------------------------------------------------------------- |
-| `--tests <path>`      | `tests/` | Test file or directory, bundle-relative or absolute.                   |
-| `--target <target>`   | All      | Repeatable: `claude-code`, `codex`, `cursor`, `antigravity`, or `all`. |
-| `--profile <profile>` | `both`   | `plugin`, `project`, or `both`.                                        |
-| `--case <name>`       | All      | Repeatable exact case name.                                            |
-| `--strict`            | Off      | Also treat forwarded warnings, and `AB701`, as blocking.               |
-| `--format <fmt>`      | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.         |
-| `--envelope`          | Off      | Wrap `--format json` output in the versioned result envelope.          |
-| `-h`, `--help`        | —        | Show help.                                                             |
+| Option                | Default  | Description                                                                        |
+| --------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `--tests <path>`      | `tests/` | Test file or directory, bundle-relative or absolute.                               |
+| `--target <target>`   | All      | Repeatable: `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, or `all`. |
+| `--profile <profile>` | `both`   | `plugin`, `project`, or `both`.                                                    |
+| `--case <name>`       | All      | Repeatable exact case name.                                                        |
+| `--strict`            | Off      | Also treat forwarded warnings, and `AB701`, as blocking.                           |
+| `--format <fmt>`      | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                     |
+| `--envelope`          | Off      | Wrap `--format json` output in the versioned result envelope.                      |
+| `-h`, `--help`        | —        | Show help.                                                                         |
 
 `--target` and `--profile` **narrow** each case's own selection rather than widening it: a
 case declaring `targets: [codex]` never runs under `--target cursor`, it is skipped and

@@ -579,7 +579,12 @@ function renderAgent(
     });
     return;
   }
-  const outMetadata: Record<string, unknown> = { ...metadata, ...(model ? { model } : {}) };
+  const outMetadata: Record<string, unknown> = { ...metadata };
+  // A target that cannot express a model must not be handed the *portable*
+  // class name instead: `model: capable` is not a model id on any host, and
+  // leaving it there emits a key the host will reject or misread.
+  if (model) outMetadata.model = model;
+  else delete outMetadata.model;
   if (target === "cursor" && Array.isArray(outMetadata.skills)) {
     const sections = outMetadata.skills
       .map(String)

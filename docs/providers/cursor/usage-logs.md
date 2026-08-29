@@ -3,8 +3,8 @@
 **There is no Cursor usage provider, and the omission is deliberate.**
 
 `cairn usage --provider cursor` reports an unknown provider and exits `1`. `--provider all`
-covers `claude-code`, `codex`, `antigravity`, and `gemini-cli`, and does not silently skip a
-fifth.
+covers `claude-code`, `codex`, `antigravity`, `gemini-cli`, and `opencode`, and does not silently
+skip a sixth.
 
 ## Why not
 

@@ -295,11 +295,65 @@ const GEMINI_CLI: ArchiveProfile = {
   ],
 };
 
+/**
+ * OpenCode, under `$XDG_DATA_HOME/opencode` (default `~/.local/share/opencode`).
+ *
+ * The first provider whose entire transcript corpus lives inside a single
+ * `log`-class file: there is no per-session transcript to select, because the
+ * conversations are rows in `opencode.db`. Archiving the database archives them
+ * all, which is why that set is opt-in like every other transcript source.
+ */
+const OPENCODE: ArchiveProfile = {
+  provider: "opencode",
+  sets: [
+    {
+      id: "session-diffs",
+      class: "artifact",
+      description: "Per-session file diffs",
+      root: "storage",
+      recursive: true,
+      match: (relative) => relative.endsWith(".json"),
+    },
+    {
+      id: "logs",
+      class: "log",
+      description: "CLI logs",
+      root: "log",
+      recursive: false,
+      match: (relative) => relative.endsWith(".log"),
+    },
+    {
+      id: "snapshots",
+      class: "log",
+      description: "Bare git repositories holding pre-edit file snapshots",
+      root: "snapshot",
+      recursive: true,
+      // Class `log` rather than `artifact`: this is an object store mirroring
+      // the working tree, the same category as Claude Code's `file-history/`,
+      // which is excluded outright. It is the only record of pre-edit state, so
+      // it is kept — but it must never land in a default run.
+      match: () => true,
+    },
+    {
+      id: "database",
+      class: "log",
+      description: "The session store: sessions, messages, parts, and projects",
+      root: "",
+      recursive: false,
+      // Exact equality, so the live `-wal` and `-shm` sidecars are never matched
+      // on their own; the backup API folds their contents into the snapshot.
+      match: (relative) => relative === "opencode.db",
+      snapshot: "sqlite",
+    },
+  ],
+};
+
 export const ARCHIVE_PROFILES: readonly ArchiveProfile[] = [
   CLAUDE_CODE,
   CODEX,
   ANTIGRAVITY,
   GEMINI_CLI,
+  OPENCODE,
 ];
 
 export function profileFor(provider: string): ArchiveProfile | undefined {

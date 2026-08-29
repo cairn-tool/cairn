@@ -156,6 +156,31 @@ describe("artifact sets", () => {
       expect(set.match("alpha/chats/parent-uuid/logs.json")).toBe(false);
     });
   });
+
+  describe("opencode", () => {
+    it("has no plans, because OpenCode writes none", () => {
+      expect(profileFor("opencode")!.sets.some((set) => set.class === "plan")).toBe(false);
+    });
+
+    it("marks the live session store for a snapshot and leaves its sidecars alone", () => {
+      const set = matcher("opencode", "database");
+      expect(set.snapshot).toBe("sqlite");
+      expect(set.match("opencode.db")).toBe(true);
+      expect(set.match("opencode.db-wal")).toBe(false);
+      expect(set.match("opencode.db-shm")).toBe(false);
+    });
+
+    it("keeps the git snapshot store out of a default run", () => {
+      // It mirrors the working tree rather than being session output, which is
+      // the same reason Claude Code's file-history is excluded outright.
+      expect(matcher("opencode", "snapshots").class).toBe("log");
+    });
+
+    it("takes per-session diffs as artifacts", () => {
+      expect(matcher("opencode", "session-diffs").match("session_diff/ses_1.json")).toBe(true);
+      expect(matcher("opencode", "session-diffs").match("session_diff/notes.txt")).toBe(false);
+    });
+  });
 });
 
 describe("parseClasses", () => {

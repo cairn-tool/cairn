@@ -155,7 +155,8 @@ What each provider contributes is declared per provider; see the archiving page 
 [Claude Code](../providers/claude-code/archiving.md),
 [Codex](../providers/codex/archiving.md),
 [Antigravity](../providers/antigravity/archiving.md), and
-[Gemini CLI](../providers/gemini-cli/archiving.md).
+[Gemini CLI](../providers/gemini-cli/archiving.md), and
+[OpenCode](../providers/opencode/archiving.md).
 
 ## SQLite snapshotting
 

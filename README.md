@@ -342,7 +342,7 @@ is known about each assistant's own formats.
 ### Agent bundle conversion
 
 The top-level `agent` toolset converts one neutral bundle into Claude Code, Codex, Cursor,
-and Antigravity artifacts. Agent-bundle defaults deliberately live in `agent-bundle.yaml`; the
+Antigravity, and OpenCode artifacts. Agent-bundle defaults deliberately live in `agent-bundle.yaml`; the
 `.cairn.yml` configuration described above remains scoped to `md` commands.
 
 ```bash
@@ -438,6 +438,7 @@ Every conversion uses this deterministic layout:
   codex/{plugin,project}/
   cursor/{plugin,project}/
   antigravity/{plugin,project}/
+  opencode/{plugin,project}/
   conversion-report.json
 ```
 
@@ -541,14 +542,14 @@ recognized during migration.
 
 #### Compatibility and migration
 
-| Component      | Claude Code                     | Codex                                   | Cursor                                        | Antigravity                              |
-| -------------- | ------------------------------- | --------------------------------------- | --------------------------------------------- | ---------------------------------------- |
-| Skills         | Plugin and `.claude/skills`     | Plugin and `.agents/skills`             | Namespaced plugin and `.cursor/skills`        | Plugin and `.agents/skills`              |
-| Agents         | Plugin and `.claude/agents`     | `.codex/agents/*.toml` project fallback | Plugin and `.cursor/agents`                   | Not emitted; native layout unconfirmed   |
-| Hooks          | PascalCase portable events      | Portable native events                  | camelCase portable events                     | Named sets; no session-start event       |
-| Rules          | `.claude/rules` project         | `AGENTS.md` project layer               | `.cursor/rules/*.mdc`                         | `.agents/rules/*.md` with `trigger`      |
-| Command policy | `.claude/settings.json` project | `.codex/rules/*.rules` project          | Unsupported without an explicit hook override | Unsupported; no native format documented |
-| MCP/assets     | Normalized/pass-through         | Normalized/pass-through                 | Normalized/pass-through                       | Normalized/pass-through                  |
+| Component      | Claude Code                     | Codex                                   | Cursor                                        | Antigravity                              | OpenCode                              |
+| -------------- | ------------------------------- | --------------------------------------- | --------------------------------------------- | ---------------------------------------- | ------------------------------------- |
+| Skills         | Plugin and `.claude/skills`     | Plugin and `.agents/skills`             | Namespaced plugin and `.cursor/skills`        | Plugin and `.agents/skills`              | Plugin and `.opencode/skills`         |
+| Agents         | Plugin and `.claude/agents`     | `.codex/agents/*.toml` project fallback | Plugin and `.cursor/agents`                   | Not emitted; native layout unconfirmed   | Plugin and `.opencode/agent`          |
+| Hooks          | PascalCase portable events      | Portable native events                  | camelCase portable events                     | Named sets; no session-start event       | Unsupported; plugins are TS callbacks |
+| Rules          | `.claude/rules` project         | `AGENTS.md` project layer               | `.cursor/rules/*.mdc`                         | `.agents/rules/*.md` with `trigger`      | `AGENTS.md` project layer             |
+| Command policy | `.claude/settings.json` project | `.codex/rules/*.rules` project          | Unsupported without an explicit hook override | Unsupported; no native format documented | Not written; shares `opencode.json`   |
+| MCP/assets     | Normalized/pass-through         | Normalized/pass-through                 | Normalized/pass-through                       | Normalized/pass-through                  | Normalized/pass-through               |
 
 This table is a summary. `cairn agent specs --format json` is the authoritative,
 machine-readable form, and is generated from the same profiles the renderer uses. The prose form,
@@ -556,7 +557,8 @@ target by target, is under [docs/providers.md](docs/providers.md):
 [Claude Code](docs/providers/claude-code/agent-bundles.md),
 [Codex](docs/providers/codex/agent-bundles.md),
 [Cursor](docs/providers/cursor/agent-bundles.md), and
-[Antigravity](docs/providers/antigravity/agent-bundles.md).
+[Antigravity](docs/providers/antigravity/agent-bundles.md), and
+[OpenCode](docs/providers/opencode/agent-bundles.md).
 
 Point `agent convert` directly at an existing Claude plugin containing
 `.claude-plugin/plugin.json` to migrate it. The importer retains manifest metadata, skills,
@@ -1250,8 +1252,8 @@ those transcripts and reports on them — tokens, tools, skills, subagents, hook
 so "where is my context actually going" is a question with an answer. Nothing is sent anywhere,
 and nothing outside the usage store is written.
 
-Four log sources are registered: **Claude Code**, **Codex CLI**, **Antigravity CLI**, and
-**Gemini CLI**.
+Five log sources are registered: **Claude Code**, **Codex CLI**, **Antigravity CLI**,
+**Gemini CLI**, and **OpenCode**.
 
 ```bash
 cairn usage summary                        # headline totals across every project
@@ -1313,7 +1315,8 @@ transcript format and counting caveats are documented separately:
 [Claude Code](docs/providers/claude-code/usage-logs.md),
 [Codex](docs/providers/codex/usage-logs.md),
 [Antigravity](docs/providers/antigravity/usage-logs.md), and
-[Gemini CLI](docs/providers/gemini-cli/usage-logs.md).
+[Gemini CLI](docs/providers/gemini-cli/usage-logs.md), and
+[OpenCode](docs/providers/opencode/usage-logs.md).
 
 ### Long-term archiving
 

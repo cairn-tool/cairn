@@ -24,21 +24,21 @@ on the target name.
 
 ## Options
 
-| Option                | Default  | Description                                                                                |
-| --------------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `--target <target>`   | Required | One target: `claude-code`, `codex`, `cursor`, or `antigravity`. Not repeatable, not `all`. |
-| `--scope <scope>`     | `user`   | `user` or `project`.                                                                       |
-| `--into <dir>`        | Profile  | Override the install root the profile declares.                                            |
-| `--profile <profile>` | Location | Must match the location's profile when given.                                              |
-| `--link`              | Off      | Symlink the rendered tree instead of copying it.                                           |
-| `--register`          | Off      | Edit host config to activate a marketplace install.                                        |
-| `--strict`            | Off      | Treat warnings as blocking findings.                                                       |
-| `--force`             | Off      | Replace a destination that is not a prior install of this bundle.                          |
-| `--dry-run`           | Off      | Plan the install without writing.                                                          |
-| `--check`             | Off      | Compare against an existing install without writing.                                       |
-| `--format <fmt>`      | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                             |
-| `--envelope`          | Off      | Wrap `--format json` output in the versioned result envelope.                              |
-| `-h`, `--help`        | —        | Show help.                                                                                 |
+| Option                | Default  | Description                                                                                            |
+| --------------------- | -------- | ------------------------------------------------------------------------------------------------------ |
+| `--target <target>`   | Required | One target: `claude-code`, `codex`, `cursor`, `antigravity`, or `opencode`. Not repeatable, not `all`. |
+| `--scope <scope>`     | `user`   | `user` or `project`.                                                                                   |
+| `--into <dir>`        | Profile  | Override the install root the profile declares.                                                        |
+| `--profile <profile>` | Location | Must match the location's profile when given.                                                          |
+| `--link`              | Off      | Symlink the rendered tree instead of copying it.                                                       |
+| `--register`          | Off      | Edit host config to activate a marketplace install.                                                    |
+| `--strict`            | Off      | Treat warnings as blocking findings.                                                                   |
+| `--force`             | Off      | Replace a destination that is not a prior install of this bundle.                                      |
+| `--dry-run`           | Off      | Plan the install without writing.                                                                      |
+| `--check`             | Off      | Compare against an existing install without writing.                                                   |
+| `--format <fmt>`      | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                                         |
+| `--envelope`          | Off      | Wrap `--format json` output in the versioned result envelope.                                          |
+| `-h`, `--help`        | —        | Show help.                                                                                             |
 
 `--check` and `--dry-run` cannot be combined.
 

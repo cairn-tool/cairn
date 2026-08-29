@@ -336,9 +336,36 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
 - **A session id is unique only within its provider.** `sessionKey()` in `src/usage/events.ts`
   qualifies it; counting or grouping sessions on the bare id merges two providers' sessions when
   they mint the same UUID, which they do.
-- **Only `claude-code` and `gemini-cli` can prune subagents at discovery.** They record the
-  thread source in the transcript's path; `codex` and `antigravity` record it inside the file, so
-  `scan.ts` filters on the parsed `kind` as well. Both filters must stay.
+- **Only `claude-code`, `gemini-cli`, and `opencode` can prune subagents at discovery.** The
+  first two record the thread source in the transcript's path and `opencode` records it on the
+  session row; `codex` and `antigravity` record it inside the file, so `scan.ts` filters on the
+  parsed `kind` as well. Both filters must stay.
+
+- **OpenCode has no filesystem unit below its whole store, so both the transcript unit and its
+  freshness key are synthesized.** `discover()` emits one `TranscriptFile` per `session` row with
+  a `relative` of `session/<id>`; collapsing the store into one entry would destroy
+  `usage sessions`, `--last`, `--project`, and the main/subagent split, because a `FileAggregate`
+  carries exactly one of each. The freshness key is `MAX(message.time_updated,
+part.time_updated)` with the row counts as `size` — **not** the `.db` file's stat, which is one
+  value shared by every session and would invalidate all of them on any write, and **not**
+  `session.time_updated`, which is measurably stale against its own messages. The store is parsed
+  once and memoized on the database's path, mtime and size, because SQLite indexes none of these
+  foreign keys and a per-session query would be a full table scan each time.
+
+- **OpenCode records the same usage at three grains, and reading two of them doubles it.** The
+  assistant `message`, its `step-finish` `part`, and the `session` rollup all carry the same
+  figures — verified against `opencode stats`. Only the message grain is read: it survives when a
+  message produced no step-finish part, and `message.id` is a primary key. Unlike Codex and
+  Gemini CLI, `tokens.cache.read` is disjoint from `input` and is not subtracted. `cost` is
+  dropped, because `TokenTotals` has no place for it and adding one is a store migration.
+
+- **Never write a bundle manifest to `opencode.json`.** Unknown top-level keys there are rejected
+  with `ConfigInvalidError` and the host refuses to start, which is why the OpenCode plugin
+  manifest lives in `.opencode-plugin/`. It is also why `opencode` declares `policies.form: null`
+  despite having a native `permission` block: `paths.project.mcp` already owns `opencode.json`,
+  and both writers serialize a whole document, so declaring the policy form would clobber the MCP
+  block. `PolicyForm` reserves `opencode-permission` for when the two share a merge-aware
+  writer.
 
 - **`gemini-cli` and `antigravity` share `~/.gemini` and must never claim each other's tree.**
   The former roots at `~/.gemini` guarded on `tmp/`, the latter at `~/.gemini/antigravity-cli`

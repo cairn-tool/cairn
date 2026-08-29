@@ -243,4 +243,5 @@ that command's page rather than quietly fixed, because changing them is breaking
 - Per-provider parsing: [Claude Code](../providers/claude-code/usage-logs.md),
   [Codex](../providers/codex/usage-logs.md),
   [Antigravity](../providers/antigravity/usage-logs.md),
-  [Gemini CLI](../providers/gemini-cli/usage-logs.md)
+  [Gemini CLI](../providers/gemini-cli/usage-logs.md),
+  [OpenCode](../providers/opencode/usage-logs.md)

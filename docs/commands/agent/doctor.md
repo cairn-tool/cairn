@@ -29,7 +29,7 @@ yourself.
 
 | Option                  | Default                | Description                                                                                          |
 | ----------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------- |
-| `--target <target>`     | All applicable targets | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, or `all`.                        |
+| `--target <target>`     | All applicable targets | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, or `all`.            |
 | `--profile <profile>`   | `both`                 | Output profile: `plugin`, `project`, or `both`.                                                      |
 | `--output <dir>`        | —                      | Also compare an existing generated tree. Requires `source`.                                          |
 | `--host-version <spec>` | —                      | Repeatable installed host version: `<target>@<version>`, or a bare version with one target selected. |

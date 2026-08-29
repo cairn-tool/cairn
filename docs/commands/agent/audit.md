@@ -28,15 +28,15 @@ the bundle is safe.
 
 ## Options
 
-| Option                | Default | Description                                                                                                |
-| --------------------- | ------- | ---------------------------------------------------------------------------------------------------------- |
-| `--target <target>`   | None    | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, or `all`. Enables the rendered checks. |
-| `--profile <profile>` | `both`  | `plugin`, `project`, or `both`. Applies to the rendered checks.                                            |
-| `--baseline <file>`   | None    | Compare executables against a previous package `sbom.json`. Requires `--target`.                           |
-| `--strict`            | Off     | Also treat forwarded parse and render warnings as blocking.                                                |
-| `--format <fmt>`      | `llm`   | Output as `llm`, `human`, `json`, or `sarif`. Shorthands: `-fh`, `-fj`.                                    |
-| `--envelope`          | Off     | Wrap `--format json` output in the versioned result envelope.                                              |
-| `-h`, `--help`        | —       | Show help.                                                                                                 |
+| Option                | Default | Description                                                                                                            |
+| --------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `--target <target>`   | None    | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, or `all`. Enables the rendered checks. |
+| `--profile <profile>` | `both`  | `plugin`, `project`, or `both`. Applies to the rendered checks.                                                        |
+| `--baseline <file>`   | None    | Compare executables against a previous package `sbom.json`. Requires `--target`.                                       |
+| `--strict`            | Off     | Also treat forwarded parse and render warnings as blocking.                                                            |
+| `--format <fmt>`      | `llm`   | Output as `llm`, `human`, `json`, or `sarif`. Shorthands: `-fh`, `-fj`.                                                |
+| `--envelope`          | Off     | Wrap `--format json` output in the versioned result envelope.                                                          |
+| `-h`, `--help`        | —       | Show help.                                                                                                             |
 
 ## It audits the bundle, not a dist tree
 

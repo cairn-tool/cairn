@@ -18,12 +18,12 @@ target artifacts.
 
 ## Options
 
-| Option                | Default | Description                                                            |
-| --------------------- | ------- | ---------------------------------------------------------------------- |
-| `--target <target>`   | None    | Repeatable: `claude-code`, `codex`, `cursor`, `antigravity`, or `all`. |
-| `--profile <profile>` | None    | `plugin`, `project`, or `both`. Requires `--target`.                   |
-| `--format <fmt>`      | `llm`   | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.         |
-| `-h`, `--help`        | —       | Show help.                                                             |
+| Option                | Default | Description                                                                        |
+| --------------------- | ------- | ---------------------------------------------------------------------------------- |
+| `--target <target>`   | None    | Repeatable: `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, or `all`. |
+| `--profile <profile>` | None    | `plugin`, `project`, or `both`. Requires `--target`.                               |
+| `--format <fmt>`      | `llm`   | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                     |
+| `-h`, `--help`        | —       | Show help.                                                                         |
 
 ## Filtering
 

@@ -131,7 +131,7 @@ describe("completion", () => {
     // --format values come from the contract, so they differ per command.
     expect(auditFormat).toBe("llm human json jsonl sarif");
     expect(graphFormat).toBe("llm human json");
-    expect(targets).toBe("claude-code codex cursor antigravity all");
+    expect(targets).toBe("claude-code codex cursor antigravity opencode all");
     // A positional-argument position offers its vocabulary and the command's
     // own flags, since either is valid there.
     expect(shells.split(" ")).toEqual(

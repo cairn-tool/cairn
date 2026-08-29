@@ -70,6 +70,13 @@ What is known about each assistant Cairn renders for, reads logs from, or archiv
 - [Usage logs](providers/gemini-cli/usage-logs.md)
 - [Archiving](providers/gemini-cli/archiving.md)
 
+### OpenCode
+
+- [Overview](providers/opencode/overview.md)
+- [Agent bundles](providers/opencode/agent-bundles.md)
+- [Usage logs](providers/opencode/usage-logs.md)
+- [Archiving](providers/opencode/archiving.md)
+
 ## Contract commands
 
 - [`describe`](commands/describe.md)

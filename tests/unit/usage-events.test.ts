@@ -6,10 +6,12 @@ import { claudeCodeProvider } from "../../src/usage/providers/claude-code.js";
 import { codexProvider } from "../../src/usage/providers/codex.js";
 import { antigravityProvider } from "../../src/usage/providers/antigravity.js";
 import { geminiCliProvider } from "../../src/usage/providers/gemini-cli.js";
+import { opencodeProvider } from "../../src/usage/providers/opencode.js";
 import type { TranscriptFile, UsageProvider } from "../../src/usage/providers/types.js";
 import { foldDays } from "../../src/usage/events.js";
 import { ANTIGRAVITY_FIXTURE, buildAntigravityLogs } from "../helpers/antigravity-fixture.js";
 import { GEMINI_FIXTURE, buildGeminiLogs } from "../helpers/gemini-cli-fixture.js";
+import { OPENCODE_FIXTURE, buildOpencodeStore } from "../helpers/opencode-fixture.js";
 
 /**
  * The contract that makes the event stream trustworthy.
@@ -286,6 +288,23 @@ describe("the event stream folds back into the day buckets", () => {
       const found = geminiCliProvider.discover(root, { subagents: true });
       expect(found.length).toBeGreaterThan(0);
       for (const file of found) await expectFoldMatches(geminiCliProvider, file);
+    });
+  });
+
+  describe("opencode", () => {
+    let root = "";
+    beforeAll(() => {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), "usage-events-opencode-"));
+      buildOpencodeStore(root, OPENCODE_FIXTURE);
+    });
+    afterAll(() => {
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it("reproduces every counter it writes, per session out of one database", async () => {
+      const found = opencodeProvider.discover(root, { subagents: true });
+      expect(found.length).toBeGreaterThan(0);
+      for (const file of found) await expectFoldMatches(opencodeProvider, file);
     });
   });
 });

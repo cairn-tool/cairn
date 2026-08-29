@@ -95,6 +95,26 @@
       ".agents/skills/deploy/SKILL.md",
       "assets/readme.md",
       "assets/sub/blob.bin"
+    ],
+    "opencode/plugin": [
+      ".opencode-plugin/plugin.json",
+      "agent/reviewer.md",
+      "agent/scout.md",
+      "assets/readme.md",
+      "assets/sub/blob.bin",
+      "skills/build/NOTES.md",
+      "skills/build/SKILL.md",
+      "skills/deploy/SKILL.md"
+    ],
+    "opencode/project": [
+      ".opencode/agent/reviewer.md",
+      ".opencode/agent/scout.md",
+      ".opencode/skills/build/NOTES.md",
+      ".opencode/skills/build/SKILL.md",
+      ".opencode/skills/deploy/SKILL.md",
+      "AGENTS.md",
+      "assets/readme.md",
+      "assets/sub/blob.bin"
     ]
   },
   "diagnostics": [

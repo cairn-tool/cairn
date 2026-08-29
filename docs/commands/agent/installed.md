@@ -13,14 +13,14 @@ for `.cairn-install.json`. It reports observed state and never writes.
 
 ## Options
 
-| Option              | Default | Description                                                                   |
-| ------------------- | ------- | ----------------------------------------------------------------------------- |
-| `--target <target>` | all     | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, or `all`. |
-| `--scope <scope>`   | both    | `user` or `project`.                                                          |
-| `--into <dir>`      | Profile | Override the install root the profile declares.                               |
-| `--format <fmt>`    | `llm`   | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                |
-| `--envelope`        | Off     | Wrap `--format json` output in the versioned result envelope.                 |
-| `-h`, `--help`      | —       | Show help.                                                                    |
+| Option              | Default | Description                                                                               |
+| ------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `--target <target>` | all     | Repeatable target: `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, or `all`. |
+| `--scope <scope>`   | both    | `user` or `project`.                                                                      |
+| `--into <dir>`      | Profile | Override the install root the profile declares.                                           |
+| `--format <fmt>`    | `llm`   | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                            |
+| `--envelope`        | Off     | Wrap `--format json` output in the versioned result envelope.                             |
+| `-h`, `--help`      | —       | Show help.                                                                                |
 
 Malformed manifests are skipped rather than reported: [`agent uninstall`](uninstall.md)
 is the command that refuses to guess (`AB806`).

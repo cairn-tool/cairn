@@ -47,6 +47,7 @@ because they are three orders of magnitude larger.
 | `codex`       | — (Codex writes none)                       | `computer-use/**`                                 | `sessions/**/rollout-*.jsonl`           | `history.jsonl`, `*.sqlite`                        |
 | `antigravity` | `brain/*/**.md` outside `.system_generated` | other `brain/` output outside `.system_generated` | `**/logs/transcript.jsonl`              | `log/*.log`, `history.jsonl`, `conversations/*.db` |
 | `gemini-cli`  | `tmp/*/*/plans/*.md`                        | `tmp/*/tool-outputs/**`                           | `tmp/*/chats/**/*.jsonl`                | `tmp/*/logs.json`                                  |
+| `opencode`    | — (OpenCode writes none)                    | `storage/**/*.json`                               | — (they are rows in `opencode.db`)      | `log/*.log`, `snapshot/**`, `opencode.db`          |
 
 Antigravity's plans and artifacts are told apart from its machinery by one directory name,
 `.system_generated`, rather than by a list of filenames. Its `transcript_full.jsonl` is

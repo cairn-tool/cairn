@@ -33,6 +33,15 @@
     ],
     "antigravity/project": [
       ".agents/skills/legacy/SKILL.md"
+    ],
+    "opencode/plugin": [
+      ".opencode-plugin/plugin.json",
+      "agent/legacy-agent.md",
+      "skills/legacy/SKILL.md"
+    ],
+    "opencode/project": [
+      ".opencode/agent/legacy-agent.md",
+      ".opencode/skills/legacy/SKILL.md"
     ]
   },
   "diagnostics": [
