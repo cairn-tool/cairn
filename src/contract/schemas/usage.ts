@@ -349,7 +349,7 @@ export const usageIndexSchema: SchemaEntry = {
     $id: schemaUri("v1", "usage-index"),
     title: "Usage index status",
     description:
-      "Emitted by `usage index --format json`. The scan cache is a private, self-invalidating store; its internal version is not part of this contract and can change without notice.",
+      "Emitted by `usage index --format json`. `usage` keeps one SQLite store for every provider. `schemaVersion` is that store's own migrated version, reported so a caller can tell an out-of-date store from a current one; it is not the contract version. `shards` is retained at 0: it described the per-project JSON shard files this store replaced, and there is no longer any such thing.",
     type: "object",
     required: ["provider", "action", "cache"],
     properties: {
@@ -364,30 +364,155 @@ export const usageIndexSchema: SchemaEntry = {
           required: ["provider", "root", "present", "shards", "entries", "bytes", "updatedAt"],
           properties: {
             provider: { type: "string" },
-            root: { type: "string" },
+            root: {
+              type: "string",
+              description: "Path of the store, which every provider shares.",
+            },
             present: { type: "boolean" },
-            shards: { type: "integer", minimum: 0 },
-            entries: { type: "integer", minimum: 0 },
-            bytes: { type: "integer", minimum: 0 },
+            shards: {
+              type: "integer",
+              minimum: 0,
+              description: "Always 0; see the top-level description.",
+            },
+            entries: {
+              type: "integer",
+              minimum: 0,
+              description: "Transcripts held for this provider.",
+            },
+            bytes: {
+              type: "integer",
+              minimum: 0,
+              description:
+                "Size of the whole store, including its write-ahead log. Reported identically on every entry rather than partitioned, because one file holds them all.",
+            },
+            days: {
+              type: "integer",
+              minimum: 0,
+              description: "Day buckets held, across the whole store.",
+            },
+            events: {
+              type: "integer",
+              minimum: 0,
+              description: "Events held, across the whole store.",
+            },
+            schemaVersion: {
+              type: "integer",
+              minimum: 0,
+              description: "Migrated schema version of the store.",
+            },
             updatedAt: { type: ["string", "null"] },
-            removed: { type: "integer", minimum: 0 },
+            removed: {
+              type: "integer",
+              minimum: 0,
+              description: "Transcripts dropped by --clear.",
+            },
           },
         },
       },
       cache: {
         type: "object",
-        description: "One provider's cache, or the total across them when several were selected.",
+        description:
+          "The store: one provider's rows when one was selected, the total across them otherwise. `bytes`, `days` and `events` are whole-store figures either way, and so are not summed.",
         required: ["root", "present", "shards", "entries", "bytes", "updatedAt"],
         properties: {
           root: { type: "string" },
           present: { type: "boolean" },
-          shards: { type: "integer", minimum: 0 },
-          entries: { type: "integer", minimum: 0, description: "Transcripts held in the cache." },
+          shards: {
+            type: "integer",
+            minimum: 0,
+            description: "Always 0; see the top-level description.",
+          },
+          entries: { type: "integer", minimum: 0, description: "Transcripts held in the store." },
           bytes: { type: "integer", minimum: 0 },
+          days: { type: "integer", minimum: 0 },
+          events: { type: "integer", minimum: 0 },
+          schemaVersion: { type: "integer", minimum: 0 },
           updatedAt: { type: ["string", "null"] },
         },
       },
-      removed: { type: "integer", minimum: 0, description: "Shards deleted by --clear." },
+      removed: { type: "integer", minimum: 0, description: "Transcripts dropped by --clear." },
+      scan: SCAN,
+    },
+  },
+};
+
+/**
+ * The store's own description, shared by `usage import` and `usage migrate`.
+ *
+ * Inlined into both documents rather than shared by `$ref`, like every other
+ * fragment here: a schema retrieved with `cairn schema <id>` must compile alone.
+ */
+const DATABASE: JsonSchema = {
+  type: "object",
+  description: "The usage store on disk.",
+  required: ["path", "present", "schemaVersion"],
+  properties: {
+    path: { type: "string" },
+    present: { type: "boolean" },
+    schemaVersion: {
+      type: "integer",
+      minimum: 0,
+      description:
+        "Migrated schema version of the store. Hand-owned and migrated rather than discarded, and unrelated to the contract version.",
+    },
+    files: { type: "integer", minimum: 0 },
+    days: { type: "integer", minimum: 0 },
+    events: { type: "integer", minimum: 0 },
+    bytes: { type: "integer", minimum: 0 },
+    updatedAt: { type: ["string", "null"] },
+    providers: {
+      type: "object",
+      description: "Transcripts held, keyed by provider.",
+      additionalProperties: { type: "integer", minimum: 0 },
+    },
+  },
+};
+
+export const usageImportSchema: SchemaEntry = {
+  id: "usage-import",
+  uri: schemaUri("v1", "usage-import"),
+  title: "Usage import",
+  commands: ["usage import", "usage migrate"],
+  schema: {
+    $schema: DRAFT,
+    $id: schemaUri("v1", "usage-import"),
+    title: "Usage import",
+    description:
+      "Emitted by `usage import` and `usage migrate` with `--format json`. `migrations.applied` is what this invocation ran; it is empty on an already-current store, which is the normal case.",
+    type: "object",
+    required: ["action", "database", "migrations"],
+    properties: {
+      provider: { type: "string" },
+      action: { enum: ["import", "migrate"] },
+      database: DATABASE,
+      migrations: {
+        type: "object",
+        required: ["from", "to", "applied", "pending"],
+        properties: {
+          from: { type: "integer", minimum: 0, description: "Version before this invocation." },
+          to: { type: "integer", minimum: 0, description: "Version after it." },
+          applied: {
+            type: "array",
+            items: { type: "integer", minimum: 0 },
+            description: "Versions this invocation ran, in order.",
+          },
+          pending: {
+            type: "array",
+            items: { type: "integer", minimum: 0 },
+            description:
+              "Versions still to run. Non-empty only under `--check`, which reports without writing.",
+          },
+        },
+      },
+      sources: {
+        type: "array",
+        description: "Log roots read, one per provider that had any.",
+        items: {
+          type: "object",
+          required: ["provider", "root"],
+          properties: { provider: { type: "string" }, root: { type: "string" } },
+        },
+      },
       scan: SCAN,
     },
   },

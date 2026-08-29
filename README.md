@@ -1240,7 +1240,7 @@ being analyzed — the registry sits at the same trust level as a `Makefile`. Se
 Coding assistants leave a structured record of every session on disk. The `usage` toolset reads
 those transcripts and reports on them — tokens, tools, skills, subagents, hooks, slash commands —
 so "where is my context actually going" is a question with an answer. Nothing is sent anywhere,
-and nothing outside the scan cache is written.
+and nothing outside the usage store is written.
 
 Three log sources are registered: **Claude Code**, **Codex CLI**, and **Antigravity CLI**.
 
@@ -1257,6 +1257,10 @@ cairn usage providers                      # what is registered, and what each r
 cairn usage summary --provider codex
 cairn usage summary --provider all         # every assistant, merged
 cairn usage tokens --by provider --provider all
+
+cairn usage import --provider all          # warm the store deliberately
+cairn usage index                          # what the store holds
+cairn usage migrate --check                # is the store current
 ```
 
 Two things make the numbers trustworthy, and both are easy to get wrong. One API response is
@@ -1267,10 +1271,28 @@ message, understating the real figure several-fold, so subagent tokens are read 
 subagent's own transcript. Subagents are included by default — on a real corpus they account for
 more tokens than the main thread — and `--no-subagents` excludes them.
 
-Each transcript is reduced once and cached under `XDG_CACHE_HOME`, keyed on its size and
-modification time. Transcripts are append-only, so only files that grew are ever reopened: a
-first scan of a multi-gigabyte corpus takes tens of seconds and every later one is immediate.
-`usage index` inspects, rebuilds, or clears that cache.
+Each transcript is reduced once into a SQLite store at `$XDG_DATA_HOME/cairn/usage.db`, keyed on
+its size and modification time. Transcripts are append-only, so only files that grew are ever
+reopened: a first import of a multi-gigabyte corpus takes about a minute and every later one is
+immediate. `usage index` inspects it, `usage import` fills it, and `usage migrate` moves it
+between versions.
+
+The store keeps two grains. The reports above read a day rollup of a few tens of thousands of
+rows. Underneath it is a per-occurrence `event` table that no report reads, so that questions a
+day bucket cannot express can be asked of the file directly:
+
+```sql
+-- tokens by hour of day, which no --by dimension can produce
+SELECT substr(ts, 12, 2) AS hour,
+       SUM(input + output + cache_read + cache_write) AS tokens
+  FROM event WHERE kind = 'response' GROUP BY hour ORDER BY hour;
+```
+
+It is a plain SQLite file, so DuckDB can read it directly
+(`INSTALL sqlite; ATTACH '...usage.db' AS usage (TYPE sqlite);`) if a columnar engine suits the
+question better. The store lives under `XDG_DATA_HOME` rather than `XDG_CACHE_HOME` because it is
+data: once transcripts are archived and pruned it may be the only record of that usage left, so
+it is migrated forward across versions rather than discarded.
 
 `--provider` selects the log source and `--provider all` merges every one present on the machine.
 What a provider can answer is data it declares rather than a branch in the reports, so a further
@@ -1278,6 +1300,45 @@ assistant's logs are one new module and one registry line away from joining the 
 
 See [shared usage command behavior](docs/commands/usage-common.md) for the full option set, the
 time-window and project-selection rules, and what the totals do and do not cover.
+
+### Long-term archiving
+
+`usage` reports on transcripts; `archive` keeps what a session actually produced. Plan documents,
+the files tools fetched or rendered, and — when asked for — the transcripts and logs themselves,
+copied into append-only compressed segments with a SQLite index.
+
+```bash
+cairn archive run --dry-run                 # what would be taken, and how much
+cairn archive run                           # plans and artifacts, every provider
+cairn archive run --include transcripts,logs --archive /Volumes/Backup/cairn
+cairn archive status
+cairn archive list --class plan --top 50
+cairn archive extract ~/.claude/plans/some-plan.md --out /tmp
+cairn archive verify --deep
+```
+
+Three things make it worth pointing at storage you care about.
+
+**A segment is an ordinary `.tar.gz`.** Members are named by their own SHA-256, so `tar tzf`
+recovers the contents with no index and no `cairn` — the point of a standard container for a store
+meant to outlive the tool that wrote it. Naming members by hash also means identical files are
+stored once, and that every member name is short enough for the ustar header, which the real
+paths (nested seven deep under project slugs) are not.
+
+**Runs are incremental twice over.** A file whose size and modification time already match the
+index is never opened; a file that is opened but whose content is already stored is never written
+again. A second run over an unchanged corpus costs one `stat` per file. A file that _changes_ gets
+a new row against a new blob, so the archive accumulates every version it ever saw and
+`archive extract` can reach an older one by hash.
+
+**What is archived is declared, not swept.** Each provider names the directories worth keeping, so
+the 340 MB of plugin payloads and the 343 MB of build scratch under `~/.claude` are not excluded
+by a blocklist that might one day miss something — they are simply never walked. Live SQLite
+stores, which all carry `-wal` sidecars, are read through the online backup API so the archived
+copy is a consistent snapshot rather than a possibly torn page image.
+
+See [shared archive command behavior](docs/commands/archive-common.md) for the full set list,
+storage layout, and exit codes.
 
 ## Checks
 

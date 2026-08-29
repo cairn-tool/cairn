@@ -1,5 +1,4 @@
 import os from "node:os";
-import path from "node:path";
 import { terminate } from "../command-result.js";
 import { BASE_FORMATS } from "../formats.js";
 import { boundedInteger } from "../option-utils.js";
@@ -9,7 +8,15 @@ import type { FileAggregate, TokenTotals, ToolKind } from "../usage/events.js";
 import { TOOL_KINDS, totalTokens } from "../usage/events.js";
 import type { ProjectSelector, Window } from "../usage/filter.js";
 import { parseProject, resolveWindow } from "../usage/filter.js";
-import { cacheStatus, clearCache, getUsageCacheRoot } from "../usage/index-cache.js";
+import {
+  clearDatabase,
+  databaseStatus,
+  getUsageDatabasePath,
+  LATEST_VERSION,
+  MIGRATIONS,
+  openUsageDatabase,
+  storeStatus,
+} from "../usage/db/index.js";
 import {
   ALL_PROVIDERS,
   DEFAULT_PROVIDER,
@@ -63,9 +70,11 @@ export interface UsageOptions {
   kind?: string;
   /** `usage sessions`. */
   sort?: string;
-  /** `usage index`. */
+  /** `usage index`, `usage import`. */
   rebuild?: boolean;
   clear?: boolean;
+  /** `usage migrate`. */
+  check?: boolean;
 }
 
 /**
@@ -940,17 +949,18 @@ export async function usageIndexAction(opts: UsageOptions): Promise<void> {
       ? "rebuild"
       : "status";
 
-  // Each provider caches separately, so every action is per provider and the
-  // payload reports both the breakdown and the total.
+  // One store holds every provider, but the actions and the counts stay per
+  // provider: `usage index --clear --provider codex` must not discard the rest.
+  const databasePath = getUsageDatabasePath();
   const caches = providers.map((provider) => ({
     provider: provider.name,
-    root: getUsageCacheRoot(provider.name),
+    root: databasePath,
     removed: 0,
   }));
 
   let scanned: ScanResult | null = null;
   if (action === "clear") {
-    for (const entry of caches) entry.removed = clearCache(entry.root);
+    for (const entry of caches) entry.removed = clearDatabase(databasePath, entry.provider);
   } else if (action === "rebuild") {
     const scope = resolveScope({ ...opts, index: true });
     scanned = emptyScan();
@@ -973,33 +983,36 @@ export async function usageIndexAction(opts: UsageOptions): Promise<void> {
 
   const statuses = caches.map((entry) => ({
     provider: entry.provider,
-    ...cacheStatus(entry.root),
+    ...databaseStatus(databasePath, entry.provider),
     ...(action === "clear" ? { removed: entry.removed } : {}),
   }));
 
-  // `cache` keeps describing one cache when one provider was selected, and
-  // becomes the total across them otherwise; `caches` is the breakdown.
+  // `cache` describes the store: one provider's rows when one was selected, the
+  // total across them otherwise. `bytes`, `days` and `events` are whole-store
+  // figures and so are taken once rather than summed — several providers share
+  // one SQLite file, and a provider's share of it is not a real number.
+  const whole = databaseStatus(databasePath);
   const total = statuses.reduce(
     (into, entry) => ({
-      root: into.root,
+      ...into,
       present: into.present || entry.present,
-      shards: into.shards + entry.shards,
       entries: into.entries + entry.entries,
-      bytes: into.bytes + entry.bytes,
       updatedAt:
         entry.updatedAt && (!into.updatedAt || entry.updatedAt > into.updatedAt)
           ? entry.updatedAt
           : into.updatedAt,
     }),
     {
-      root:
-        statuses.length === 1
-          ? statuses[0].root
-          : path.dirname(getUsageCacheRoot(providers[0].name)),
+      root: databasePath,
       present: false,
+      // Retained at 0: it described the JSON shard store this replaced, and is a
+      // required property of the published schema. See docs/contract.md.
       shards: 0,
       entries: 0,
-      bytes: 0,
+      bytes: whole.bytes,
+      days: whole.days,
+      events: whole.events,
+      schemaVersion: whole.schemaVersion,
       updatedAt: null as string | null,
     },
   );
@@ -1028,14 +1041,186 @@ export async function usageIndexAction(opts: UsageOptions): Promise<void> {
   for (const entry of statuses) {
     lines.push(`${style(entry.provider, BOLD, human)}  ${style(entry.root, CYAN, human)}`);
     lines.push(`  present:     ${entry.present ? "yes" : "no"}`);
-    lines.push(`  shards:      ${entry.shards}`);
     lines.push(`  transcripts: ${entry.entries}`);
+    lines.push(`  days:        ${entry.days}`);
+    lines.push(`  events:      ${entry.events}`);
+    lines.push(`  schema:      v${entry.schemaVersion}`);
     lines.push(`  size:        ${num(entry.bytes, human)} bytes`);
     lines.push(`  updated:     ${entry.updatedAt ?? "never"}`);
     if (action === "clear") {
-      lines.push(`  removed:     ${entry.removed} shard${entry.removed === 1 ? "" : "s"}`);
+      const removed = entry.removed ?? 0;
+      lines.push(`  removed:     ${removed} transcript${removed === 1 ? "" : "s"}`);
     }
   }
   if (scanned) lines.push(`rebuilt: ${scanLine(scanned, human)}`);
+  process.stdout.write(lines.join("\n") + "\n");
+}
+
+// ---------------------------------------------------------------------------
+// usage import / usage migrate
+// ---------------------------------------------------------------------------
+
+/**
+ * The store as both commands report it.
+ *
+ * Read through a fresh read-only handle rather than the one that just wrote, so
+ * the figures are what a later reader would see rather than what this process
+ * has pending.
+ */
+function databasePayload(path: string): Record<string, unknown> {
+  const status = databaseStatus(path);
+  return {
+    path,
+    present: status.present,
+    schemaVersion: status.schemaVersion,
+    files: status.entries,
+    days: status.days,
+    events: status.events,
+    bytes: status.bytes,
+    updatedAt: status.updatedAt,
+    ...(status.present ? { providers: providerCounts(path) } : {}),
+  };
+}
+
+function providerCounts(path: string): Record<string, number> {
+  let opened;
+  try {
+    opened = openUsageDatabase({ path, readOnly: true, migrate: false });
+  } catch {
+    return {};
+  }
+  try {
+    return storeStatus(opened.db).providers;
+  } catch {
+    return {};
+  } finally {
+    try {
+      opened.db.close();
+    } catch {
+      // Best-effort.
+    }
+  }
+}
+
+/**
+ * Imports every selected provider's transcripts into the store.
+ *
+ * This is the same work a report does on its way to producing numbers — the
+ * store populates itself on first use — so `usage import` exists to do it
+ * deliberately rather than as a side effect: to warm a cold store before a
+ * timed report, to run it on a schedule, and to see the counters on their own.
+ */
+export async function usageImportAction(opts: UsageOptions): Promise<void> {
+  const format = resolveFormat(opts);
+  const scope = resolveScope({ ...opts, index: true });
+  const databasePath = getUsageDatabasePath();
+
+  const opened = openUsageDatabase({ path: databasePath });
+  const migrations = { from: opened.from, to: opened.to, applied: opened.applied, pending: [] };
+  opened.db.close();
+
+  const result = emptyScan();
+  for (const source of scope.sources) {
+    const scanned = await scan({
+      provider: source.provider,
+      root: source.root,
+      subagents: scope.subagents,
+      window: scope.window,
+      projects: scope.selectors,
+      useIndex: true,
+      ...(opts.rebuild ? { rebuild: true } : {}),
+    });
+    result.failures.push(...scanned.failures);
+    for (const key of Object.keys(result.counters) as Array<keyof ScanCounters>) {
+      result.counters[key] += scanned.counters[key];
+    }
+  }
+
+  const exitCode = decideExit(result.counters, result.failures, opts.strict === true);
+  const payload = {
+    provider: opts.provider ?? DEFAULT_PROVIDER,
+    action: "import" as const,
+    database: databasePayload(databasePath),
+    migrations,
+    sources: scope.sources.map((source) => ({ provider: source.provider.name, root: source.root })),
+    scan: scanPayload(result),
+  };
+
+  if (format === "json") {
+    const output = jsonPayload("usage import", payload, opts, {
+      exitCode,
+      summary: { parsed: result.counters.parsed, cached: result.counters.cached },
+    });
+    (exitCode === 0 ? process.stdout : process.stderr).write(output);
+    if (exitCode !== 0) terminate(exitCode);
+    return;
+  }
+
+  const human = format === "human";
+  const lines = [
+    `${style("store", BOLD, human)}  ${style(databasePath, CYAN, human)}`,
+    `  schema:      v${payload.database.schemaVersion as number}`,
+    `  transcripts: ${payload.database.files as number}`,
+    `  days:        ${payload.database.days as number}`,
+    `  events:      ${num(payload.database.events as number, human)}`,
+    `  size:        ${num(payload.database.bytes as number, human)} bytes`,
+  ];
+  if (migrations.applied.length > 0) {
+    lines.push(`  migrated:    v${migrations.from} to v${migrations.to}`);
+  }
+  lines.push(`imported: ${scanLine(result, human)}`);
+  write(lines, exitCode);
+}
+
+/**
+ * Applies pending store migrations.
+ *
+ * Opening the store for any other command already migrates it, so this exists
+ * for the two cases that need it separately: `--check`, which reports what is
+ * pending without writing, and migrating a store deliberately before a run
+ * rather than discovering mid-report that it needed it.
+ */
+export async function usageMigrateAction(opts: UsageOptions): Promise<void> {
+  const format = resolveFormat(opts);
+  const databasePath = getUsageDatabasePath();
+  const check = opts.check === true;
+
+  const opened = openUsageDatabase({
+    path: databasePath,
+    ...(check ? { migrate: false } : {}),
+  });
+  const from = opened.from;
+  const applied = opened.applied;
+  const to = opened.to;
+  opened.db.close();
+
+  const pending = check
+    ? MIGRATIONS.filter((migration) => migration.version > from)
+        .map((migration) => migration.version)
+        .sort((a, b) => a - b)
+    : [];
+
+  const payload = {
+    action: "migrate" as const,
+    database: databasePayload(databasePath),
+    migrations: { from, to, applied, pending },
+  };
+
+  if (format === "json") {
+    process.stdout.write(
+      jsonPayload("usage migrate", payload, opts, {
+        summary: { applied: applied.length, pending: pending.length },
+      }),
+    );
+    return;
+  }
+
+  const human = format === "human";
+  const lines = [`${style("store", BOLD, human)}  ${style(databasePath, CYAN, human)}`];
+  lines.push(`  schema:   v${to}`);
+  lines.push(`  latest:   v${LATEST_VERSION}`);
+  if (applied.length > 0) lines.push(`  applied:  ${applied.map((v) => `v${v}`).join(", ")}`);
+  else if (pending.length > 0) lines.push(`  pending:  ${pending.map((v) => `v${v}`).join(", ")}`);
+  else lines.push("  pending:  none");
   process.stdout.write(lines.join("\n") + "\n");
 }

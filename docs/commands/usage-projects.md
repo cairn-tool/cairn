@@ -38,4 +38,4 @@ selector accepts.
 
 - [`usage sessions`](usage-sessions.md) reports the same activity one session at a time.
 - [`usage tokens`](usage-tokens.md) breaks the same tokens down by model, time, project, or session.
-- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the scan cache.
+- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the store.

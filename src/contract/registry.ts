@@ -289,11 +289,118 @@ const CONTRACTS: CommandContract[] = [
   }),
   usageCommand("index", {
     outputSchema: "usage-index",
-    exitCodes: [OK("Status written, or the cache was rebuilt or cleared"), USAGE],
+    exitCodes: [OK("Status written, or the store was rebuilt or cleared"), USAGE],
     stream: { success: "stdout" },
     notes:
-      "The scan cache keys on each transcript's path, size, and modification time; transcripts are append-only, so an unchanged file cannot hold a record the stored aggregate is missing. The cache is private and self-invalidating: its internal version is not part of the published contract, and `writes` stays false because nothing outside the cache directory is touched.",
+      "The store keys on each transcript's path, size, and modification time; transcripts are append-only, so an unchanged file cannot hold a record the stored aggregate is missing. One SQLite store under `XDG_DATA_HOME` holds every provider, which changes three things a consumer may have relied on and which are recorded here rather than quietly fixed: `shards` is always `0`, because the per-project JSON shard files it counted no longer exist; `removed` counts transcripts dropped by `--clear` rather than shard files deleted; and `bytes` is the whole store's size, reported identically on every `caches` entry rather than partitioned between them, so it is not summed into `cache`. `writes` stays false because nothing outside the store is touched.",
   }),
+  usageCommand("import", {
+    outputSchema: "usage-import",
+    notes:
+      "Populates the store that every other `usage` command reads. Reports import on first use, so this is never required; it exists to do that work deliberately, and to expose the counters without a report around them. Two grains are written: the day buckets every report reads, and per-occurrence event rows that no report reads but that answer what a day bucket cannot. " +
+      STRICT_NOTE,
+  }),
+  usageCommand("migrate", {
+    outputSchema: "usage-import",
+    formats: BASE_FORMATS,
+    exitCodes: [
+      OK("Store is current, or was migrated"),
+      { code: 1, meaning: "Invocation error, or the store is newer than this build understands" },
+    ],
+    stream: { success: "stdout" },
+    notes:
+      "The store's schema version is a fifth hand-owned version, and the first in this project that is migrated rather than discarded: after `archive run --include transcripts` has run and the source logs are pruned, the store may be the only record of that usage left, so a version bump has to carry the data forward. Every command that opens the store migrates it, so this is needed only to migrate deliberately or, with `--check`, to see what is pending first. A store written by a newer `cairn` is refused rather than opened, because writing to it could drop columns this build knows nothing about.",
+  }),
+
+  // Archive
+  {
+    id: "archive run",
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "archive-result",
+    exitCodes: [OK("Run completed"), USAGE],
+    stream: { success: "stdout" },
+    // The only writer in the toolset, and unlike `usage index` the directory it
+    // writes to is durable storage the user chose, so claiming otherwise would
+    // be misleading.
+    writes: true,
+    stability: "experimental",
+    notes:
+      "Archives what each provider declares in `src/archive/sets.ts` — an allowlist of directories, never a sweep of a home directory, so plugin payloads and build scratch cannot be picked up by accident. `plans` and `artifacts` are taken by default; `transcripts` and `logs` are opt-in through `--include` because they are three orders of magnitude larger. Incremental twice over: a file whose size and modification time match the index is never opened, and content already stored is never written again, so a file that merely changed path costs one row. A file whose content changes gets a new row against a new blob, so every version ever seen is kept. Unreadable files are counted under `run.failures` and never fatal, because over thousands of artifacts a file removed mid-walk is routine.",
+  },
+  {
+    id: "archive status",
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "archive-listing",
+    exitCodes: [OK("Status written"), USAGE],
+    stream: { success: "stdout" },
+    writes: false,
+    stability: "experimental",
+    notes:
+      "Reports on an archive without opening a segment. `blobs` is distinct stored contents and `artifacts` counts every version of every path, so the two differ wherever files duplicate or change. `byClass[].bytes` sums each artifact row's content and therefore double-counts a blob shared between paths; the top-level `bytes` is the deduplicated figure.",
+  },
+  {
+    id: "archive list",
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "archive-listing",
+    exitCodes: [OK("Listing written"), USAGE],
+    stream: { success: "stdout" },
+    writes: false,
+    stability: "experimental",
+    notes:
+      "One row per archived path, newest first, with `versions` counting the contents held for it rather than listing them. `--top 0` returns everything. An absent archive lists nothing and exits 0, because having archived nothing yet is not an error.",
+  },
+  {
+    id: "archive extract",
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "archive-result",
+    exitCodes: [OK("File written"), USAGE],
+    stream: { success: "stdout" },
+    writes: true,
+    stability: "experimental",
+    notes:
+      "Takes an original path or a sha256 prefix. A path resolves to its newest version; a hash reaches any version. The content is re-hashed on the way out, so an archive whose index and bytes disagree reports that rather than handing back the wrong file. A prefix matching more than one blob is refused rather than resolved arbitrarily. `writes` is true: unlike the rest of the toolset this writes outside the archive, into `--out`.",
+  },
+  {
+    id: "archive verify",
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "archive-result",
+    exitCodes: [
+      OK("Archive matches its index"),
+      USAGE,
+      FINDINGS("The archive and its index disagree"),
+    ],
+    stream: { success: "stdout", findings: "stderr" },
+    writes: false,
+    stability: "experimental",
+    notes:
+      "Unlike every other `archive` and `usage` command, this exits 2 without `--strict`: corruption is the actionable finding it exists to report, not an incidental one. The default pass hashes each segment file; `--deep` also decompresses each and re-hashes every member, which additionally catches an index whose offsets no longer point where it claims. A segment whose own hash already fails is not opened further, since it can say nothing reliable about its members.",
+  },
+  {
+    id: "archive migrate",
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "archive-result",
+    exitCodes: [
+      OK("Index is current, or was migrated"),
+      { code: 1, meaning: "Invocation error, or the index is newer than this build understands" },
+    ],
+    stream: { success: "stdout" },
+    writes: true,
+    stability: "experimental",
+    notes:
+      "The archive index carries its own hand-owned schema version, separate from the usage store's, and is likewise migrated rather than discarded: it is the only map from an original path to the segment holding that file's bytes, and the segments themselves are append-only and never rewritten. Every command that opens the index migrates it, so this is needed only to migrate deliberately or, with `--check`, to see what is pending. An index written by a newer `cairn` is refused rather than opened.",
+  },
 
   // Agent
   agentCommand("convert", {

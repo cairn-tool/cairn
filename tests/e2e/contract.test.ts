@@ -14,8 +14,9 @@ const cli = path.resolve("dist/cli.js");
 const fixtures = path.resolve("tests/fixtures");
 const temporary: string[] = [];
 /**
- * A cache home of its own, so no case reads or writes whatever this machine has
- * cached for real. `usage index` reports on that directory directly.
+ * A cache and data home of its own, so no case reads or writes whatever this
+ * machine holds for real. `usage index` reports on that directory directly, and
+ * the usage store lives under `XDG_DATA_HOME` rather than the cache.
  */
 const cacheHome = fs.mkdtempSync(path.join(os.tmpdir(), "contract-cache-"));
 const addFormats = addFormatsImport as unknown as (instance: Ajv2020) => Ajv2020;
@@ -30,7 +31,7 @@ async function run(...args: string[]): Promise<Run> {
   // A non-zero exit arrives as a rejection, so the exit code comes from here.
   try {
     const result = await exec("node", [cli, ...args], {
-      env: { ...process.env, CI: "1", XDG_CACHE_HOME: cacheHome },
+      env: { ...process.env, CI: "1", XDG_CACHE_HOME: cacheHome, XDG_DATA_HOME: cacheHome },
     });
     return { ...result, exitCode: 0 };
   } catch (error) {
@@ -115,6 +116,25 @@ function publishedBundle(): string {
  * write to, whatever this machine happens to have in its real log root.
  */
 const USAGE_FIXTURE = ["--logs", path.join(fixtures, "usage-logs"), "-fj"];
+/**
+ * `archive` writes, so every case points it at a directory of this run's own and
+ * reads the fixture corpus rather than this machine's real log roots.
+ */
+const ARCHIVE_LOGS = [
+  "--logs",
+  path.join(fixtures, "usage-logs"),
+  "--include",
+  "transcripts",
+  "-fj",
+];
+let archiveHome = "";
+const archiveRoot = (): string => {
+  if (!archiveHome) {
+    archiveHome = fs.mkdtempSync(path.join(os.tmpdir(), "contract-archive-"));
+    temporary.push(archiveHome);
+  }
+  return archiveHome;
+};
 const USAGE_LOGS = [...USAGE_FIXTURE, "--no-index"];
 /** A second provider, to prove the payload shape is not Claude Code's alone. */
 const CODEX_LOGS = [
@@ -167,7 +187,7 @@ describe("describe", () => {
       commands: Array<{ id: string; stability: string }>;
     };
     // Leaf commands are the ones a contract applies to; groups are containers.
-    const groups = new Set(["md", "agent", "scripts", "usage"]);
+    const groups = new Set(["md", "agent", "scripts", "usage", "archive"]);
     const walked = described.commands
       .map((command) => command.id)
       .filter((id) => !groups.has(id))
@@ -699,6 +719,73 @@ describe("declared output schemas match real output", () => {
       exitCode: 0,
     },
     {
+      // `import` and `migrate` write to the store, so they use the fixture corpus
+      // with the index on rather than USAGE_LOGS, which bypasses it.
+      label: "usage import",
+      schema: "usage-import",
+      args: () => ["usage", "import", ...USAGE_FIXTURE],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage migrate",
+      schema: "usage-import",
+      args: () => ["usage", "migrate", "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage migrate (check)",
+      schema: "usage-import",
+      args: () => ["usage", "migrate", "--check", "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      // The archive commands act on a directory of this run's own, never on
+      // whatever the developer has archived for real.
+      label: "archive run",
+      schema: "archive-result",
+      args: () => ["archive", "run", "--archive", archiveRoot(), ...ARCHIVE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "archive run (dry run)",
+      schema: "archive-result",
+      args: () => ["archive", "run", "--archive", archiveRoot(), "--dry-run", ...ARCHIVE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "archive status",
+      schema: "archive-listing",
+      args: () => ["archive", "status", "--archive", archiveRoot(), "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "archive list",
+      schema: "archive-listing",
+      args: () => ["archive", "list", "--archive", archiveRoot(), "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "archive verify",
+      schema: "archive-result",
+      args: () => ["archive", "verify", "--archive", archiveRoot(), "--deep", "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "archive migrate",
+      schema: "archive-result",
+      args: () => ["archive", "migrate", "--archive", archiveRoot(), "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
       label: "usage summary (codex)",
       schema: "usage-summary",
       args: () => ["usage", "summary", ...CODEX_LOGS],
@@ -722,7 +809,7 @@ describe("declared output schemas match real output", () => {
   ];
 
   // Groups whose id is two tokens.
-  const GROUPS = new Set(["md", "agent", "scripts", "usage"]);
+  const GROUPS = new Set(["md", "agent", "scripts", "usage", "archive"]);
 
   it.each(cases)("$label", async (testCase) => {
     const context = {

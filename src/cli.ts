@@ -69,10 +69,21 @@ import {
   type ScriptsOptions,
 } from "./commands/scripts.js";
 import {
+  archiveExtractAction,
+  archiveListAction,
+  archiveMigrateAction,
+  archiveRunAction,
+  archiveStatusAction,
+  archiveVerifyAction,
+  type ArchiveOptions,
+} from "./commands/archive.js";
+import {
   usageAgentsAction,
   usageCommandsAction,
   usageHooksAction,
+  usageImportAction,
   usageIndexAction,
+  usageMigrateAction,
   usageProjectsAction,
   usageProvidersAction,
   usageSessionsAction,
@@ -605,7 +616,7 @@ const usage = program
   .description("Report on Claude Code usage from its own session logs")
   .addHelpText(
     "after",
-    "\nReads the session transcripts an assistant leaves on disk and reports on them:\ntokens by model and day, tool and MCP calls, skills, subagents, hooks, and slash\ncommands. Nothing is sent anywhere and nothing outside the scan cache is written.\n\nEvery transcript is reduced once and cached under XDG_CACHE_HOME, keyed on each\nfile's size and modification time, so the first scan is slow and later ones are not.\n\nProviders:\n  --provider selects the log source; `usage providers` lists what is registered.\n\nWindows:\n  --since and --until take a relative span (7d, 2w, 3m, 1y) or an ISO date, and are\n  inclusive day bounds.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+    "\nReads the session transcripts an assistant leaves on disk and reports on them:\ntokens by model and day, tool and MCP calls, skills, subagents, hooks, and slash\ncommands. Nothing is sent anywhere and nothing outside the usage store is written.\n\nEvery transcript is reduced once into a SQLite store under XDG_DATA_HOME, keyed on\neach file's size and modification time, so the first scan is slow and later ones are\nnot. The store keeps day buckets for these reports and per-occurrence event rows for\nquestions a day bucket cannot express; query the file directly for those.\n\nProviders:\n  --provider selects the log source; `usage providers` lists what is registered.\n\nWindows:\n  --since and --until take a relative span (7d, 2w, 3m, 1y) or an ISO date, and are\n  inclusive day bounds.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   );
 
 /**
@@ -627,7 +638,7 @@ const usageCommon = (command: Command): Command =>
     .option("--top <n>", "Rows to show; 0 for all", "20")
     .option("--logs <dir>", "Read logs from this directory instead of the discovered one")
     .option("--no-subagents", "Exclude subagent transcripts")
-    .option("--no-index", "Bypass the scan cache; neither read it nor write it")
+    .option("--no-index", "Bypass the usage store; neither read it nor write it")
     .option("--strict", "Exit 2 when a transcript could not be fully read");
 
 const usageExitCodes =
@@ -732,14 +743,110 @@ usage
   .action((opts: Record<string, unknown>) => usageProvidersAction(opts as UsageOptions));
 
 usageCommon(usage.command("index"))
-  .description("Show, rebuild, or clear the scan cache")
-  .option("--rebuild", "Re-parse every transcript and rewrite the cache")
-  .option("--clear", "Delete the cache")
+  .description("Show, rebuild, or clear the usage store")
+  .option("--rebuild", "Re-parse every transcript and rewrite its rows")
+  .option("--clear", "Drop the selected providers' rows")
   .addHelpText(
     "after",
-    "\nThe cache keys on each transcript's path, size, and modification time. Transcripts\nare append-only, so an unchanged file cannot hold a record the stored aggregate is\nmissing, and only files that grew are reopened.\n\nThe cache is private and self-invalidating: nothing outside the cache directory is\nwritten, and its internal format can change without a contract bump.\n\nExit codes:\n  0  Status written, or the cache was rebuilt or cleared\n  1  Invocation error",
+    "\nThe store keys on each transcript's path, size, and modification time. Transcripts\nare append-only, so an unchanged file cannot hold a record the stored aggregate is\nmissing, and only files that grew are reopened.\n\nOne SQLite store under XDG_DATA_HOME holds every provider, so --clear is scoped by\n--provider and the size it reports is the whole file's.\n\nExit codes:\n  0  Status written, or the store was rebuilt or cleared\n  1  Invocation error",
   )
   .action((opts: Record<string, unknown>) => usageIndexAction(opts as UsageOptions));
+
+usageCommon(usage.command("import"))
+  .description("Import transcripts into the usage store")
+  .option("--rebuild", "Re-parse every transcript, not only the ones that changed")
+  .addHelpText(
+    "after",
+    "\nReports populate the store on first use, so this is never required. It exists to do\nthat work deliberately: to warm a cold store before a timed report, to run on a\nschedule, and to see the import counters without a report wrapped around them.\n\nThe store keeps two grains. Day buckets answer every report this tool offers; the\nevent rows answer what a day bucket cannot, and are there for anything querying the\nSQLite file directly.\n\nExit codes:\n  0  Import completed\n  1  Invocation error, or no logs found\n  2  --strict was given and a transcript could not be fully read",
+  )
+  .action((opts: Record<string, unknown>) => usageImportAction(opts as UsageOptions));
+
+usage
+  .command("migrate")
+  .description("Apply pending usage store migrations")
+  .option("--format <fmt>", "Output format: llm, human, json", "llm")
+  .option("--envelope", "Wrap --format json output in the versioned result envelope")
+  .option("--check", "Report what is pending without writing")
+  .addHelpText(
+    "after",
+    "\nEvery command that opens the store migrates it, so this is needed only to migrate\ndeliberately, or with --check to see what is pending first.\n\nThe store is migrated rather than discarded. Once transcripts have been archived and\npruned it may be the only record of that usage left, so a version bump carries the\ndata forward instead of throwing it away. A store written by a newer cairn is\nrefused rather than guessed at.\n\nExit codes:\n  0  Store is current, or was migrated\n  1  Invocation error, or the store is newer than this build understands",
+  )
+  .action((opts: Record<string, unknown>) => usageMigrateAction(opts as UsageOptions));
+
+const archive = program
+  .command("archive")
+  .description("Archive plans, artifacts, and logs into long-term compressed storage")
+  .addHelpText(
+    "after",
+    "\nStores what an assistant leaves behind — plan documents, the files tools produced, and\noptionally transcripts and logs — as append-only .tar.gz segments with a SQLite index.\n\nWhat gets archived is declared per provider, not discovered by sweeping a home directory:\nonly named directories are walked, so plugin payloads and build scratch cannot be picked\nup by accident.\n\nSegments are ordinary archives. `tar tzf` recovers their contents with no index and no\ncairn, which is the point of a store meant to outlive the tool that wrote it.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+  );
+
+/** Options every `archive` subcommand shares. */
+const archiveCommon = (command: Command): Command =>
+  command
+    .option("--format <fmt>", "Output format: llm, human, json", "llm")
+    .option("--envelope", "Wrap --format json output in the versioned result envelope")
+    .option("--archive <dir>", "Archive location; defaults to XDG_DATA_HOME/cairn/archive");
+
+archiveCommon(archive.command("run"))
+  .description("Archive new and changed artifacts")
+  .option("--provider <name>", "Log source to archive, or all", "claude-code")
+  .option("--include <classes>", "plans, artifacts, transcripts, logs", "plans,artifacts")
+  .option("--logs <dir>", "Read logs from this directory instead of the discovered one")
+  .option("--dry-run", "Report what would be archived without storing anything")
+  .option("--segment-size <bytes>", "Seal a segment once it reaches this many uncompressed bytes")
+  .addHelpText(
+    "after",
+    "\nplans and artifacts are archived by default; transcripts and logs are opt-in because\nthey are three orders of magnitude larger.\n\nIncremental twice over: a file whose size and modification time already match the index\nis never opened, and a file whose content is already stored is never written again, so a\nsecond run over an unchanged corpus costs one stat per file.\n\nA file that changes gets a new row against a new blob, so the archive keeps every version\nit ever saw.\n\nExit codes:\n  0  Run completed\n  1  Invocation error, or no logs found",
+  )
+  .action((opts: Record<string, unknown>) => archiveRunAction(opts as ArchiveOptions));
+
+archiveCommon(archive.command("status"))
+  .description("Report what the archive holds")
+  .addHelpText("after", "\nExit codes:\n  0  Status written\n  1  Invocation error")
+  .action((opts: Record<string, unknown>) => archiveStatusAction(opts as ArchiveOptions));
+
+archiveCommon(archive.command("list"))
+  .description("List archived artifacts")
+  .option("--provider <name>", "Limit to one log source, or all", "all")
+  .option("--class <name>", "plan, artifact, transcript, or log")
+  .option("--since <day>", "Only artifacts last seen on or after this ISO day")
+  .option("--top <n>", "Rows to show; 0 for all", "20")
+  .addHelpText(
+    "after",
+    "\nOne row per archived path, newest first. A path the archive holds several versions of is\nlisted once, with the count.\n\nExit codes:\n  0  Listing written\n  1  Invocation error",
+  )
+  .action((opts: Record<string, unknown>) => archiveListAction(opts as ArchiveOptions));
+
+archiveCommon(archive.command("extract"))
+  .argument("<target>", "Original path, or a sha256 prefix")
+  .description("Write an archived file back out")
+  .option("--out <dir>", "Directory to write into", ".")
+  .addHelpText(
+    "after",
+    "\nA path resolves to its newest version; name a hash to reach an older one. The content is\nre-hashed on the way out, so an archive whose index and bytes disagree reports that rather\nthan handing back the wrong file.\n\nExit codes:\n  0  File written\n  1  Invocation error, or nothing matched",
+  )
+  .action((target: string, opts: Record<string, unknown>) =>
+    archiveExtractAction(target, opts as ArchiveOptions),
+  );
+
+archiveCommon(archive.command("verify"))
+  .description("Check the archive against its index")
+  .option("--deep", "Also decompress every segment and re-hash each blob")
+  .addHelpText(
+    "after",
+    "\nThe default pass hashes each segment file, catching truncation and corruption for the cost\nof reading it. --deep additionally re-hashes every member, which catches an index whose\noffsets no longer point where it claims.\n\nExit codes:\n  0  Archive matches its index\n  1  Invocation error\n  2  The archive and its index disagree",
+  )
+  .action((opts: Record<string, unknown>) => archiveVerifyAction(opts as ArchiveOptions));
+
+archiveCommon(archive.command("migrate"))
+  .description("Apply pending archive index migrations")
+  .option("--check", "Report what is pending without writing")
+  .addHelpText(
+    "after",
+    "\nThe index is migrated rather than discarded: it is the only map from an original path to\nthe segment holding that file's bytes. An index written by a newer cairn is refused rather\nthan guessed at.\n\nExit codes:\n  0  Index is current, or was migrated\n  1  Invocation error, or the index is newer than this build understands",
+  )
+  .action((opts: Record<string, unknown>) => archiveMigrateAction(opts as ArchiveOptions));
 
 // Internal: refreshes the cached latest version. Spawned detached by the notifier.
 program

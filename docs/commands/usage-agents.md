@@ -50,4 +50,4 @@ per-path spawn record, so under `--by path` the transcript count _is_ the spawn 
 
 - [`usage tools`](usage-tools.md) breaks tool calls down, including MCP.
 - [`usage sessions`](usage-sessions.md) reports the same activity one session at a time.
-- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the scan cache.
+- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the store.

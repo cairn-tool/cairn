@@ -49,4 +49,4 @@ this command exits `0` either way, and reporting an unavailable provider is the 
 ## Related surfaces
 
 - [`usage summary`](usage-summary.md) gives the headline totals these rows break down.
-- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the scan cache.
+- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the store.

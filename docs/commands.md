@@ -1,6 +1,6 @@
 # Complete command listing
 
-`cairn` contains four toolsets plus update and contract commands. Angle brackets in usage
+`cairn` contains five toolsets plus update and contract commands. Angle brackets in usage
 signatures are required arguments; square brackets are optional arguments.
 
 ## Global interface
@@ -18,6 +18,7 @@ signatures are required arguments; square brackets are optional arguments.
 | `cairn md`                                           | Validate, query, analyze, and modify Markdown workspaces.              |
 | `cairn scripts`                                      | Resolve and run named scripts declared in `.cairn.yml`.                |
 | `cairn usage`                                        | Report on Claude Code usage from its own session logs.                 |
+| `cairn archive`                                      | Archive plans, artifacts, and logs into long-term storage.             |
 
 ## Script commands
 
@@ -34,13 +35,17 @@ to the registry that declared it, so a hook keeps working after the caller chang
 ## Usage commands
 
 Reads the session transcripts an assistant leaves on disk and reports on them. Nothing is sent
-anywhere and nothing outside the scan cache is written. A provider registry selects the log
+anywhere and nothing outside the usage store is written. A provider registry selects the log
 source, so a second assistant's logs join the same reports rather than needing their own.
 
 Counts deduplicate the per-response fan-out in the source transcripts, and a subagent's tokens
 come from its own transcript rather than from the parent's understated summary of it. See
-[shared usage command behavior](commands/usage-common.md) for the options, the scan cache, and
+[shared usage command behavior](commands/usage-common.md) for the options, the store, and
 what the totals do and do not cover.
+
+Transcripts are imported once into a SQLite store under `$XDG_DATA_HOME`, which holds both the
+day rollup the reports read and a per-occurrence event table for questions a day bucket cannot
+express.
 
 | Command                                          | Description                                                    |
 | ------------------------------------------------ | -------------------------------------------------------------- |
@@ -54,7 +59,29 @@ what the totals do and do not cover.
 | [`usage hooks`](commands/usage-hooks.md)         | Hook executions by event and tool, with failures and latency.  |
 | [`usage commands`](commands/usage-commands.md)   | Slash command usage by name.                                   |
 | [`usage providers`](commands/usage-providers.md) | The log sources `usage` can report on, and what each answers.  |
-| [`usage index`](commands/usage-index.md)         | Show, rebuild, or clear the scan cache.                        |
+| [`usage index`](commands/usage-index.md)         | Show, rebuild, or clear the usage store.                       |
+| [`usage import`](commands/usage-import.md)       | Import transcripts into the usage store.                       |
+| [`usage migrate`](commands/usage-migrate.md)     | Apply pending usage store migrations.                          |
+
+## Archive commands
+
+Copies what an assistant leaves behind into long-term storage: plan documents, the files tools
+produced, and optionally the session transcripts and logs. Segments are ordinary `.tar.gz`
+archives whose members are named by their own hash, so `tar` recovers them with no index and no
+`cairn` — the point of a store meant to outlive the tool that wrote it.
+
+What gets archived is declared per provider rather than swept from a home directory, and a run is
+incremental twice over: unchanged files are never opened, and content already stored is never
+written twice. See [shared archive command behavior](commands/archive-common.md).
+
+| Command                                          | Description                             |
+| ------------------------------------------------ | --------------------------------------- |
+| [`archive run`](commands/archive-run.md)         | Archive new and changed artifacts.      |
+| [`archive status`](commands/archive-status.md)   | Report what the archive holds.          |
+| [`archive list`](commands/archive-list.md)       | List archived artifacts.                |
+| [`archive extract`](commands/archive-extract.md) | Write an archived file back out.        |
+| [`archive verify`](commands/archive-verify.md)   | Check the archive against its index.    |
+| [`archive migrate`](commands/archive-migrate.md) | Apply pending archive index migrations. |
 
 ## Agent commands
 

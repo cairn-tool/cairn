@@ -39,4 +39,4 @@ Model and tool listings are capped at ten rows; use [`usage tokens`](usage-token
 
 - [`usage tokens`](usage-tokens.md) breaks the same tokens down by model, time, project, or session.
 - [`usage sessions`](usage-sessions.md) reports the same activity one session at a time.
-- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the scan cache.
+- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the store.

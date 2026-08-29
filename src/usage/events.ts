@@ -249,3 +249,152 @@ export function utcDay(timestamp: string): string | null {
   if (!Number.isFinite(parsed)) return null;
   return new Date(parsed).toISOString().slice(0, 10);
 }
+
+/**
+ * What one observed occurrence in a transcript was.
+ *
+ * Events are the per-occurrence decomposition of a {@link DayBucket}: the bucket
+ * is a sum, and this is what was summed. Storing both is deliberate. The bucket
+ * answers every report that exists today in 82k rows; the event stream answers
+ * the questions a day bucket cannot — anything sub-day, per-turn, or sequential —
+ * at roughly 2.5M rows.
+ *
+ * A provider emits these *alongside* the bucket it already builds rather than
+ * instead of it, so no published number depends on this type being complete.
+ * {@link foldDays} folds a stream back into buckets, and
+ * `tests/unit/usage-events.test.ts` asserts the fold reproduces what the
+ * provider built. That test is what makes the stream trustworthy; without it
+ * an event silently missing from a provider would be invisible.
+ *
+ * `hook_error` exists because a hook's failure count and its execution count can
+ * legitimately diverge: Claude Code's `stop_hook_summary` reports failures in a
+ * `hookErrors` array that carries no matching execution record, so a `hook`
+ * event per failure would invent executions that never ran.
+ */
+export type EventKind =
+  | "response"
+  | "tool_use"
+  | "agent"
+  | "skill"
+  | "command"
+  | "prompt"
+  | "error"
+  | "compaction"
+  | "hook"
+  | "hook_error";
+
+export interface UsageEvent {
+  /** ISO instant from the record itself. */
+  ts: string;
+  kind: EventKind;
+  /** `response` only. */
+  model?: string;
+  /** `response` only. Already corrected for each provider's distortions. */
+  tokens?: TokenTotals;
+  /** `tool_use` only: the raw tool name, before {@link classifyTool}. */
+  tool?: string;
+  /** `agent`, `skill`, `command`, `hook`, `hook_error`: the thing's name. */
+  name?: string;
+  /** `hook` only. */
+  status?: "ok" | "failed" | "cancelled";
+  /** `hook` only. */
+  durationMs?: number;
+  /** `agent` only, where the provider records a spawn depth on the call itself. */
+  depth?: number;
+}
+
+/**
+ * One transcript, parsed.
+ *
+ * `aggregate` is exactly what {@link UsageProvider.read} has always returned;
+ * `events` is the same content decomposed. Both come out of one pass.
+ */
+export interface ParsedFile {
+  aggregate: FileAggregate;
+  events: UsageEvent[];
+}
+
+/**
+ * Folds an event stream back into day buckets.
+ *
+ * `observedDays` seeds the result, because a provider opens a bucket for every
+ * timestamped record it sees — including records that increment nothing. Those
+ * all-zero days are real output: `usage tokens --by day` reports a row for a day
+ * a session touched but spent nothing on. Deriving days from events alone would
+ * drop them.
+ */
+export function foldDays(
+  events: readonly UsageEvent[],
+  observedDays: readonly string[] = [],
+): Record<string, DayBucket> {
+  const days: Record<string, DayBucket> = {};
+  for (const day of observedDays) days[day] ??= emptyBucket();
+
+  for (const event of events) {
+    const day = utcDay(event.ts);
+    if (!day) continue;
+    const bucket = (days[day] ??= emptyBucket());
+    switch (event.kind) {
+      case "response":
+        if (event.model && event.tokens) {
+          addTokens((bucket.models[event.model] ??= emptyTokens()), event.tokens);
+        }
+        break;
+      case "tool_use":
+        if (event.tool) bucket.tools[event.tool] = (bucket.tools[event.tool] ?? 0) + 1;
+        break;
+      case "agent": {
+        if (!event.name) break;
+        const totals = (bucket.agents[event.name] ??= { count: 0, maxDepth: 0 });
+        totals.count += 1;
+        if (typeof event.depth === "number") {
+          totals.maxDepth = Math.max(totals.maxDepth, event.depth);
+        }
+        break;
+      }
+      case "skill":
+        if (event.name) bucket.skills[event.name] = (bucket.skills[event.name] ?? 0) + 1;
+        break;
+      case "command":
+        if (event.name) bucket.commands[event.name] = (bucket.commands[event.name] ?? 0) + 1;
+        break;
+      case "prompt":
+        bucket.prompts += 1;
+        break;
+      case "error":
+        bucket.errors += 1;
+        break;
+      case "compaction":
+        bucket.compactions += 1;
+        break;
+      case "hook": {
+        const totals = (bucket.hooks[event.name ?? "unknown"] ??= {
+          count: 0,
+          failures: 0,
+          cancelled: 0,
+          totalMs: 0,
+          maxMs: 0,
+        });
+        totals.count += 1;
+        if (event.status === "failed") totals.failures += 1;
+        if (event.status === "cancelled") totals.cancelled += 1;
+        const duration = event.durationMs ?? 0;
+        totals.totalMs += duration;
+        totals.maxMs = Math.max(totals.maxMs, duration);
+        break;
+      }
+      case "hook_error": {
+        const totals = (bucket.hooks[event.name ?? "unknown"] ??= {
+          count: 0,
+          failures: 0,
+          cancelled: 0,
+          totalMs: 0,
+          maxMs: 0,
+        });
+        totals.failures += 1;
+        break;
+      }
+    }
+  }
+  return days;
+}

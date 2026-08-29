@@ -26,17 +26,40 @@ change to one command's output publishes `v2/<id>.json` and changes that command
 
 ### The other hand-owned versions
 
-Four versions in this project are owned by hand rather than by semantic-release, and none of
+Five versions in this project are owned by hand rather than by semantic-release, and none of
 them is the package version. They version different things and move independently:
 
-| Version                        | Versions                                               | Reported by                          |
-| ------------------------------ | ------------------------------------------------------ | ------------------------------------ |
-| Contract `schemaVersion`       | The contract surface described here                    | `describe`, the `--envelope` wrapper |
-| Target profile `schemaVersion` | The structure of a target conformance profile          | `agent specs`                        |
-| Bundle `schemaVersion`         | The `agent-bundle.yaml` format authors write           | `agent inspect`                      |
-| Test file `schemaVersion`      | The assertion format `agent test` cases are written in | `agent test` (`test.schemaVersion`)  |
+| Version                        | Versions                                               | Reported by                                    |
+| ------------------------------ | ------------------------------------------------------ | ---------------------------------------------- |
+| Contract `schemaVersion`       | The contract surface described here                    | `describe`, the `--envelope` wrapper           |
+| Target profile `schemaVersion` | The structure of a target conformance profile          | `agent specs`                                  |
+| Bundle `schemaVersion`         | The `agent-bundle.yaml` format authors write           | `agent inspect`                                |
+| Test file `schemaVersion`      | The assertion format `agent test` cases are written in | `agent test` (`test.schemaVersion`)            |
+| Usage store version            | The SQLite schema of `usage.db`                        | `usage index`, `usage migrate`, `usage import` |
 
 A normal release bumps none of them.
+
+#### The usage store version is migrated, not discarded
+
+It is the odd one out, and the difference matters. The other private stores in this project —
+the URL cache, the workspace index — invalidate by _discarding_: a version mismatch throws the
+file away, costs a re-parse, and can never produce a wrong answer. Their versions are private,
+undocumented, and safe to bump at will.
+
+The usage store cannot work that way. Once `archive run --include transcripts` has run and the
+source logs have been pruned, the store may be the only surviving record of that usage, so a
+version bump has to carry the data forward. It is stored in `PRAGMA user_version` and the
+migration list is `src/usage/db/migrations.ts`. Three rules follow:
+
+- a shipped migration is never edited, because a store in the field has already run it; add a
+  new one instead
+- a migration has to work on real data, not only on an empty file
+- a store whose version exceeds what the running build understands is **refused**, not opened —
+  it may carry columns this build would drop on its next write
+
+It is still not part of the payload contract: it versions a file on disk, not a payload shape.
+It is listed here because it is hand-owned, and because a consumer reading `schemaVersion` out
+of `usage index` needs to know which of the two kinds of version it is looking at.
 
 ## Schema ids
 

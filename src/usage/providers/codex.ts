@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { createReadStream } from "node:fs";
-import type { DayBucket, FileAggregate, TokenTotals } from "../events.js";
+import type { DayBucket, FileAggregate, ParsedFile, TokenTotals, UsageEvent } from "../events.js";
 import { addTokens, emptyBucket, emptyTokens, utcDay } from "../events.js";
 import type {
   DiscoverOptions,
@@ -144,6 +144,14 @@ interface ParseState {
   previous: Cumulative | null;
   /** Model in force, updated by every turn_context and settings change. */
   model: string;
+  /** Per-occurrence decomposition; see the note on `ParseState` in claude-code.ts. */
+  events: UsageEvent[];
+  /** Timestamp of the record being applied, which every event is stamped with. */
+  ts: string;
+}
+
+function emit(state: ParseState, event: Omit<UsageEvent, "ts">): void {
+  state.events.push({ ts: state.ts, ...event });
 }
 
 function bucketFor(state: ParseState, timestamp: string | undefined): DayBucket | null {
@@ -155,11 +163,12 @@ function bucketFor(state: ParseState, timestamp: string | undefined): DayBucket 
   return (aggregate.days[day] ??= emptyBucket());
 }
 
-function tool(bucket: DayBucket, name: string): void {
+function tool(state: ParseState, bucket: DayBucket, name: string): void {
   bucket.tools[name] = (bucket.tools[name] ?? 0) + 1;
+  emit(state, { kind: "tool_use", tool: name });
 }
 
-function applySpawn(bucket: DayBucket, args: string | undefined): void {
+function applySpawn(state: ParseState, bucket: DayBucket, args: string | undefined): void {
   let type = "(unrecorded)";
   try {
     const parsed = JSON.parse(args ?? "{}") as { agent_type?: unknown };
@@ -169,19 +178,26 @@ function applySpawn(bucket: DayBucket, args: string | undefined): void {
   }
   const totals = (bucket.agents[type] ??= { count: 0, maxDepth: 0 });
   totals.count += 1;
+  emit(state, { kind: "agent", name: type });
 }
 
-function applyUserItem(bucket: DayBucket, content: RawContent[] | undefined): void {
+function applyUserItem(
+  state: ParseState,
+  bucket: DayBucket,
+  content: RawContent[] | undefined,
+): void {
   for (const part of content ?? []) {
     // Codex records an invoked skill as its own content part.
     if (part?.type === "skill" && typeof part.name === "string" && part.name) {
       bucket.skills[part.name] = (bucket.skills[part.name] ?? 0) + 1;
+      emit(state, { kind: "skill", name: part.name });
     }
     // `$name` is Codex's slash-command analogue, and the only place it is named.
     for (const element of part?.text_elements ?? []) {
       const placeholder = element?.placeholder;
       if (typeof placeholder === "string" && placeholder.startsWith("$")) {
         bucket.commands[placeholder] = (bucket.commands[placeholder] ?? 0) + 1;
+        emit(state, { kind: "command", name: placeholder });
       }
     }
   }
@@ -205,6 +221,7 @@ function applyRecord(state: ParseState, record: RawRecord): void {
 
   const bucket = bucketFor(state, record.timestamp);
   if (!bucket) return;
+  state.ts = record.timestamp!;
 
   switch (payload.type) {
     case "token_count": {
@@ -216,20 +233,23 @@ function applyRecord(state: ParseState, record: RawRecord): void {
       state.previous = current;
       // A duplicate re-emission carries the same cumulative figure and so a zero
       // delta. Counting it would inflate the request count for no tokens.
-      if (!isEmpty(totals)) addTokens((bucket.models[state.model] ??= emptyTokens()), totals);
+      if (!isEmpty(totals)) {
+        addTokens((bucket.models[state.model] ??= emptyTokens()), totals);
+        emit(state, { kind: "response", model: state.model, tokens: totals });
+      }
       return;
     }
     // `response_item` is the raw API view and `event_msg` the UI view of the
     // same activity. Tools are counted from the former only; counting both
     // doubles every call.
     case "custom_tool_call":
-      if (typeof payload.name === "string") tool(bucket, payload.name);
+      if (typeof payload.name === "string") tool(state, bucket, payload.name);
       return;
     case "function_call": {
       if (typeof payload.name !== "string") return;
       const name = payload.namespace ? `${payload.namespace}.${payload.name}` : payload.name;
-      tool(bucket, name);
-      if (payload.name === "spawn_agent") applySpawn(bucket, payload.arguments);
+      tool(state, bucket, name);
+      if (payload.name === "spawn_agent") applySpawn(state, bucket, payload.arguments);
       return;
     }
     // MCP and web search have no `response_item` counterpart, so they are taken
@@ -237,20 +257,22 @@ function applyRecord(state: ParseState, record: RawRecord): void {
     case "mcp_tool_call_end": {
       const server = payload.invocation?.server ?? "unknown";
       const name = payload.invocation?.tool ?? "unknown";
-      tool(bucket, `mcp__${server}__${name}`);
+      tool(state, bucket, `mcp__${server}__${name}`);
       return;
     }
     case "web_search_end":
-      tool(bucket, "web.search");
+      tool(state, bucket, "web.search");
       return;
     case "user_message":
       bucket.prompts += 1;
+      emit(state, { kind: "prompt" });
       return;
     case "context_compacted":
       bucket.compactions += 1;
+      emit(state, { kind: "compaction" });
       return;
     case "item_completed":
-      if (payload.item?.type === "UserMessage") applyUserItem(bucket, payload.item.content);
+      if (payload.item?.type === "UserMessage") applyUserItem(state, bucket, payload.item.content);
       return;
     default:
       return;
@@ -383,6 +405,10 @@ export const codexProvider: UsageProvider = {
   },
 
   async read(file: TranscriptFile): Promise<FileAggregate> {
+    return (await codexProvider.parse(file)).aggregate;
+  },
+
+  async parse(file: TranscriptFile): Promise<ParsedFile> {
     const aggregate: FileAggregate = {
       file: file.file,
       size: file.size,
@@ -397,7 +423,13 @@ export const codexProvider: UsageProvider = {
       malformedLines: 0,
     };
 
-    const state: ParseState = { aggregate, previous: null, model: "(unknown)" };
+    const state: ParseState = {
+      aggregate,
+      previous: null,
+      model: "(unknown)",
+      events: [],
+      ts: "",
+    };
     const lines = readline.createInterface({
       input: createReadStream(file.file, { encoding: "utf-8" }),
       crlfDelay: Infinity,
@@ -425,6 +457,6 @@ export const codexProvider: UsageProvider = {
       applyRecord(state, record);
     }
 
-    return aggregate;
+    return { aggregate, events: state.events };
   },
 };

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { createReadStream } from "node:fs";
-import type { DayBucket, FileAggregate, TokenTotals } from "../events.js";
+import type { DayBucket, FileAggregate, ParsedFile, TokenTotals, UsageEvent } from "../events.js";
 import { addTokens, emptyBucket, emptyTokens, utcDay } from "../events.js";
 import type {
   DiscoverOptions,
@@ -117,8 +117,22 @@ function hookTotals(bucket: DayBucket, name: string) {
   return (bucket.hooks[name] ??= { count: 0, failures: 0, cancelled: 0, totalMs: 0, maxMs: 0 });
 }
 
+function emit(state: ParseState, event: Omit<UsageEvent, "ts">): void {
+  state.events.push({ ts: state.ts, ...event });
+}
+
 interface ParseState {
   aggregate: FileAggregate;
+  /**
+   * The per-occurrence decomposition of the buckets being built.
+   *
+   * Pushed alongside every counter increment rather than derived from the
+   * finished aggregate, so the two cannot drift. `tests/unit/usage-events.test.ts`
+   * folds this back and asserts it reproduces `aggregate.days`.
+   */
+  events: UsageEvent[];
+  /** Timestamp of the record being applied, which every event is stamped with. */
+  ts: string;
   /**
    * `message.id`s already counted.
    *
@@ -150,7 +164,9 @@ function applyAssistant(state: ParseState, record: RawRecord, bucket: DayBucket)
   if (model && model !== SYNTHETIC_MODEL && message.usage && message.id) {
     if (!state.seenMessages.has(message.id)) {
       state.seenMessages.add(message.id);
-      addTokens((bucket.models[model] ??= emptyTokens()), readUsage(message.usage));
+      const tokens = readUsage(message.usage);
+      addTokens((bucket.models[model] ??= emptyTokens()), tokens);
+      emit(state, { kind: "response", model, tokens });
     }
   }
 
@@ -159,36 +175,45 @@ function applyAssistant(state: ParseState, record: RawRecord, bucket: DayBucket)
     if (block?.type !== "tool_use" || typeof block.name !== "string") continue;
     const name = block.name;
     bucket.tools[name] = (bucket.tools[name] ?? 0) + 1;
+    emit(state, { kind: "tool_use", tool: name });
     // The subagent-spawning tool is `Agent`; `Task` is accepted for older logs.
     if (name === "Agent" || name === "Task") {
       const type = block.input?.subagent_type;
       const key = typeof type === "string" && type ? type : "general-purpose";
       const totals = (bucket.agents[key] ??= { count: 0, maxDepth: 0 });
       totals.count += 1;
+      emit(state, { kind: "agent", name: key });
     } else if (name === "Skill") {
       const skill = block.input?.skill;
       if (typeof skill === "string" && skill) {
         bucket.skills[skill] = (bucket.skills[skill] ?? 0) + 1;
+        emit(state, { kind: "skill", name: skill });
       }
     }
   }
 }
 
-function applyUser(record: RawRecord, bucket: DayBucket): void {
+function applyUser(state: ParseState, record: RawRecord, bucket: DayBucket): void {
   const content = record.message?.content;
   if (typeof content !== "string") return;
 
   // A real typed turn, as opposed to a tool result or an injected system turn.
-  if (record.promptSource === "typed" && record.isMeta !== true) bucket.prompts += 1;
+  if (record.promptSource === "typed" && record.isMeta !== true) {
+    bucket.prompts += 1;
+    emit(state, { kind: "prompt" });
+  }
 
   SLASH_COMMAND.lastIndex = 0;
   for (const match of content.matchAll(SLASH_COMMAND)) {
     const name = match[1].trim();
-    if (name) bucket.commands[name] = (bucket.commands[name] ?? 0) + 1;
+    if (name) {
+      bucket.commands[name] = (bucket.commands[name] ?? 0) + 1;
+      emit(state, { kind: "command", name });
+    }
   }
 }
 
-function applyAttachment(record: RawRecord, bucket: DayBucket): void {
+function applyAttachment(state: ParseState, record: RawRecord, bucket: DayBucket): void {
   const attachment = record.attachment;
   if (!attachment?.type) return;
   switch (attachment.type) {
@@ -196,16 +221,20 @@ function applyAttachment(record: RawRecord, bucket: DayBucket): void {
       const name = attachment.hookName ?? attachment.hookEvent ?? "unknown";
       const totals = hookTotals(bucket, name);
       totals.count += 1;
-      if (count(attachment.exitCode) !== 0) totals.failures += 1;
+      const failed = count(attachment.exitCode) !== 0;
+      if (failed) totals.failures += 1;
       const duration = count(attachment.durationMs);
       totals.totalMs += duration;
       totals.maxMs = Math.max(totals.maxMs, duration);
+      emit(state, { kind: "hook", name, status: failed ? "failed" : "ok", durationMs: duration });
       break;
     }
     case "hook_cancelled": {
-      const totals = hookTotals(bucket, attachment.hookName ?? attachment.hookEvent ?? "unknown");
+      const name = attachment.hookName ?? attachment.hookEvent ?? "unknown";
+      const totals = hookTotals(bucket, name);
       totals.count += 1;
       totals.cancelled += 1;
+      emit(state, { kind: "hook", name, status: "cancelled", durationMs: 0 });
       break;
     }
     case "invoked_skills": {
@@ -213,6 +242,7 @@ function applyAttachment(record: RawRecord, bucket: DayBucket): void {
         const name = skill?.name;
         if (typeof name === "string" && name) {
           bucket.skills[name] = (bucket.skills[name] ?? 0) + 1;
+          emit(state, { kind: "skill", name });
         }
       }
       break;
@@ -221,6 +251,7 @@ function applyAttachment(record: RawRecord, bucket: DayBucket): void {
       const name = attachment.skill?.name;
       if (typeof name === "string" && name) {
         bucket.skills[name] = (bucket.skills[name] ?? 0) + 1;
+        emit(state, { kind: "skill", name });
       }
       break;
     }
@@ -229,13 +260,15 @@ function applyAttachment(record: RawRecord, bucket: DayBucket): void {
   }
 }
 
-function applySystem(record: RawRecord, bucket: DayBucket): void {
+function applySystem(state: ParseState, record: RawRecord, bucket: DayBucket): void {
   switch (record.subtype) {
     case "api_error":
       bucket.errors += 1;
+      emit(state, { kind: "error" });
       break;
     case "compact_boundary":
       bucket.compactions += 1;
+      emit(state, { kind: "compaction" });
       break;
     case "stop_hook_summary": {
       // Stop hooks report here rather than as a `hook_success` attachment, so
@@ -246,9 +279,15 @@ function applySystem(record: RawRecord, bucket: DayBucket): void {
         const duration = count(info?.durationMs);
         totals.totalMs += duration;
         totals.maxMs = Math.max(totals.maxMs, duration);
+        emit(state, { kind: "hook", name: "Stop", status: "ok", durationMs: duration });
       }
       if (Array.isArray(record.hookErrors) && record.hookErrors.length > 0) {
         hookTotals(bucket, "Stop").failures += record.hookErrors.length;
+        // A failure with no matching execution record: `hook_error` bumps the
+        // failure count without inventing a run that never happened.
+        for (let index = 0; index < record.hookErrors.length; index++) {
+          emit(state, { kind: "hook_error", name: "Stop" });
+        }
       }
       break;
     }
@@ -281,19 +320,20 @@ function applyRecord(state: ParseState, record: RawRecord): void {
 
   const bucket = bucketFor(state, record.timestamp);
   if (!bucket) return;
+  state.ts = record.timestamp!;
 
   switch (record.type) {
     case "assistant":
       applyAssistant(state, record, bucket);
       break;
     case "user":
-      applyUser(record, bucket);
+      applyUser(state, record, bucket);
       break;
     case "attachment":
-      applyAttachment(record, bucket);
+      applyAttachment(state, record, bucket);
       break;
     case "system":
-      applySystem(record, bucket);
+      applySystem(state, record, bucket);
       break;
     default:
       break;
@@ -410,6 +450,10 @@ export const claudeCodeProvider: UsageProvider = {
   },
 
   async read(file: TranscriptFile): Promise<FileAggregate> {
+    return (await claudeCodeProvider.parse(file)).aggregate;
+  },
+
+  async parse(file: TranscriptFile): Promise<ParsedFile> {
     const name = path.basename(file.file, ".jsonl");
     const subagent = file.kind === "subagent";
     // A subagent transcript's own records carry the parent's `sessionId`, and
@@ -436,7 +480,7 @@ export const claudeCodeProvider: UsageProvider = {
       malformedLines: 0,
     };
 
-    const state: ParseState = { aggregate, seenMessages: new Set() };
+    const state: ParseState = { aggregate, events: [], seenMessages: new Set(), ts: "" };
     const lines = readline.createInterface({
       input: createReadStream(file.file, { encoding: "utf-8" }),
       crlfDelay: Infinity,
@@ -456,6 +500,6 @@ export const claudeCodeProvider: UsageProvider = {
       if (record && typeof record === "object") applyRecord(state, record);
     }
 
-    return aggregate;
+    return { aggregate, events: state.events };
   },
 };

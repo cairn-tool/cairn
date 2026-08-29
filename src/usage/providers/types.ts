@@ -1,4 +1,4 @@
-import type { FileAggregate, TranscriptKind } from "../events.js";
+import type { FileAggregate, ParsedFile, TranscriptKind } from "../events.js";
 
 /**
  * What a provider can report on.
@@ -67,4 +67,13 @@ export interface UsageProvider {
   discover(root: string, options: DiscoverOptions): TranscriptFile[];
   /** Reduce one transcript to its aggregate. Never throws on malformed content. */
   read(file: TranscriptFile): Promise<FileAggregate>;
+  /**
+   * The same single pass as {@link read}, also returning the per-occurrence
+   * event decomposition the usage store keeps.
+   *
+   * `read` is the aggregate half of this and stays on the interface because
+   * every rollup wants only that; a caller that needs neither the events nor a
+   * second pass should keep calling it.
+   */
+  parse(file: TranscriptFile): Promise<ParsedFile>;
 }

@@ -17,13 +17,17 @@ src/agent/targets/*.ts versioned per-target capability profiles
 src/agent/test/*.ts    bundle contract-test parsing, assertion evaluation, and digests
 src/contract/*.ts      published JSON Schemas + the per-command contract registry
 src/scripts/*.ts       named-script registry parsing, chain resolution, and execution
-src/usage/*.ts         transcript parsing, day-bucketed aggregates, scan index
+src/usage/*.ts         transcript parsing, day-bucketed aggregates, scan orchestration
+src/usage/db/*.ts      the SQLite usage store: schema, migrations, import, queries
+src/sqlite.ts          the node:sqlite loader, shared by every store
+src/sqlite-store.ts    generic open + migrate for the two owned SQLite stores
+src/archive/*.ts       artifact sets, tar reading, segments, and the archive index
 src/usage/providers/*.ts  per-LLM log-source profiles
 src/config-schema.ts   validators shared by the config loader and the script registry
 tests/{unit,integration,e2e}
 ```
 
-There are four toolsets, `md`, `agent`, `scripts`, and `usage`, plus the top-level `check-update`,
+There are five toolsets, `md`, `agent`, `scripts`, `usage`, and `archive`, plus the top-level `check-update`,
 `describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
 `command(...)` registration in `src/cli.ts`, a `src/contract/registry.ts` entry, a
 `docs/commands/<name>.md` page with entries in `docs/commands.md` and `docs/_contents.md`, a
@@ -234,19 +238,35 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   parent's `toolUseResult.totalTokens` is the subagent's _final message only_ and understates
   real spend several-fold. `subagents/agent-*.jsonl` outnumbers main transcripts about 6:1 and
   holds more bytes, so they are scanned by default; `--no-subagents` prunes discovery.
-- **A filtered `usage` scan must merge into the cache shard, not rebuild it.** `--since` and
-  `--no-subagents` prune discovery, so rebuilding a shard from what such a walk found evicts
-  every entry it never looked at and makes the next full scan re-parse everything. Only a
-  complete walk may drop entries — that is the `partial` flag in `src/usage/scan.ts`, and
-  `tests/e2e/usage.test.ts` guards it.
-- **The `usage` index `CACHE_VERSION` is not a hand-owned contract version.** It is private and
-  self-invalidating like `src/url-cache.ts`'s: bump it freely, a mismatch costs a re-parse. Do
-  not add it to `docs/contract.md` alongside `CONTRACT_VERSION`, `PROFILE_SCHEMA_VERSION`, or
-  the two bundle `schemaVersion`s.
-- **`usage --since`/`--until` are day-granular, deliberately.** The index stores per-day buckets
-  per file, which is what makes `tokens --by day` possible without keeping raw events; accepting
-  an instant would promise a precision the store cannot keep. The lower bound also prunes the
-  walk by file mtime before anything is opened.
+- **A filtered `usage` import may not delete.** `--since` and `--no-subagents` prune discovery,
+  so dropping rows for what such a walk did not find evicts every entry it never looked at and
+  makes the next full import re-parse everything. Only a complete walk may delete — that is the
+  `partial` flag in `src/usage/scan.ts`, and `tests/e2e/usage.test.ts` guards it. The rule
+  survived the move from JSON shards to SQLite unchanged; only the storage did.
+- **The usage store version is hand-owned, and migrated rather than discarded.** Unlike
+  `src/url-cache.ts`'s private `CACHE_VERSION`, a mismatch here may not throw the file away:
+  after `archive run --include transcripts` prunes the source logs, the store can be the only
+  record of that usage left. `PRAGMA user_version` holds it, `src/usage/db/migrations.ts` is the
+  list, a shipped migration is never edited, and a store from a newer build is **refused**, not
+  opened. It is the fifth entry in the `docs/contract.md` table of hand-owned versions.
+- **The usage store keeps two grains, and one test is what keeps them honest.** Providers emit
+  per-occurrence `UsageEvent`s _alongside_ the day buckets they already built, never instead of
+  them, so no published number depends on the event stream being complete.
+  `tests/unit/usage-events.test.ts` folds the stream back with `foldDays` and asserts it
+  reproduces `aggregate.days`. Adding a counter to a provider without emitting its event fails
+  there rather than shipping a quietly short `event` table. `hook_error` exists because a hook's
+  failure count and execution count legitimately diverge — Claude Code's `stop_hook_summary`
+  reports failures with no matching execution record.
+- **`usage index`'s `shards` is retained at `0`, and `bytes` is not summed.** One store replaced
+  the per-project shard files, so `shards` counts something that no longer exists but is a
+  required property of the published schema; `removed` now counts transcripts, not files; and
+  `bytes` is the whole store's size repeated on every `caches` entry. Recorded in the registry
+  `notes` and `docs/commands/usage-index.md` rather than quietly fixed, the same rule as
+  `md links -fj` and `md lint-dir --summary`.
+- **`usage --since`/`--until` are day-granular, deliberately.** The day rollup is what makes
+  `tokens --by day` cheap, and the bounds are pushed into SQL against it; accepting an instant
+  would promise a precision that rollup cannot keep, even though the `event` table could answer
+  it. The lower bound also prunes the walk by file mtime before anything is opened.
 - **`usage` provider capability is data, and the reports read that data.** Same rule as
   `src/agent/targets/*.ts`: `src/commands/usage.ts` must never branch on `provider.name`.
   Registering a second LLM is a module under `src/usage/providers/` plus a line in its
@@ -275,9 +295,12 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   keeps every JSONL-derived figure while emitting no tokens. Read the JSONL (named fields) for
   everything it can answer and the database only for what exists nowhere else.
 - **`node:sqlite` prints an experimental warning to stderr on import.** stderr carries the JSON
-  payload whenever a command reports findings, so `loadSqlite()` suppresses it around the
-  `createRequire` call — the same rule as the update notifier. A `tests/e2e/usage.test.ts` case
-  asserts stderr stays empty.
+  payload whenever a command reports findings, so `loadSqlite()` in `src/sqlite.ts` suppresses it
+  around the `createRequire` call — the same rule as the update notifier. A
+  `tests/e2e/usage.test.ts` case asserts stderr stays empty. That loader is shared by the
+  antigravity provider, which reads somebody else's database and treats every failure as a
+  missing token column, and by the usage store, which owns its file and calls `requireSqlite()`
+  because it cannot degrade. Do not copy it a third time.
 - **A session id is unique only within its provider.** `sessionKey()` in `src/usage/events.ts`
   qualifies it; counting or grouping sessions on the bare id merges two providers' sessions when
   they mint the same UUID, which they do.
@@ -315,6 +338,36 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   `src/completion/shells.ts` builds `_CAIRN_PATHS` from `model.binary`; it was hardcoded
   `_CLAUDE_CLI_PATHS` and so was the one string in that file the binary name never reached.
   Do not re-inline it.
+- **The archive's member names are content hashes, and that is a path-length defence as well as
+  deduplication.** `src/archive/segments.ts` names every member `blobs/<aa>/<sha256>` — 73
+  characters, comfortably inside the ustar `name` field. The real paths are not: the corpus nests
+  seven deep under project slugs that are themselves absolute paths with the separators replaced,
+  and `tarball` throws `TarPathTooLongError` rather than escalating to a PAX header. Storing by
+  original path would fail on real data and lose deduplication at the same time.
+- **`src/archive/tar-read.ts` is the first reader of a format this repo only ever wrote.** It
+  pairs with `src/agent/package/tar.ts` and handles only what that writer emits; a PAX or GNU
+  long-name header is refused rather than guessed at. `archive extract` and `archive verify --deep`
+  both go through it, and `sealSegment` uses it to record member offsets by reading back the
+  archive it just built rather than predicting them from entry sizes — predicting would duplicate
+  the writer's padding rules somewhere they could drift.
+- **The archive matches candidates to stored rows through one `artifactKey` helper.** The two
+  sides were briefly written separately with different separators, and the result was an archive
+  that re-hashed its entire corpus on every run while still producing correct output — a bug with
+  no wrong answer to give it away. The separator is a NUL for the same reason `sessionKey` uses
+  one: it cannot occur in either half, and a space can and does occur in a path.
+- **A blob still buffered in the current segment is not the same as a stored one.** `run.ts` keeps
+  `storedBlobs` and `pendingBlobs` apart because a second file with the same content as one still
+  in the buffer cannot have its artifact row written yet — the `blob` row it references does not
+  exist until the segment is sealed. Conflating them is a foreign key violation, not a subtle
+  miscount.
+- **`archive verify` exits 2 without `--strict`, and that is deliberate.** Every other `usage` and
+  `archive` command treats an unreadable file as routine and reports it, because over thousands of
+  artifacts a file removed mid-walk is normal. Corruption is not routine; it is the finding the
+  command exists to report, so making it opt-in would defeat the point.
+- **`archive run` declares `writes: true`, and `usage index` does not.** Both write only to their
+  own store, but the archive's location is a durable directory the user chose and may point at
+  external storage, so calling it non-writing would be misleading. `archive extract` is also a
+  writer, and the only one that writes outside the archive.
 - **No published schema may set `additionalProperties: false` or `$ref` another document.**
   The first would make every additive change break validating consumers; the second would make
   `cairn schema <id>` return something that cannot be compiled on its own.

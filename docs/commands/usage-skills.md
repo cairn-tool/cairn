@@ -35,4 +35,4 @@ prefix and a bare project skill does not.
 
 - [`usage commands`](usage-commands.md) reports slash command usage by name.
 - [`usage tools`](usage-tools.md) breaks tool calls down, including MCP.
-- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the scan cache.
+- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the store.

@@ -1,7 +1,7 @@
 # Shared usage command behavior
 
 Every command below `cairn usage` reads an assistant's own session logs and reports on
-them. Nothing is sent anywhere, and nothing outside the scan cache is written.
+them. Nothing is sent anywhere, and nothing outside the usage store is written.
 
 ## Common options
 
@@ -20,7 +20,7 @@ command page lists only the options particular to it.
 | `--top <n>`         | `20`          | Rows to show; `0` for all. `totals` is unaffected.                    |
 | `--logs <dir>`      | Discovered    | Read logs from this directory instead of the discovered one.          |
 | `--no-subagents`    | —             | Exclude subagent transcripts.                                         |
-| `--no-index`        | —             | Bypass the scan cache; neither read it nor write it.                  |
+| `--no-index`        | —             | Bypass the store; neither read it nor write it.                       |
 | `--strict`          | `false`       | Exit `2` when a transcript could not be fully read.                   |
 | `-h`, `--help`      | —             | Show help.                                                            |
 
@@ -159,20 +159,51 @@ reliably turned back into a path.
 and everything under it, or a bare name, which matches any project path containing it, case
 insensitively.
 
-## The scan cache
+## The usage store
 
-Each transcript is reduced once and stored under `$XDG_CACHE_HOME/cairn/usage/<provider>/`
-(or `~/.cache/...`), one shard per project. The key is each file's path, size, and modification
-time: a transcript that has not changed cannot hold a record the stored aggregate is missing, so
-only files that grew are reopened. Providers cache separately, so adding one does not invalidate
-another's work.
+Each transcript is reduced once into a SQLite store at `$XDG_DATA_HOME/cairn/usage.db`
+(or `~/.local/share/cairn/usage.db`). One store holds every provider. The key is each file's
+path, size, and modification time: a transcript that has not changed cannot hold a record the
+stored aggregate is missing, so only files that grew are reopened.
 
-A filtered scan merges into the stored shards rather than replacing them, so a `--since` run
-never evicts what a full run had already done. See [`usage index`](usage-index.md) to inspect,
-rebuild, or clear it.
+A filtered scan may only insert and update, never delete, so a `--since` or `--no-subagents` run
+never evicts what a full run had already done. See [`usage index`](usage-index.md) to inspect it,
+[`usage import`](usage-import.md) to populate it deliberately, and
+[`usage migrate`](usage-migrate.md) to move it between versions.
 
-The cache is private and self-invalidating. Its internal format is not part of the published
-contract and can change without notice; a mismatch costs a re-parse, never a wrong answer.
+`$XDG_DATA_HOME`, not `$XDG_CACHE_HOME`, because this is data rather than a cache. The JSON
+shard cache it replaced was disposable — losing it cost a re-parse. Once transcripts have been
+archived and the originals pruned, this store is the only record of that usage left on the
+machine, so it is migrated forward across versions rather than discarded, and it does not live
+somewhere tools are entitled to delete without asking.
+
+### Two grains
+
+The store keeps both a per-occurrence `event` table and a materialized day rollup.
+
+Every report this tool offers reads the day rollup, which is a few tens of thousands of rows and
+answers in milliseconds. The `event` table is roughly two orders of magnitude larger and is read
+by nothing here; it exists so that questions a day bucket cannot express — anything sub-day,
+per-turn, or sequential — can be asked of the SQLite file directly:
+
+```sql
+-- tokens by hour of day, which no `--by` dimension can produce
+SELECT substr(ts, 12, 2) AS hour,
+       SUM(input + output + cache_read + cache_write) AS tokens
+  FROM event WHERE kind = 'response' GROUP BY hour ORDER BY hour;
+```
+
+The two are written from the same parse in the same pass, and
+`tests/unit/usage-events.test.ts` folds the event stream back into day buckets and asserts it
+reproduces them, so the grains cannot silently disagree.
+
+Nothing forces you to use SQLite's own tools. DuckDB reads the store natively, if a columnar
+engine is wanted for heavier analysis:
+
+```sql
+INSTALL sqlite; LOAD sqlite;
+ATTACH '~/.local/share/cairn/usage.db' AS usage (TYPE sqlite);
+```
 
 ## Exit codes
 

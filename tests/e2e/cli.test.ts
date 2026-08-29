@@ -40,7 +40,11 @@ async function runCliInWithWorkspaceCache(
   cwd: string,
   ...args: string[]
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  const env = { ...process.env, XDG_CACHE_HOME: path.join(cwd, ".test-cache") };
+  const env = {
+    ...process.env,
+    XDG_CACHE_HOME: path.join(cwd, ".test-cache"),
+    XDG_DATA_HOME: path.join(cwd, ".test-data"),
+  };
   try {
     const { stdout, stderr } = await exec("node", [cliPath, ...args], { cwd, env });
     return { stdout, stderr, exitCode: 0 };

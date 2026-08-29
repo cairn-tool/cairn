@@ -40,4 +40,4 @@ so a session's subagent spend is never dropped from its own row.
 
 - [`usage projects`](usage-projects.md) reports the same activity one project at a time.
 - [`usage agents`](usage-agents.md) reports what the subagent calls actually cost.
-- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the scan cache.
+- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the store.

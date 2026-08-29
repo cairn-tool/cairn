@@ -41,4 +41,4 @@ The subagent-spawning tool is classified as `agent` and the skill-invoking tool 
 
 - [`usage agents`](usage-agents.md) reports what the subagent calls actually cost.
 - [`usage skills`](usage-skills.md) reports skill invocations by name.
-- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the scan cache.
+- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the store.

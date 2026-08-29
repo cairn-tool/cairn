@@ -9,6 +9,7 @@ This directory is the reference documentation for `cairn`.
 - [Project configuration schema](configuration.md)
 - [Shared Markdown command behavior](commands/md-common.md)
 - [Shared usage command behavior](commands/usage-common.md)
+- [Shared archive command behavior](commands/archive-common.md)
 
 ## Contract commands
 
@@ -53,6 +54,17 @@ This directory is the reference documentation for `cairn`.
 - [`usage commands`](commands/usage-commands.md)
 - [`usage providers`](commands/usage-providers.md)
 - [`usage index`](commands/usage-index.md)
+- [`usage import`](commands/usage-import.md)
+- [`usage migrate`](commands/usage-migrate.md)
+
+## Archive commands
+
+- [`archive run`](commands/archive-run.md)
+- [`archive status`](commands/archive-status.md)
+- [`archive list`](commands/archive-list.md)
+- [`archive extract`](commands/archive-extract.md)
+- [`archive verify`](commands/archive-verify.md)
+- [`archive migrate`](commands/archive-migrate.md)
 
 ## Other top-level commands
 

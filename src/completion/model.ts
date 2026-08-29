@@ -9,6 +9,7 @@ import {
   TOKEN_DIMENSIONS,
   TOOL_DIMENSIONS,
 } from "../usage/aggregate.js";
+import { ARTIFACT_CLASSES } from "../archive/sets.js";
 import { ALL_PROVIDERS, providerNames } from "../usage/providers/index.js";
 
 /** The shells a script can be generated for. */
@@ -78,6 +79,7 @@ const CHOICES: Record<string, string[]> = {
   "usage tools|--kind": [...TOOL_KINDS],
   "usage sessions|--sort": [...SESSION_SORTS],
   "usage agents|--by": [...AGENT_DIMENSIONS],
+  "archive list|--class": [...ARTIFACT_CLASSES],
 };
 
 /** Positional arguments whose values are a fixed vocabulary. */

@@ -39,7 +39,7 @@ async function runWith(
   cache: string,
   ...args: string[]
 ): Promise<{ stdout: string; stderr: string; code: number }> {
-  const env = { ...process.env, CI: "1", XDG_CACHE_HOME: cache };
+  const env = { ...process.env, CI: "1", XDG_CACHE_HOME: cache, XDG_DATA_HOME: cache };
   try {
     const result = await exec("node", [cli, ...args], { env });
     return { ...result, code: 0 };

@@ -2,9 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { createReadStream } from "node:fs";
-import type { DayBucket, FileAggregate } from "../events.js";
+import type { DayBucket, FileAggregate, ParsedFile, UsageEvent } from "../events.js";
 import { emptyBucket, emptyTokens, utcDay } from "../events.js";
-import { createRequire } from "node:module";
+import type { SqliteDatabase, SqliteRow } from "../../sqlite.js";
+import { loadSqlite } from "../../sqlite.js";
 import { decode, int, str, sub, timestamp } from "./protobuf.js";
 import type {
   DiscoverOptions,
@@ -64,45 +65,6 @@ const USAGE_COMPLETION = 3;
 const USAGE_PROMPT = 5;
 const USAGE_THINKING = 9;
 const USAGE_OUTPUT = 10;
-
-interface SqliteRow {
-  [column: string]: unknown;
-}
-
-interface SqliteDatabase {
-  prepare(sql: string): { all(): SqliteRow[]; get(): SqliteRow | undefined };
-  close(): void;
-}
-
-let sqliteModule:
-  { DatabaseSync: new (p: string, o?: object) => SqliteDatabase } | null | undefined;
-
-/**
- * Loads `node:sqlite`, suppressing its experimental warning.
- *
- * The warning goes to stderr, and stderr carries the JSON payload whenever a
- * command reports findings — so letting it through would corrupt a consumer's
- * parse. This is the same rule that keeps the update notifier off machine-
- * readable streams.
- *
- * Returns null when the runtime has no `node:sqlite`, which costs the token
- * column and nothing else.
- */
-function loadSqlite(): typeof sqliteModule {
-  if (sqliteModule !== undefined) return sqliteModule;
-  const emit = process.emitWarning;
-  try {
-    process.emitWarning = () => {};
-    // A synchronous require of a builtin, which `import` cannot do from a
-    // non-async call site. `createRequire` is how ESM asks for one.
-    sqliteModule = createRequire(import.meta.url)("node:sqlite") as typeof sqliteModule;
-  } catch {
-    sqliteModule = null;
-  } finally {
-    process.emitWarning = emit;
-  }
-  return sqliteModule;
-}
 
 interface Identity {
   project: string;
@@ -244,7 +206,11 @@ function bucketOf(aggregate: FileAggregate, at: string): DayBucket | null {
  * About one line in a thousand is torn by an interleaved append and will not
  * parse. Those are counted, never fatal.
  */
-async function readTranscript(file: string, aggregate: FileAggregate): Promise<void> {
+async function readTranscript(
+  file: string,
+  aggregate: FileAggregate,
+  events: UsageEvent[],
+): Promise<void> {
   let lines: readline.Interface;
   try {
     if (!fs.statSync(file).isFile()) return;
@@ -269,13 +235,26 @@ async function readTranscript(file: string, aggregate: FileAggregate): Promise<v
     const bucket = bucketOf(aggregate, record.created_at);
     if (!bucket) continue;
 
+    const at = record.created_at;
     for (const call of record.tool_calls ?? []) {
       const name = call?.name;
-      if (typeof name === "string" && name) bucket.tools[name] = (bucket.tools[name] ?? 0) + 1;
+      if (typeof name === "string" && name) {
+        bucket.tools[name] = (bucket.tools[name] ?? 0) + 1;
+        events.push({ ts: at, kind: "tool_use", tool: name });
+      }
     }
-    if (record.type === "USER_INPUT" && record.source === "USER_EXPLICIT") bucket.prompts += 1;
-    if (record.type === "ERROR_MESSAGE" || record.status === "ERROR") bucket.errors += 1;
-    if (record.type === "CHECKPOINT") bucket.compactions += 1;
+    if (record.type === "USER_INPUT" && record.source === "USER_EXPLICIT") {
+      bucket.prompts += 1;
+      events.push({ ts: at, kind: "prompt" });
+    }
+    if (record.type === "ERROR_MESSAGE" || record.status === "ERROR") {
+      bucket.errors += 1;
+      events.push({ ts: at, kind: "error" });
+    }
+    if (record.type === "CHECKPOINT") {
+      bucket.compactions += 1;
+      events.push({ ts: at, kind: "compaction" });
+    }
   }
 }
 
@@ -385,6 +364,10 @@ export const antigravityProvider: UsageProvider = {
   },
 
   async read(file: TranscriptFile): Promise<FileAggregate> {
+    return (await antigravityProvider.parse(file)).aggregate;
+  },
+
+  async parse(file: TranscriptFile): Promise<ParsedFile> {
     const id = path.basename(file.file, ".db");
     const root = path.dirname(path.dirname(file.file));
 
@@ -402,6 +385,7 @@ export const antigravityProvider: UsageProvider = {
       malformedLines: 0,
     };
 
+    const events: UsageEvent[] = [];
     const sqlite = loadSqlite();
     if (sqlite) {
       let db: SqliteDatabase | undefined;
@@ -432,6 +416,18 @@ export const antigravityProvider: UsageProvider = {
             totals.output += row.output;
             totals.thinking += row.thinking;
             totals.requests += 1;
+            events.push({
+              ts: row.at,
+              kind: "response",
+              model,
+              tokens: {
+                ...emptyTokens(),
+                input: row.prompt,
+                output: row.output,
+                thinking: row.thinking,
+                requests: 1,
+              },
+            });
           }
         }
       } catch {
@@ -445,7 +441,7 @@ export const antigravityProvider: UsageProvider = {
       }
     }
 
-    await readTranscript(path.join(root, BRAIN, id, TRANSCRIPT), aggregate);
+    await readTranscript(path.join(root, BRAIN, id, TRANSCRIPT), aggregate, events);
 
     const commands = readHistory(root).get(id);
     if (commands && aggregate.firstTs) {
@@ -454,10 +450,16 @@ export const antigravityProvider: UsageProvider = {
         const bucket = (aggregate.days[day] ??= emptyBucket());
         for (const [name, uses] of Object.entries(commands)) {
           bucket.commands[name] = (bucket.commands[name] ?? 0) + uses;
+          // `history.jsonl` records no per-use timestamp, so every use is
+          // stamped with the conversation's first — the same day the bucket
+          // above files it under.
+          for (let use = 0; use < uses; use++) {
+            events.push({ ts: aggregate.firstTs, kind: "command", name });
+          }
         }
       }
     }
 
-    return aggregate;
+    return { aggregate, events };
   },
 };

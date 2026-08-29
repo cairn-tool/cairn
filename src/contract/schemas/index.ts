@@ -16,10 +16,12 @@ import {
   mdOrphansSchema,
   mdQuerySchema,
 } from "./markdown.js";
+import { archiveListingSchema, archiveResultSchema } from "./archive.js";
 import { checkUpdateSchema, describeSchema, envelopeSchema, schemaListSchema } from "./meta.js";
 import { scriptListSchema, scriptRunSchema, scriptWhichSchema } from "./scripts.js";
 import {
   usageIndexSchema,
+  usageImportSchema,
   usageProvidersSchema,
   usageRollupSchema,
   usageSummarySchema,
@@ -55,6 +57,9 @@ export const SCHEMAS: readonly SchemaEntry[] = [
   usageRollupSchema,
   usageProvidersSchema,
   usageIndexSchema,
+  usageImportSchema,
+  archiveResultSchema,
+  archiveListingSchema,
   checkUpdateSchema,
   describeSchema,
   schemaListSchema,

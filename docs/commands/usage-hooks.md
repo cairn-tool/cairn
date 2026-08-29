@@ -38,4 +38,4 @@ execution, because no hook appears on both.
 ## Related surfaces
 
 - [`usage tools`](usage-tools.md) breaks tool calls down, including MCP.
-- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the scan cache.
+- [Shared usage command behavior](usage-common.md) documents log discovery, counting, windows, project selection, and the store.

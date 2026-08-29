@@ -1,18 +1,36 @@
 import os from "node:os";
+import type { SqliteDatabase } from "../sqlite.js";
 import type { FileAggregate } from "./events.js";
 import { sessionKey } from "./events.js";
 import type { ProjectSelector, Window } from "./filter.js";
 import { clipToWindow, matchesProject, modifiedSinceFor } from "./filter.js";
-import { getUsageCacheRoot, readShard, writeShard } from "./index-cache.js";
+import { getUsageDatabasePath, openUsageDatabase } from "./db/open.js";
+import {
+  deleteMissing,
+  prepareWrites,
+  selectFiles,
+  storedFiles,
+  writeParsedFile,
+} from "./db/store.js";
+import type { StoredFile } from "./db/store.js";
 import type { TranscriptFile, UsageProvider } from "./providers/types.js";
 
 /**
- * Discovery, cache reconciliation, and parsing.
+ * Discovery, store reconciliation, and parsing.
  *
  * This is the only module in `src/usage` that both reads the filesystem and
- * writes the cache; `filter.ts` and `aggregate.ts` stay pure so their rules can
+ * writes the store; `filter.ts` and `aggregate.ts` stay pure so their rules can
  * be tested without fixtures on disk.
+ *
+ * The store is a SQLite database rather than the directory of JSON shards this
+ * used to keep, but the reconciliation rules are unchanged and deliberately so:
+ * freshness is still `(size, mtime)`, and a walk that discovery pruned still may
+ * not delete. What the database adds is the per-event grain, which no report
+ * reads today and no shard could have held.
  */
+
+/** How many files one transaction covers, so a large import is not one lock. */
+const BATCH = 200;
 
 export interface ScanOptions {
   provider: UsageProvider;
@@ -22,11 +40,12 @@ export interface ScanOptions {
   projects: readonly ProjectSelector[];
   /** Keep only the n most recent sessions. Applied after aggregation. */
   last?: number;
-  /** When false the cache is neither read nor written. */
+  /** When false the store is neither read nor written. */
   useIndex: boolean;
-  /** Re-parse every file even on a cache hit, then rewrite the shards. */
+  /** Re-parse every file even on a hit, then rewrite its rows. */
   rebuild?: boolean;
-  cacheRoot?: string;
+  /** Overrides the discovered store path. */
+  databasePath?: string;
   concurrency?: number;
 }
 
@@ -54,6 +73,7 @@ export interface ScanResult {
   files: FileAggregate[];
   counters: ScanCounters;
   failures: ScanFailure[];
+  /** The store this scan read and wrote, or null under `--no-index`. */
   cacheRoot: string | null;
 }
 
@@ -84,7 +104,7 @@ export function defaultScanConcurrency(): number {
   return Math.max(2, Math.min(8, os.cpus().length));
 }
 
-function isFresh(entry: FileAggregate | undefined, file: TranscriptFile): boolean {
+function isFresh(entry: StoredFile | undefined, file: TranscriptFile): boolean {
   return entry !== undefined && entry.size === file.size && entry.mtimeMs === file.mtimeMs;
 }
 
@@ -118,69 +138,115 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
    */
   const partial = modifiedSince !== undefined || !options.subagents;
 
-  const cacheRoot = options.useIndex
-    ? (options.cacheRoot ?? getUsageCacheRoot(options.provider.name))
-    : null;
-
-  const byShard = new Map<string, TranscriptFile[]>();
-  for (const file of discovered) {
-    const bucket = byShard.get(file.shard);
-    if (bucket) bucket.push(file);
-    else byShard.set(file.shard, [file]);
-  }
+  const databasePath = options.useIndex ? (options.databasePath ?? getUsageDatabasePath()) : null;
 
   const aggregates: FileAggregate[] = [];
 
-  for (const [shard, files] of byShard) {
-    const stored = cacheRoot ? readShard(cacheRoot, shard) : {};
-    // A complete walk rebuilds the shard from what it found, so a transcript
-    // that has since been deleted drops out instead of accumulating forever. A
-    // partial walk starts from what is already stored, because it has no
-    // evidence about the files it skipped.
-    const rekeyed: Record<string, FileAggregate> = partial ? { ...stored } : {};
-    const misses: TranscriptFile[] = [];
-
-    for (const file of files) {
-      const entry = stored[file.relative];
-      if (!options.rebuild && isFresh(entry, file)) {
-        counters.cached += 1;
-        rekeyed[file.relative] = entry!;
-        aggregates.push(entry!);
-      } else {
-        misses.push(file);
-      }
-    }
-
+  if (!databasePath) {
+    // `--no-index`: parse everything found and keep nothing.
     const parsed = await concurrent(
-      misses,
+      discovered,
       options.concurrency ?? defaultScanConcurrency(),
       async (file) => {
         try {
-          return { file, aggregate: await options.provider.read(file) };
+          return await options.provider.read(file);
         } catch (error) {
           failures.push({ file: file.file, reason: (error as Error).message });
           return null;
         }
       },
     );
-
-    for (const result of parsed) {
-      if (!result) {
+    for (const aggregate of parsed) {
+      if (!aggregate) {
         counters.skipped += 1;
         continue;
       }
       counters.parsed += 1;
-      counters.malformed += result.aggregate.malformedLines;
-      rekeyed[result.file.relative] = result.aggregate;
-      aggregates.push(result.aggregate);
+      counters.malformed += aggregate.malformedLines;
+      aggregates.push(aggregate);
     }
+  } else {
+    const opened = openUsageDatabase({ path: databasePath });
+    const db = opened.db;
+    try {
+      const stored = storedFiles(db, options.provider.name);
+      const misses: TranscriptFile[] = [];
+      const seen = new Set<string>();
 
-    // A partial walk can only ever add, so with nothing parsed there is nothing
-    // to store; a complete walk also rewrites when an entry has disappeared.
-    const changed = partial
-      ? misses.length > 0
-      : misses.length > 0 || Object.keys(rekeyed).length !== Object.keys(stored).length;
-    if (cacheRoot && changed) writeShard(cacheRoot, shard, rekeyed);
+      for (const file of discovered) {
+        seen.add(file.relative);
+        if (!options.rebuild && isFresh(stored.get(file.relative), file)) counters.cached += 1;
+        else misses.push(file);
+      }
+
+      if (misses.length > 0) {
+        const statements = prepareWrites(db);
+        const importedAt = new Date().toISOString();
+        // Parsing is the slow half and runs concurrently; writing is serial,
+        // because one SQLite connection has one writer.
+        for (let offset = 0; offset < misses.length; offset += BATCH) {
+          const batch = misses.slice(offset, offset + BATCH);
+          const parsed = await concurrent(
+            batch,
+            options.concurrency ?? defaultScanConcurrency(),
+            async (file) => {
+              try {
+                return { file, parsed: await options.provider.parse(file) };
+              } catch (error) {
+                failures.push({ file: file.file, reason: (error as Error).message });
+                return null;
+              }
+            },
+          );
+          db.exec("BEGIN");
+          try {
+            for (const result of parsed) {
+              if (!result) {
+                counters.skipped += 1;
+                continue;
+              }
+              counters.parsed += 1;
+              counters.malformed += result.parsed.aggregate.malformedLines;
+              writeParsedFile(
+                statements,
+                result.parsed,
+                result.file.relative,
+                importedAt,
+                stored.get(result.file.relative)?.id,
+              );
+            }
+            db.exec("COMMIT");
+          } catch (error) {
+            db.exec("ROLLBACK");
+            throw error;
+          }
+        }
+      }
+
+      // Only a complete walk may delete: absence proves the transcript is gone
+      // only when the walk would have found it.
+      if (!partial) {
+        db.exec("BEGIN");
+        try {
+          deleteMissing(db, options.provider.name, seen);
+          db.exec("COMMIT");
+        } catch (error) {
+          db.exec("ROLLBACK");
+          throw error;
+        }
+      }
+
+      aggregates.push(
+        ...selectFiles(db, {
+          providers: [options.provider.name],
+          subagents: options.subagents,
+          since: options.window.since ?? undefined,
+          until: options.window.until ?? undefined,
+        }),
+      );
+    } finally {
+      closeQuietly(db);
+    }
   }
 
   let selected: FileAggregate[] = [];
@@ -199,7 +265,16 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   }
   counters.selected = selected.length;
 
-  return { files: selected, counters, failures, cacheRoot };
+  return { files: selected, counters, failures, cacheRoot: databasePath };
+}
+
+function closeQuietly(db: SqliteDatabase): void {
+  try {
+    db.close();
+  } catch {
+    // A store that will not close cleanly must not fail a report that already
+    // has its numbers.
+  }
 }
 
 /**

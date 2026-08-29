@@ -43,7 +43,12 @@ interface Run {
   exitCode: number;
 }
 
-/** A cache home of its own, so the suite neither reads nor grows the real one. */
+/**
+ * A cache and data home of its own, so the suite neither reads nor grows the
+ * real ones. Both are set: the usage store lives under `XDG_DATA_HOME` because
+ * it is durable rather than disposable, and leaving that unset would point every
+ * case at the developer's own `~/.local/share/cairn`.
+ */
 function cacheHome(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "usage-e2e-cache-"));
   temporary.push(root);
@@ -51,7 +56,7 @@ function cacheHome(): string {
 }
 
 async function runWith(cache: string, ...args: string[]): Promise<Run> {
-  const env = { ...process.env, CI: "1", XDG_CACHE_HOME: cache };
+  const env = { ...process.env, CI: "1", XDG_CACHE_HOME: cache, XDG_DATA_HOME: cache };
   try {
     const result = await exec("node", [cli, ...args], { env });
     return { ...result, exitCode: 0 };
@@ -262,8 +267,8 @@ describe("the scan index", () => {
   });
 
   it("does not evict entries a filtered scan never looked at", async () => {
-    // A --since or --no-subagents walk sees only part of the corpus, so it must
-    // merge into the stored shard rather than rebuild it. Rebuilding would make
+    // A --since or --no-subagents walk sees only part of the corpus, so it may
+    // only insert and update. Deleting the rows it never looked at would make
     // the next full scan re-parse everything it had already done.
     const cache = cacheHome();
     await runWith(cache, "usage", "summary", ...FIXTURE, "-fj");
@@ -272,7 +277,7 @@ describe("the scan index", () => {
     expect(full.scan).toMatchObject({ cached: 2, parsed: 0 });
   });
 
-  it("reports, rebuilds, and clears the cache", async () => {
+  it("reports, rebuilds, and clears the store", async () => {
     const cache = cacheHome();
     const empty = json(await runWith(cache, "usage", "index", "-fj"));
     validate("usage-index", empty);
@@ -283,11 +288,35 @@ describe("the scan index", () => {
     expect(rebuilt.action).toBe("rebuild");
     expect(rebuilt.scan).toMatchObject({ parsed: 2 });
     expect(rebuilt.cache).toMatchObject({ entries: 2 });
+    // The store carries a grain the shards it replaced never held. `days` counts
+    // day buckets, which is one per file per day: the main transcript spans two
+    // days and its subagent one.
+    expect(rebuilt.cache).toMatchObject({ days: 3, schemaVersion: 1 });
+    expect((rebuilt.cache as { events: number }).events).toBeGreaterThan(0);
 
     const cleared = json(await runWith(cache, "usage", "index", "--clear", "-fj"));
     expect(cleared.action).toBe("clear");
-    expect(cleared.removed).toBe(1);
-    expect(cleared.cache).toMatchObject({ entries: 0 });
+    // Transcripts, not shards: one store replaced the per-project shard files,
+    // so there is no longer any such thing as a shard to count.
+    expect(cleared.removed).toBe(2);
+    expect(cleared.cache).toMatchObject({ entries: 0, shards: 0 });
+  });
+
+  it("refuses a store written by a newer cairn rather than guessing at it", async () => {
+    const cache = cacheHome();
+    await runWith(cache, "usage", "summary", ...FIXTURE, "-fj");
+    const store = path.join(cache, "cairn", "usage.db");
+    expect(fs.existsSync(store)).toBe(true);
+    // `user_version` lives in the file header, at a fixed offset, big-endian.
+    const handle = fs.openSync(store, "r+");
+    const bump = Buffer.alloc(4);
+    bump.writeUInt32BE(9999);
+    fs.writeSync(handle, bump, 0, 4, 60);
+    fs.closeSync(handle);
+
+    const result = await runWith(cache, "usage", "summary", ...FIXTURE, "-fj");
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("9999");
   });
 
   it("refuses to clear and rebuild in one invocation", async () => {
@@ -510,7 +539,14 @@ describe("--provider all", () => {
   });
 
   async function runHome(...args: string[]): Promise<Run> {
-    const env = { ...process.env, CI: "1", HOME: home, XDG_CACHE_HOME: cacheHome() };
+    const cache = cacheHome();
+    const env = {
+      ...process.env,
+      CI: "1",
+      HOME: home,
+      XDG_CACHE_HOME: cache,
+      XDG_DATA_HOME: cache,
+    };
     delete env.CODEX_HOME;
     delete env.CLAUDE_CONFIG_DIR;
     try {
