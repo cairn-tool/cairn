@@ -7,6 +7,7 @@ import { jsonPayload } from "../result.js";
 import { closeQuietly } from "../sqlite-store.js";
 import { LATEST_VERSION, getArchiveRoot, openArchive, segmentsDirectory } from "../archive/db.js";
 import { archiveStatus, extract, listArtifacts, resolve, verify } from "../archive/query.js";
+import { createReporter, progressAllowed } from "../archive/progress.js";
 import { DEFAULT_SEGMENT_BYTES } from "../archive/segments.js";
 import { ARTIFACT_CLASSES, parseClasses } from "../archive/sets.js";
 import { runArchive } from "../archive/run.js";
@@ -40,6 +41,10 @@ export interface ArchiveOptions {
   include?: string;
   dryRun?: boolean;
   segmentSize?: string;
+  /** One durable line per artifact, to stderr. */
+  verbose?: boolean;
+  /** Commander sets this false for `--no-progress`. */
+  progress?: boolean;
   /** `archive list`. */
   class?: string;
   since?: string;
@@ -130,12 +135,19 @@ export async function archiveRunAction(opts: ArchiveOptions): Promise<void> {
   const sources = sourcesFor(opts);
   if (sources.length === 0) throw new Error("No provider logs found on this machine");
 
+  // The transient line is terminal chrome; verbose is a durable log a caller
+  // may well be redirecting, so only the first is gated on having a terminal.
+  const verbose = opts.verbose === true;
+  const progress = opts.progress !== false && progressAllowed(format);
+  const reporter = createReporter({ progress, verbose });
+
   const result = await runArchive({
     archiveRoot: root,
     sources,
     classes,
     ...(opts.dryRun ? { dryRun: true } : {}),
     segmentBytes: positive(opts.segmentSize, "--segment-size", DEFAULT_SEGMENT_BYTES),
+    reporter,
   });
 
   // An unreadable file is reported, never fatal: over thousands of artifacts a

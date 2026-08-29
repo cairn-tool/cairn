@@ -17,6 +17,8 @@ Archives new and changed artifacts.
 | `--logs <dir>`                                     | —                 | Read logs from this directory instead of the discovered one.   |
 | `--dry-run`                                        | —                 | Report what would be archived without storing anything.        |
 | `--segment-size <bytes>`                           | `67108864`        | Seal a segment once it reaches this many uncompressed bytes.   |
+| `-v`, `--verbose`                                  | —                 | Print one line per artifact to stderr.                         |
+| `--no-progress`                                    | —                 | Suppress the progress line.                                    |
 | [Shared options](archive-common.md#common-options) | —                 | `--format`, `--envelope`, `--archive`, `-h`.                   |
 
 ## What it does
@@ -33,6 +35,43 @@ version rather than replacing it.
 `--dry-run` opens nothing at all: it reports what the sets matched and how large it is, from the
 `stat` the walk already performed. It is the right way to find out what `--include transcripts`
 would cost before committing to it.
+
+## Watching a long run
+
+A run over a full corpus is tens of thousands of files and takes minutes, so it reports as it
+goes. Two levels, answering different questions.
+
+**The progress line** answers _is it still going, and how far in_. It rewrites itself in place on
+stderr:
+
+```text
+  38% 9184/24093 files - 3.0G/7.8G - 12 seg - 41.2M/s - 1m14s - ...tool-results/report.pdf
+```
+
+Because it rewrites in place it appears only when **stderr is a terminal**, `--format` is not
+`json`, and `CI` is unset — the same gate the update notice uses, and for the same reason: a
+carriage-return-rewritten line is corruption in a redirected log and noise in a CI transcript.
+`--no-progress` turns it off. On a narrow terminal the path gives way before the counters do.
+
+**`--verbose`** answers _what exactly did it do to which file_, one durable line per artifact:
+
+```text
+stored    plan            13.3k  00be1c87ba76  /Users/you/.claude/plans/some-plan.md
+duplicate artifact         2.1M  4f2a91c0de35  /Users/you/.claude/projects/x/page-3.jpg
+unchanged transcript       881k  ------------  /Users/you/.claude/projects/x/session.jsonl
+sealed    seg-000013.tar.gz  24.8M  431 blobs
+```
+
+An `unchanged` row carries no hash, because such a file is never opened — that is the whole point
+of the freshness check. Verbose is **not** gated on a terminal, since being redirectable is what it
+is for:
+
+```bash
+cairn archive run --provider all --include plans,artifacts,transcripts,logs -v 2> archive.log
+```
+
+`--verbose` suppresses the progress line, which would otherwise fight it for the same row. An
+unreadable file is reported durably at either level.
 
 ## Reading the counters
 

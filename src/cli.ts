@@ -795,9 +795,11 @@ archiveCommon(archive.command("run"))
   .option("--logs <dir>", "Read logs from this directory instead of the discovered one")
   .option("--dry-run", "Report what would be archived without storing anything")
   .option("--segment-size <bytes>", "Seal a segment once it reaches this many uncompressed bytes")
+  .option("-v, --verbose", "Print one line per artifact to stderr")
+  .option("--no-progress", "Suppress the progress line")
   .addHelpText(
     "after",
-    "\nplans and artifacts are archived by default; transcripts and logs are opt-in because\nthey are three orders of magnitude larger.\n\nIncremental twice over: a file whose size and modification time already match the index\nis never opened, and a file whose content is already stored is never written again, so a\nsecond run over an unchanged corpus costs one stat per file.\n\nA file that changes gets a new row against a new blob, so the archive keeps every version\nit ever saw.\n\nExit codes:\n  0  Run completed\n  1  Invocation error, or no logs found",
+    "\nplans and artifacts are archived by default; transcripts and logs are opt-in because\nthey are three orders of magnitude larger.\n\nIncremental twice over: a file whose size and modification time already match the index\nis never opened, and a file whose content is already stored is never written again, so a\nsecond run over an unchanged corpus costs one stat per file.\n\nA file that changes gets a new row against a new blob, so the archive keeps every version\nit ever saw.\n\nProgress:\n  A run over a full corpus is tens of thousands of files and takes minutes, so it draws a\n  progress line on stderr. That line rewrites itself in place, so it appears only when\n  stderr is a terminal, --format is not json, and CI is unset; --no-progress suppresses it.\n\n  -v prints one durable line per artifact instead, giving its disposition (stored,\n  duplicate, unchanged, skipped), size, hash, and path. It is not gated on a terminal,\n  so `cairn archive run -v 2> archive.log` is the way to keep a record of a long run.\n\nExit codes:\n  0  Run completed\n  1  Invocation error, or no logs found",
   )
   .action((opts: Record<string, unknown>) => archiveRunAction(opts as ArchiveOptions));
 

@@ -8,6 +8,7 @@ import type { UsageProvider } from "../usage/providers/types.js";
 import { openArchive, segmentsDirectory } from "./db.js";
 import type { ArtifactClass, ArtifactSet } from "./sets.js";
 import { profileFor } from "./sets.js";
+import type { RunReporter } from "./progress.js";
 import { DEFAULT_SEGMENT_BYTES, hashBuffer, SegmentWriter } from "./segments.js";
 
 /**
@@ -226,6 +227,13 @@ export interface RunOptions {
   /** Report what would be taken in, storing nothing. */
   dryRun?: boolean;
   segmentBytes?: number;
+  /**
+   * Told what happened as it happens.
+   *
+   * The engine reports events; how they are drawn is the command's business, so
+   * nothing here knows about terminals, colours, or `--verbose`.
+   */
+  reporter?: RunReporter;
 }
 
 export async function runArchive(options: RunOptions): Promise<RunResult> {
@@ -239,7 +247,13 @@ export async function runArchive(options: RunOptions): Promise<RunResult> {
 
   const candidates = collect(options.sources, options.classes);
   counters.discovered = candidates.length;
-  for (const candidate of candidates) bump(candidate.set.class, "discovered");
+  let plannedBytes = 0;
+  for (const candidate of candidates) {
+    bump(candidate.set.class, "discovered");
+    plannedBytes += candidate.size;
+  }
+  const reporter = options.reporter;
+  reporter?.start?.({ files: candidates.length, bytes: plannedBytes });
 
   if (options.dryRun) {
     // Nothing is opened: a dry run reports what the sets matched and how much it
@@ -249,6 +263,7 @@ export async function runArchive(options: RunOptions): Promise<RunResult> {
       (byClass[candidate.set.class] ??= { discovered: 0, stored: 0, bytes: 0 }).bytes +=
         candidate.size;
     }
+    reporter?.finish?.();
     return { counters, failures, segments: [], byClass };
   }
 
@@ -342,12 +357,23 @@ export async function runArchive(options: RunOptions): Promise<RunResult> {
       });
       waiting = [];
       pendingBlobs.clear();
+      reporter?.segment?.({
+        name: segment.name,
+        bytes: segment.bytes,
+        blobs: segment.blobs.length,
+      });
     };
 
     for (const candidate of candidates) {
       const previous = indexed.get(artifactKey(candidate.provider, candidate.recordPath));
       if (previous && previous.size === candidate.size && previous.mtimeMs === candidate.mtimeMs) {
         counters.unchanged += 1;
+        reporter?.file?.({
+          path: candidate.recordPath,
+          class: candidate.set.class,
+          size: candidate.size,
+          disposition: "unchanged",
+        });
         continue;
       }
 
@@ -356,17 +382,35 @@ export async function runArchive(options: RunOptions): Promise<RunResult> {
         content = await readCandidate(candidate);
       } catch (error) {
         counters.skipped += 1;
-        failures.push({ file: candidate.file, reason: (error as Error).message });
+        const reason = (error as Error).message;
+        failures.push({ file: candidate.file, reason });
+        reporter?.failure?.({ file: candidate.file, reason });
+        reporter?.file?.({
+          path: candidate.recordPath,
+          class: candidate.set.class,
+          size: candidate.size,
+          disposition: "skipped",
+        });
         continue;
       }
 
       counters.hashed += 1;
       const sha256 = hashBuffer(content);
 
+      const seen = (disposition: "stored" | "duplicate"): void =>
+        reporter?.file?.({
+          path: candidate.recordPath,
+          class: candidate.set.class,
+          size: candidate.size,
+          disposition,
+          sha256,
+        });
+
       if (storedBlobs.has(sha256)) {
         // Same bytes under a new path, or a file touched without being changed.
         counters.duplicate += 1;
         transact(db, () => writeArtifact(candidate, sha256));
+        seen("duplicate");
         continue;
       }
 
@@ -375,6 +419,7 @@ export async function runArchive(options: RunOptions): Promise<RunResult> {
         // paths, so only the row is added — once the segment is sealed.
         counters.duplicate += 1;
         waiting.push({ candidate, sha256 });
+        seen("duplicate");
         continue;
       }
 
@@ -386,11 +431,13 @@ export async function runArchive(options: RunOptions): Promise<RunResult> {
 
       pendingBlobs.add(sha256);
       waiting.push({ candidate, sha256 });
+      seen("stored");
       writer.add({ sha256, content, mode: candidate.mode });
       if (writer.shouldSeal) commitSegment();
     }
 
     commitSegment();
+    reporter?.finish?.();
 
     return {
       counters,
