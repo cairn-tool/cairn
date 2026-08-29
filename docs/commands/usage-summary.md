@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage summary [options]
+cairn usage summary [options]
 ```
 
 Headline totals over the selected window: sessions, prompts, tokens by class and by

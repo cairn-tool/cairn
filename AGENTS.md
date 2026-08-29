@@ -1,6 +1,7 @@
-# claude-cli
+# Cairn
 
-A TypeScript/Node ESM CLI published as `@bstockus/claude-cli`. The binary is `claude-cli`.
+A TypeScript/Node ESM CLI published as `@bstockus/cairn`. The binary is `cairn`.
+Renamed from `claude-cli`; see the compatibility gotcha below.
 
 ## Layout
 
@@ -191,7 +192,7 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   What makes it acceptable is that the command is declared by name in a tracked file rather than
   discovered in analyzed content — a resolver, not an evaluator. The load-bearing rules:
   resolution stops at the git root (or a deeper `--root`) and refuses entirely outside a
-  repository, `node_modules` is skipped so a vendored `.claude-cli.yml` cannot win by being
+  repository, `node_modules` is skipped so a vendored `.cairn.yml` cannot win by being
   nearest, the resolved `cwd` is containment-checked as well as the registry file, and `run:`
   passes forwarded arguments as separate argv entries to `sh -c` so the shell binds them to
   `$1…$n` without ever lexing them. Interpolating arguments into the body, or reaching for
@@ -217,7 +218,7 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   parsed registry off `ResolvedConfig` is what keeps `serve` more than one line from exposing it.
   The chain walk in `src/scripts/resolve.ts` deliberately validates _only_ `scripts:` — an
   ancestor's malformed `urls:` block belongs to another project.
-- **This repository has no `.claude-cli.yml`, and adding one is not free.** Any config file sets
+- **This repository has no `.cairn.yml`, and adding one is not free.** Any config file sets
   `config.root` to its directory, which confines the workspace — `tests/e2e/contract.test.ts`
   spawns the CLI with the repo as cwd while operating on temporary workspaces, and every one of
   those cases fails with "Directory is outside configured workspace root". Dogfooding the
@@ -284,9 +285,39 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   inside the file, so `scan.ts` filters on the parsed `kind` as well. Both filters must stay.
 - **Cursor is deliberately unregistered.** There is no local corpus to write or verify a parser
   against; `~/.cursor` on a machine without Cursor holds only third-party hook config.
+- **Every pre-rename identifier is still a read path, and the `LEGACY_*` constants are why.**
+  The tool was `claude-cli` through v1.11.0. Eight constants carry the old spelling —
+  `LEGACY_CONFIG_FILENAME`, `LEGACY_TOC_START`/`_END`, `LEGACY_SNIPPET_ATTRIBUTE`,
+  `LEGACY_INSTALL_MANIFEST`, and a `LEGACY_BASELINE_FORMAT` in each of `src/audit-baseline.ts`
+  and `src/agent/audit/baseline.ts` — plus the `CLAUDE_CLI_*` environment variables. Cairn
+  **writes** the new spelling and **reads** either. `tests/unit/legacy-names.test.ts` is the
+  contract for that; deleting a case there is the deliberate act of dropping compatibility,
+  not cleanup. Three rules are load-bearing and not obvious:
+  a TOC pair keeps the spelling it was found with (`synchronizeToc` returns the matched
+  markers in `block`), because migrating them would report every legacy document as stale
+  for a change that alters no table of contents, and a _mixed_ pair is `malformed`;
+  `parseSnippetLink`'s two substring fast-path tests must check both spellings or a legacy
+  fence reports `unlinked` without the regex ever seeing it; and `currentDepth`/`currentStack`
+  in `src/scripts/execute.ts` **read** either variable while writing both, or a script that
+  re-exports only the legacy name resets the counter and defeats the recursion guard.
+- **Config discovery is per-directory-then-ascend, not per-name-then-ascend.** `configIn`
+  tries `.cairn.yml` then `.claude-cli.yml` in one directory before moving up, and
+  `src/scripts/resolve.ts` calls the same helper. Walking each name over the whole chain
+  instead would let a legacy file in the repository root beat a nested `.cairn.yml`, and
+  would make a directory holding both files look like two registries shadowing each other.
+- **Install-manifest comparisons are split by source, deliberately.** `installManifestIn`
+  is for paths read off _disk_; the `artifact.path === INSTALL_MANIFEST` equality tests in
+  `src/agent/install/index.ts` compare against a plan this run just built, which never emits
+  the legacy name. Widening those to accept both would be noise, not safety. A destination
+  holding both manifests reads as `malformed` rather than picking one — same rule as two
+  matching install scopes.
+- **The bash completion's paths variable is derived, and that is the fix for a real bug.**
+  `src/completion/shells.ts` builds `_CAIRN_PATHS` from `model.binary`; it was hardcoded
+  `_CLAUDE_CLI_PATHS` and so was the one string in that file the binary name never reached.
+  Do not re-inline it.
 - **No published schema may set `additionalProperties: false` or `$ref` another document.**
   The first would make every additive change break validating consumers; the second would make
-  `claude-cli schema <id>` return something that cannot be compiled on its own.
+  `cairn schema <id>` return something that cannot be compiled on its own.
   `tests/unit/contract-schemas.test.ts` enforces both.
 
 ## Commits

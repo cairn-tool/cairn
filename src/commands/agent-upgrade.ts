@@ -32,7 +32,7 @@ function fingerprint(artifacts: Artifact[]): string[] {
 function writeFileAtomically(destination: string, content: Buffer, mode: number): void {
   const temporary = path.join(
     path.dirname(destination),
-    `.${path.basename(destination)}.claude-cli-${process.pid}.tmp`,
+    `.${path.basename(destination)}.cairn-${process.pid}.tmp`,
   );
   fs.writeFileSync(temporary, content, { mode, flag: "wx" });
   try {
@@ -46,7 +46,7 @@ function writeFileAtomically(destination: string, content: Buffer, mode: number)
 export async function agentUpgradeAction(source: string, opts: AgentUpgradeOptions): Promise<void> {
   if (opts.check && opts.dryRun) throw new Error("--check and --dry-run cannot be used together");
   // Required rather than defaulted: an implicit "latest" would make a CI run's
-  // result depend on which claude-cli version happened to be installed.
+  // result depend on which Cairn version happened to be installed.
   if (!opts.toSchema) throw new Error("--to-schema is required, for example --to-schema 2");
 
   const bundle = loadBundle(source);
@@ -69,7 +69,7 @@ export async function agentUpgradeAction(source: string, opts: AgentUpgradeOptio
           "unsupported",
           {
             path: manifestPath,
-            remediation: "This is a claude-cli defect; please report it.",
+            remediation: "This is a Cairn defect; please report it.",
           },
         ),
         severity: "error",

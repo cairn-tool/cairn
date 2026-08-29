@@ -84,7 +84,7 @@ export function modifiedSinceFor(window: Window): number | undefined {
  *
  * `.` and a relative path resolve against the working directory. A bare token
  * with no separator is treated as a directory-name or slug fragment, so
- * `--project claude-cli` works without spelling out the whole path.
+ * `--project cairn` works without spelling out the whole path.
  */
 export interface ProjectSelector {
   raw: string;

@@ -36,13 +36,13 @@ export const NOTIFIER_CONTRACT = {
   description: "The update notice is advisory only and never appears on a machine-readable stream.",
   stream: "stderr",
   suppressedWhen: [
-    "CLAUDE_CLI_NO_UPDATE_NOTIFIER=1",
+    "CAIRN_NO_UPDATE_NOTIFIER=1",
     "CI is set",
     "stderr is not a TTY",
     "--format is json, jsonl, or sarif, including a project-configured format",
     "the command is check-update, describe, schema, completion, scripts run, or the internal cache refresh",
   ],
-  optOutEnv: "CLAUDE_CLI_NO_UPDATE_NOTIFIER",
+  optOutEnv: "CAIRN_NO_UPDATE_NOTIFIER",
 } as const;
 
 /**
@@ -62,7 +62,7 @@ export function getCachePath(env: NodeJS.ProcessEnv = process.env, homedir?: str
   const home = homedir ?? os.homedir();
   const xdg = env.XDG_CACHE_HOME?.trim();
   const base = xdg && xdg.length > 0 ? xdg : path.join(home, ".cache");
-  return path.join(base, "claude-cli", "update-check.json");
+  return path.join(base, "cairn", "update-check.json");
 }
 
 export function readCache(cachePath: string): UpdateCache | null {
@@ -218,6 +218,10 @@ export interface NotifyDecision {
  * non-interactive callers never spawn a child process either.
  */
 export function isNotifierAllowed(ctx: Omit<NotifyDecision, "cache" | "currentVersion">): boolean {
+  // The pre-rename spelling stays honored: an opt-out already exported in a CI
+  // job or a shell profile must not start printing notices because the tool was
+  // renamed. Only the current name is published through `describe`.
+  if (ctx.env.CAIRN_NO_UPDATE_NOTIFIER === "1") return false;
   if (ctx.env.CLAUDE_CLI_NO_UPDATE_NOTIFIER === "1") return false;
   if (ctx.env.CI) return false;
   // Not a terminal means the output is being parsed by something. Both stdout
@@ -233,7 +237,7 @@ export function isNotifierAllowed(ctx: Omit<NotifyDecision, "cache" | "currentVe
   // poll them should not keep spawning the background refresh.
   if (ctx.argv.includes(DESCRIBE_COMMAND)) return false;
   if (ctx.argv.includes(SCHEMA_COMMAND)) return false;
-  // `eval "$(claude-cli completion zsh)"` belongs in an interactive rc file,
+  // `eval "$(cairn completion zsh)"` belongs in an interactive rc file,
   // where stderr *is* a TTY. Without this the notice would print on every shell
   // start and the background refresh would spawn on every shell start.
   if (ctx.argv.includes(COMPLETION_COMMAND)) return false;

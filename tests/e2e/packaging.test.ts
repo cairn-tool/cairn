@@ -16,7 +16,7 @@ let packedFiles: string[];
 // Pack a real tarball and read its table of contents. Parsing `npm pack --json`
 // stdout is not safe: npm and lifecycle scripts (husky) may print ahead of the JSON.
 beforeAll(async () => {
-  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-pack-"));
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-pack-"));
   await exec("npm", ["pack", "--ignore-scripts", "--pack-destination", tmpDir], {
     cwd: repoRoot,
   });

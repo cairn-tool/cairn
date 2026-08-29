@@ -1,6 +1,6 @@
 before the region
-// claude-cli:snippet:start greet
+// cairn:snippet:start greet
 hello
 world
-// claude-cli:snippet:end greet
+// cairn:snippet:end greet
 after the region

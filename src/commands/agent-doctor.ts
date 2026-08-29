@@ -138,7 +138,7 @@ function hostStatus(
         {
           target,
           remediation:
-            "Regenerate with a newer claude-cli; the target profile may not describe this host yet.",
+            "Regenerate with a newer Cairn; the target profile may not describe this host yet.",
         },
       ),
     verified: () =>
@@ -241,7 +241,7 @@ export async function agentDoctorAction(
       diagnostics.push(
         finding("AB400", "error", `Target profile for ${target} is inconsistent: ${problem}`, {
           target,
-          remediation: "This is a claude-cli defect; please report it.",
+          remediation: "This is a Cairn defect; please report it.",
         }),
       );
 
@@ -286,7 +286,7 @@ export async function agentDoctorAction(
                   target,
                   profile,
                   path: relative,
-                  remediation: "This is a claude-cli defect; please report it.",
+                  remediation: "This is a Cairn defect; please report it.",
                 },
               ),
             );

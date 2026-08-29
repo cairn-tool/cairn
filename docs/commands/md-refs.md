@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md refs <file> [options]
+cairn md refs <file> [options]
 ```
 
 Lists references originating in one Markdown document and checks whether local targets exist.

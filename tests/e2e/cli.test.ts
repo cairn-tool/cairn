@@ -54,7 +54,7 @@ describe("CLI e2e", () => {
   it("shows help with no arguments", async () => {
     const { stdout, exitCode } = await runCli("help");
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("claude-cli");
+    expect(stdout).toContain("cairn");
     expect(stdout).toContain("md");
   });
 
@@ -958,7 +958,7 @@ describe("CLI e2e", () => {
     try {
       fs.mkdirSync(nested);
       fs.writeFileSync(
-        path.join(tmpDir, ".claude-cli.yml"),
+        path.join(tmpDir, ".cairn.yml"),
         [
           "version: 1",
           "output:",
@@ -988,7 +988,7 @@ describe("CLI e2e", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "configured-override-"));
     try {
       fs.writeFileSync(
-        path.join(tmpDir, ".claude-cli.yml"),
+        path.join(tmpDir, ".cairn.yml"),
         "version: 1\noutput:\n  format: json\ncommands:\n  headers:\n    maxDepth: 1\n",
       );
       fs.writeFileSync(path.join(tmpDir, "doc.md"), "# Top\n\n## Child\n");
@@ -1029,7 +1029,7 @@ describe("CLI e2e", () => {
     try {
       fs.mkdirSync(path.join(tmpDir, "docs"));
       fs.writeFileSync(
-        path.join(tmpDir, ".claude-cli.yml"),
+        path.join(tmpDir, ".cairn.yml"),
         "version: 1\nroot: docs\nchecks:\n  katex: false\n",
       );
       fs.writeFileSync(path.join(tmpDir, "docs", "doc.md"), "# Doc\n\nBad math: $\\invalid$\n");
@@ -1045,7 +1045,7 @@ describe("CLI e2e", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "configured-urls-"));
     try {
       fs.writeFileSync(
-        path.join(tmpDir, ".claude-cli.yml"),
+        path.join(tmpDir, ".cairn.yml"),
         'version: 1\nurls:\n  ignore: ["https://127.0.0.1:1/**"]\n',
       );
       fs.writeFileSync(path.join(tmpDir, "doc.md"), "[ignored](https://127.0.0.1:1/nope)\n");
@@ -1160,7 +1160,7 @@ describe("CLI e2e", () => {
     try {
       fs.writeFileSync(path.join(tmpDir, "schema.yml"), "type: object\nrequired: [title]\n");
       fs.writeFileSync(
-        path.join(tmpDir, ".claude-cli.yml"),
+        path.join(tmpDir, ".cairn.yml"),
         "version: 1\nfrontmatter:\n  schema: schema.yml\n  rules:\n    formats: {date: date}\n",
       );
       fs.writeFileSync(path.join(tmpDir, "doc.md"), "---\ntitle: Doc\ndate: invalid\n---\n");
@@ -1178,7 +1178,7 @@ describe("CLI e2e", () => {
     try {
       fs.writeFileSync(
         file,
-        "# Doc\n\nbefore\n<!-- claude-cli:toc:start -->\nold\n<!-- claude-cli:toc:end -->\nafter\n",
+        "# Doc\n\nbefore\n<!-- cairn:toc:start -->\nold\n<!-- cairn:toc:end -->\nafter\n",
       );
       expect((await runCli("md", "toc", file, "--check")).exitCode).toBe(2);
       const preview = await runCli("md", "toc", file, "--dry-run");
@@ -1187,7 +1187,7 @@ describe("CLI e2e", () => {
       expect((await runCli("md", "toc", file, "--write")).exitCode).toBe(0);
       expect((await runCli("md", "toc", file, "--check")).exitCode).toBe(0);
       expect(fs.readFileSync(file, "utf-8")).toContain(
-        "before\n<!-- claude-cli:toc:start -->\n- [Doc](#doc)\n<!-- claude-cli:toc:end -->\nafter",
+        "before\n<!-- cairn:toc:start -->\n- [Doc](#doc)\n<!-- cairn:toc:end -->\nafter",
       );
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -1198,12 +1198,12 @@ describe("CLI e2e", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-e2e-"));
     try {
       fs.writeFileSync(
-        path.join(tmpDir, ".claude-cli.yml"),
+        path.join(tmpDir, ".cairn.yml"),
         'version: 1\ntoc:\n  files: ["README.md"]\nchecks:\n  mermaid: false\n  katex: false\n  references: false\n',
       );
       fs.writeFileSync(
         path.join(tmpDir, "README.md"),
-        "# Readme\n\n<!-- claude-cli:toc:start -->\nold\n<!-- claude-cli:toc:end -->\n",
+        "# Readme\n\n<!-- cairn:toc:start -->\nold\n<!-- cairn:toc:end -->\n",
       );
       const result = await runCliIn(tmpDir, "md", "audit", "--summary");
       expect(result.exitCode).toBe(2);
@@ -1216,7 +1216,7 @@ describe("CLI e2e", () => {
   it("suppresses baselined audit findings but still fails on regressions", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-baseline-e2e-"));
     try {
-      fs.writeFileSync(path.join(tmpDir, ".claude-cli.yml"), "version: 1\n");
+      fs.writeFileSync(path.join(tmpDir, ".cairn.yml"), "version: 1\n");
       fs.writeFileSync(path.join(tmpDir, "a.md"), "# A\n\n[gone](./missing.md)\n");
       fs.writeFileSync(path.join(tmpDir, "b.md"), "# B\n\n[gone](./nope.md)\n");
       const baseline = path.join(tmpDir, "audit-baseline.json");
@@ -1228,7 +1228,7 @@ describe("CLI e2e", () => {
       expect(written.exitCode).toBe(0);
       expect(written.stdout).toContain("Wrote 2 baseline entries");
       const document = JSON.parse(fs.readFileSync(baseline, "utf-8"));
-      expect(document.baselineFormat).toBe("claude-cli-md-audit-baseline");
+      expect(document.baselineFormat).toBe("cairn-md-audit-baseline");
       // Workspace-relative, so the file survives a checkout elsewhere.
       expect(document.entries.map((e: { file: string }) => e.file)).toEqual(["a.md", "b.md"]);
 
@@ -1274,7 +1274,7 @@ describe("CLI e2e", () => {
   it("rejects combining baseline flags and reports a foreign baseline as a finding", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-baseline-bad-e2e-"));
     try {
-      fs.writeFileSync(path.join(tmpDir, ".claude-cli.yml"), "version: 1\n");
+      fs.writeFileSync(path.join(tmpDir, ".cairn.yml"), "version: 1\n");
       fs.writeFileSync(path.join(tmpDir, "a.md"), "# A\n\n[gone](./missing.md)\n");
       const baseline = path.join(tmpDir, "b.json");
 
@@ -1310,7 +1310,7 @@ describe("CLI e2e", () => {
     try {
       fs.mkdirSync(path.join(tmpDir, "old"));
       fs.mkdirSync(path.join(tmpDir, "new"));
-      fs.writeFileSync(path.join(tmpDir, ".claude-cli.yml"), "version: 1\n");
+      fs.writeFileSync(path.join(tmpDir, ".cairn.yml"), "version: 1\n");
       fs.writeFileSync(path.join(tmpDir, "target.md"), "# Target\n");
       fs.writeFileSync(
         path.join(tmpDir, "old", "source.md"),
@@ -1362,7 +1362,7 @@ describe("workspace queries and index", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "workspace-query-"));
     try {
       fs.writeFileSync(
-        path.join(tmpDir, ".claude-cli.yml"),
+        path.join(tmpDir, ".cairn.yml"),
         'version: 1\noutput:\n  paths: relative\nassets:\n  extensions: [".png", ".svg"]\n',
       );
       fs.writeFileSync(
@@ -1756,9 +1756,9 @@ describe("md diff", () => {
 
 describe("md fix", () => {
   const STALE =
-    "# Doc\n\nbefore\n<!-- claude-cli:toc:start -->\nold\n<!-- claude-cli:toc:end -->\n\n## Section\n";
+    "# Doc\n\nbefore\n<!-- cairn:toc:start -->\nold\n<!-- cairn:toc:end -->\n\n## Section\n";
   const FIXED =
-    "# Doc\n\nbefore\n<!-- claude-cli:toc:start -->\n- [Doc](#doc)\n  - [Section](#section)\n<!-- claude-cli:toc:end -->\n\n## Section\n";
+    "# Doc\n\nbefore\n<!-- cairn:toc:start -->\n- [Doc](#doc)\n  - [Section](#section)\n<!-- cairn:toc:end -->\n\n## Section\n";
 
   async function inWorkspace(body: (dir: string) => Promise<void>): Promise<void> {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "md-fix-e2e-"));
@@ -1819,7 +1819,7 @@ describe("md fix", () => {
       expect(JSON.parse(second.stdout).edits).toBe(0);
       expect((await runCliIn(dir, "md", "fix", "doc.md")).exitCode).toBe(0);
       // No staging file survives a successful commit.
-      expect(fs.readdirSync(dir).filter((n) => n.includes("claude-cli-"))).toEqual([]);
+      expect(fs.readdirSync(dir).filter((n) => n.includes("cairn-"))).toEqual([]);
     });
   });
 
@@ -1827,7 +1827,7 @@ describe("md fix", () => {
     await inWorkspace(async (dir) => {
       fs.writeFileSync(
         path.join(dir, "bad.md"),
-        "# Bad\n<!-- claude-cli:toc:start -->\n<!-- claude-cli:toc:start -->\n<!-- claude-cli:toc:end -->\n",
+        "# Bad\n<!-- cairn:toc:start -->\n<!-- cairn:toc:start -->\n<!-- cairn:toc:end -->\n",
       );
       const result = await runCliIn(dir, "md", "fix", ".", "-fj");
       // doc.md still has a pending fix, so the exit is 2 for that, not for bad.md.
@@ -1868,7 +1868,7 @@ describe("md fix", () => {
       // The mutation mode is CLI-only by design; a checked-in config must never
       // be able to turn a check into a write.
       fs.writeFileSync(
-        path.join(dir, ".claude-cli.yml"),
+        path.join(dir, ".cairn.yml"),
         "version: 1\ncommands:\n  fix:\n    write: true\n",
       );
       const result = await runCliIn(dir, "md", "fix", "doc.md");
@@ -1959,10 +1959,10 @@ describe("md fix", () => {
 
 describe("md check-snippets", () => {
   const SOURCE =
-    "// claude-cli:snippet:start greet\nexport function greet() {\n  return 1;\n}\n// claude-cli:snippet:end greet\n";
+    "// cairn:snippet:start greet\nexport function greet() {\n  return 1;\n}\n// cairn:snippet:end greet\n";
   const CURRENT =
-    "# Doc\n\n```js claude-cli:snippet=src/a.js#greet\nexport function greet() {\n  return 1;\n}\n```\n";
-  const STALE = "# Doc\n\n```js claude-cli:snippet=src/a.js#greet\nold body\n```\n";
+    "# Doc\n\n```js cairn:snippet=src/a.js#greet\nexport function greet() {\n  return 1;\n}\n```\n";
+  const STALE = "# Doc\n\n```js cairn:snippet=src/a.js#greet\nold body\n```\n";
 
   async function inWorkspace(
     doc: string,
@@ -2038,7 +2038,7 @@ describe("md check-snippets", () => {
   });
 
   it("fails --write on a missing source, because there is no fix to apply", async () => {
-    const doc = "# Doc\n\n```js claude-cli:snippet=src/gone.js#greet\nx\n```\n";
+    const doc = "# Doc\n\n```js cairn:snippet=src/gone.js#greet\nx\n```\n";
     await inWorkspace(doc, async (dir) => {
       const result = await runCliIn(dir, "md", "check-snippets", "doc.md", "--write", "-fj");
       expect(result.exitCode).toBe(2);
@@ -2051,7 +2051,7 @@ describe("md check-snippets", () => {
   });
 
   it("reports a missing region", async () => {
-    const doc = "# Doc\n\n```js claude-cli:snippet=src/a.js#nope\nx\n```\n";
+    const doc = "# Doc\n\n```js cairn:snippet=src/a.js#nope\nx\n```\n";
     await inWorkspace(doc, async (dir) => {
       const result = await runCliIn(dir, "md", "check-snippets", "doc.md", "-fj");
       expect(result.exitCode).toBe(2);
@@ -2065,7 +2065,7 @@ describe("md check-snippets", () => {
   it("refuses a source reached by a symlink out of the workspace root", async () => {
     // --write copies a source into a tracked file, so an escape here is a
     // content-exfiltration primitive rather than a nuisance.
-    const doc = "# Doc\n\n```text claude-cli:snippet=escape.txt\nx\n```\n";
+    const doc = "# Doc\n\n```text cairn:snippet=escape.txt\nx\n```\n";
     await inWorkspace(doc, async (dir) => {
       const secret = path.join(dir, "..", `${path.basename(dir)}-outside.txt`);
       fs.writeFileSync(secret, "SECRET\n");
@@ -2086,8 +2086,8 @@ describe("md check-snippets", () => {
 
   it("refuses a blockquoted fence but still refreshes the rest of the document", async () => {
     const doc =
-      "# Doc\n\n> ```js claude-cli:snippet=src/a.js#greet\n> x\n> ```\n\n" +
-      "```js claude-cli:snippet=src/a.js#greet\nx\n```\n";
+      "# Doc\n\n> ```js cairn:snippet=src/a.js#greet\n> x\n> ```\n\n" +
+      "```js cairn:snippet=src/a.js#greet\nx\n```\n";
     await inWorkspace(doc, async (dir) => {
       const result = await runCliIn(dir, "md", "check-snippets", "doc.md", "--write", "-fj");
       expect(result.exitCode).toBe(2);
@@ -2095,7 +2095,7 @@ describe("md check-snippets", () => {
       expect(payload).toMatchObject({ drift: 2, unwritable: 1, applied: 1 });
       const written = fs.readFileSync(path.join(dir, "doc.md"), "utf-8");
       expect(written).toContain("> x");
-      expect(written).toContain("```js claude-cli:snippet=src/a.js#greet\nexport function greet");
+      expect(written).toContain("```js cairn:snippet=src/a.js#greet\nexport function greet");
     });
   });
 
@@ -2371,7 +2371,7 @@ describe("md query composable predicates", () => {
       // Predicates are per-question; a checked-in one would silently filter
       // every query anyone ran in the workspace.
       fs.writeFileSync(
-        path.join(dir, ".claude-cli.yml"),
+        path.join(dir, ".cairn.yml"),
         "version: 1\ncommands:\n  query:\n    where: ['has:h1']\n",
       );
       const result = await runCliIn(dir, "md", "query", "tasks");

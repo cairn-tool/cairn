@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md tasks <file> [options]
+cairn md tasks <file> [options]
 ```
 
 Extracts GFM task-list items with source lines, checked state, rendered text, and completion

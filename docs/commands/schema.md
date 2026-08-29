@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli schema [id] [options]
+cairn schema [id] [options]
 ```
 
 Prints a published output schema, or lists the schemas available. Together with
@@ -33,10 +33,10 @@ already JSON.
 Schema `$id` values look like URLs:
 
 ```text
-https://github.com/bstockus/claude-cli/schema/v1/md-graph.json
+https://github.com/bstockus/cairn/schema/v1/md-graph.json
 ```
 
-They are identifiers, not fetchable URLs. `claude-cli schema <id>` is how you retrieve one.
+They are identifiers, not fetchable URLs. `cairn schema <id>` is how you retrieve one.
 Every schema is self-contained — no `$ref` leaves its own document — so what you retrieve can
 be compiled on its own by any JSON Schema 2020-12 validator.
 
@@ -47,16 +47,16 @@ properties, since adding one is a non-breaking change.
 
 ```bash
 # What is published?
-claude-cli schema
+cairn schema
 
 # Retrieve one.
-claude-cli schema agent-result
+cairn schema agent-result
 
 # Save a schema for CI validation.
-claude-cli schema md-audit > md-audit.schema.json
+cairn schema md-audit > md-audit.schema.json
 
 # Which commands does a schema cover?
-claude-cli schema --format json | jq '.schemas[] | select(.id == "issue-list") | .commands'
+cairn schema --format json | jq '.schemas[] | select(.id == "issue-list") | .commands'
 ```
 
 ## Exit codes

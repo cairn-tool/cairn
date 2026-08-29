@@ -10,7 +10,7 @@ import { initializeRuntime, resetRuntime } from "../../src/runtime.js";
 let directory: string;
 
 beforeEach(() => {
-  directory = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-inputs-"));
+  directory = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-inputs-"));
   initializeRuntime(loadConfig({ disabled: true }, directory));
 });
 

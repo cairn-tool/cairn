@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md rename-file <source> <destination> [options]
+cairn md rename-file <source> <destination> [options]
 ```
 
 Moves one Markdown document or referenced asset inside the workspace and rewrites selected

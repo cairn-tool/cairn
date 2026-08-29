@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent compat [source] [options]
+cairn agent compat [source] [options]
 ```
 
 Without `source`, prints the general platform compatibility matrix. With `source`, analyzes

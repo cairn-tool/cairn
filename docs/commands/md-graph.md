@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md graph [directory] [options]
+cairn md graph [directory] [options]
 ```
 
 Builds the selected Markdown document graph and reports inbound/outbound counts, broken

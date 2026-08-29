@@ -31,7 +31,7 @@ function run(
 }
 
 beforeEach(() => {
-  tmpDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-query-")));
+  tmpDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "cairn-query-")));
   workspace = new Workspace(loadConfig({ disabled: true }, tmpDir));
   write(
     "a.md",

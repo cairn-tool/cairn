@@ -13,13 +13,13 @@ import type { Issue } from "../../src/types.js";
 
 let root: string;
 beforeEach(() => {
-  root = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-baseline-"));
+  root = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-baseline-"));
 });
 afterEach(() => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-const generator = { name: "@bstockus/claude-cli", version: "9.9.9" };
+const generator = { name: "@bstockus/cairn", version: "9.9.9" };
 const issue = (file: string, line: number, checker: string, message: string): Issue => ({
   file: path.join(root, file),
   line,

@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent inspect <source> [options]
+cairn agent inspect <source> [options]
 ```
 
 Loads a bundle and displays its normalized representation, component references, target
@@ -31,8 +31,8 @@ A large normalized bundle is hard to read whole. `--target` narrows it to the co
 actually reach the selected targets, and `--profile` drops the sections a profile never emits.
 
 ```bash
-claude-cli agent inspect ./bundle --target codex
-claude-cli agent inspect ./bundle --target claude-code --profile plugin
+cairn agent inspect ./bundle --target codex
+cairn agent inspect ./bundle --target claude-code --profile plugin
 ```
 
 - **Components** (`skills`, `agents`, `rules`) are kept when they reach **any** selected target.

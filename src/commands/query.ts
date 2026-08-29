@@ -286,7 +286,7 @@ function composableQuery(
   opts: QueryOptions,
 ): { envelope: QueryEnvelope; plan: QueryPlan; result: QueryResult } {
   // Detected from argv rather than by comparing against defaults, so a
-  // `.claude-cli.yml` setting `commands.query.status` does not look like a
+  // `.cairn.yml` setting `commands.query.status` does not look like a
   // conflicting flag on every composable tasks query.
   const typed = explicitOptionKeys(opts as unknown as Record<string, unknown>);
   const conflicting = LEGACY_OPTIONS.filter((name) => typed.has(name));

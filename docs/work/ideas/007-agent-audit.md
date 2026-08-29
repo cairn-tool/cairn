@@ -12,8 +12,8 @@ text; where the implementation diverged, the command's own documentation is auth
 **Command sketch:**
 
 ```text
-claude-cli agent audit ./bundle --target all
-claude-cli agent audit ./dist/codex/plugin --format sarif
+cairn agent audit ./bundle --target all
+cairn agent audit ./dist/codex/plugin --format sarif
 ```
 
 Validation answers "is this structurally valid?" Audit should answer "what should a reviewer

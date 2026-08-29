@@ -13,9 +13,9 @@ documentation is authoritative.
 **Command sketch:**
 
 ```text
-claude-cli describe
-claude-cli describe md graph --format json
-claude-cli schema agent-result
+cairn describe
+cairn describe md graph --format json
+cairn schema agent-result
 ```
 
 JSON output is already important, but each command currently owns its own result shape.

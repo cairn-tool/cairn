@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent install <source> --target <target> [options]
+cairn agent install <source> --target <target> [options]
 ```
 
 Places a bundle where a host actually scans for plugins or project files. Rendering and
@@ -78,7 +78,7 @@ with `claude plugin validate ~/.claude/plugins/marketplaces/<name>`.
 
 ## Installed-state manifest
 
-Each destination gets `.claude-cli-install.json`: generator name and version, bundle name and
+Each destination gets `.cairn-install.json`: generator name and version, bundle name and
 version, target, profile, scope, layout, mode (`copy`/`link`), and a path/mode/sha256
 inventory. [`agent uninstall`](agent-uninstall.md) removes exactly that inventory.
 [`agent installed`](agent-installed.md) lists what it finds.
@@ -105,16 +105,16 @@ carries them. Only errors, and warnings under `--strict`, fail.
 
 ```bash
 # Cursor user plugin, auto-scanned.
-claude-cli agent install ./bundle --target cursor --scope user
+cairn agent install ./bundle --target cursor --scope user
 
 # Claude Code local marketplace, and edit settings.json to enable it.
-claude-cli agent install ./bundle --target claude-code --scope user --register
+cairn agent install ./bundle --target claude-code --scope user --register
 
 # Project-scope merge into a named directory, preview only.
-claude-cli agent install ./bundle --target cursor --scope project --into ./app --dry-run
+cairn agent install ./bundle --target cursor --scope project --into ./app --dry-run
 
 # Live edits while iterating on a plugin.
-claude-cli agent install ./bundle --target cursor --scope user --link
+cairn agent install ./bundle --target cursor --scope user --link
 ```
 
 ## Exit codes

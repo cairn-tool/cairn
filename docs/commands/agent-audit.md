@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent audit <source> [options]
+cairn agent audit <source> [options]
 ```
 
 [`agent validate`](agent-validate.md) answers "is this structurally valid?". `agent audit`
@@ -117,7 +117,7 @@ Paths are compared by exact string equality with no normalization: the renderer 
 in one namespace. This is why `--baseline` requires `--target`.
 
 A missing or unparseable file is an invocation error (exit `1`). A file that parses but is
-not a `claude-cli-inventory` document is `AB654`, and every drift check is skipped — guessing
+not a `cairn-inventory` document is `AB654`, and every drift check is skipped — guessing
 at another tool's schema would produce a report nobody can trust. A `subject` naming a
 different version is recorded in the payload but is not a finding: comparing across releases
 is the normal use.
@@ -184,28 +184,28 @@ Unlike the `md` diagnostic commands, SARIF goes to **stdout**, matching the rest
 `agent` contract. `jsonl` is deliberately not offered — its published `diagnostic-record`
 schema is the `md` `Issue` shape, which an agent diagnostic does not fit.
 
-> `.claude-cli.yml`'s `commands.audit` key configures **`md audit`**, not this command. Agent
-> commands never read project configuration; `claude-cli describe agent audit` reports
+> `.cairn.yml`'s `commands.audit` key configures **`md audit`**, not this command. Agent
+> commands never read project configuration; `cairn describe agent audit` reports
 > `formatConfigurable: false`.
 
 ## Examples
 
 ```bash
 # What would this bundle run?
-claude-cli agent audit ./bundle -fj | jq '.audit.commands'
+cairn agent audit ./bundle -fj | jq '.audit.commands'
 
 # Full review, including the rendered output for every target.
-claude-cli agent audit ./bundle --target all
+cairn agent audit ./bundle --target all
 
 # CI gate feeding a code-scanning upload.
-claude-cli agent audit ./bundle --target all --format sarif > audit.sarif
+cairn agent audit ./bundle --target all --format sarif > audit.sarif
 
 # Errors only.
-claude-cli agent audit ./bundle -fj | jq '.diagnostics[] | select(.severity == "error")'
+cairn agent audit ./bundle -fj | jq '.diagnostics[] | select(.severity == "error")'
 
 # What changed since the last release?
-claude-cli agent package ./bundle --target all --output ./dist
-claude-cli agent audit ./bundle --target all --baseline ./previous/sbom.json
+cairn agent package ./bundle --target all --output ./dist
+cairn agent audit ./bundle --target all --baseline ./previous/sbom.json
 ```
 
 ## Exit codes

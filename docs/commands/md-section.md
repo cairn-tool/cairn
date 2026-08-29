@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md section <file> <heading> [options]
+cairn md section <file> <heading> [options]
 ```
 
 Extracts one section selected by case-insensitive heading text or GitHub anchor slug. By

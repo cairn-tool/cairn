@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage commands [options]
+cairn usage commands [options]
 ```
 
 Slash command usage by name, with how many sessions each reached.

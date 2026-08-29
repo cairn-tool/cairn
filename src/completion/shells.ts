@@ -57,6 +57,11 @@ function valueOptions(command: CompletionCommand): CompletionCommand["options"] 
 }
 
 function bash(model: CompletionModel): string {
+  // Derived rather than written out, because the two sites below are the only
+  // places in this file the binary name does not already reach through
+  // `model.binary` — the reason they still said CLAUDE_CLI long after the tool
+  // was named something else.
+  const pathsVariable = `_${model.binary.toUpperCase().replace(/[^A-Z0-9_]/g, "_")}_PATHS`;
   const lines = [
     header(model, "#"),
     "",
@@ -71,7 +76,7 @@ function bash(model: CompletionModel): string {
     '  while [ "$index" -lt "$COMP_CWORD" ]; do',
     '    word="${COMP_WORDS[$index]}"',
     '    case "$word" in -*) break ;; esac',
-    '    case " ${_CLAUDE_CLI_PATHS} " in',
+    `    case " \${${pathsVariable}} " in`,
     '      *" ${command_path:+$command_path }$word "*) command_path="${command_path:+$command_path }$word" ;;',
     "      *) break ;;",
     "    esac",
@@ -105,7 +110,7 @@ function bash(model: CompletionModel): string {
     "  esac",
     "}",
     "",
-    `_CLAUDE_CLI_PATHS=${sq(
+    `${pathsVariable}=${sq(
       model.commands
         .map((command) => command.id)
         .filter(Boolean)

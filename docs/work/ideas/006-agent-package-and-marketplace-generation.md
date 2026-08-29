@@ -13,9 +13,9 @@ authoritative.
 **Command sketch:**
 
 ```text
-claude-cli agent package ./bundle --target all --output ./dist
-claude-cli agent package ./bundle --target codex --marketplace repo --check
-claude-cli agent package ./bundle --target claude-code --archive
+cairn agent package ./bundle --target all --output ./dist
+cairn agent package ./bundle --target codex --marketplace repo --check
+cairn agent package ./bundle --target claude-code --archive
 ```
 
 Conversion produces a directory tree, but distribution also needs marketplace entries,

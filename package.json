@@ -1,5 +1,5 @@
 {
-  "name": "@bstockus/claude-cli",
+  "name": "@bstockus/cairn",
   "version": "1.11.0",
   "type": "module",
   "description": "An agent-agnostic CLI toolkit for working with markdown files and related assets",
@@ -16,17 +16,17 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bstockus/claude-cli.git"
+    "url": "git+https://github.com/bstockus/cairn.git"
   },
   "bugs": {
-    "url": "https://github.com/bstockus/claude-cli/issues"
+    "url": "https://github.com/bstockus/cairn/issues"
   },
-  "homepage": "https://github.com/bstockus/claude-cli#readme",
+  "homepage": "https://github.com/bstockus/cairn#readme",
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
   "bin": {
-    "claude-cli": "./dist/cli.js"
+    "cairn": "./dist/cli.js"
   },
   "files": [
     "dist",

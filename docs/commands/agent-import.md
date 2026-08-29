@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent import <source> --output <dir> [options]
+cairn agent import <source> --output <dir> [options]
 ```
 
 Turns an existing native plugin or project into a portable bundle — the inverse of
@@ -135,16 +135,16 @@ warnings under `--strict`, fail. Pass `--strict` in CI when you want lossless im
 
 ```bash
 # Detect the layout and import.
-claude-cli agent import ./existing-plugin --output ./portable
+cairn agent import ./existing-plugin --output ./portable
 
 # Pin the layout explicitly.
-claude-cli agent import . --from cursor-project --output ./portable --dry-run
+cairn agent import . --from cursor-project --output ./portable --dry-run
 
 # Re-import only the native overlay after upstream added a platform-only feature.
-claude-cli agent import ./existing-plugin --output ./portable --merge native-only
+cairn agent import ./existing-plugin --output ./portable --merge native-only
 
 # What was lost?
-claude-cli agent import ./existing-plugin --output ./portable -fj \
+cairn agent import ./existing-plugin --output ./portable -fj \
   | jq '.import.files[] | select(.fidelity != "exact")'
 ```
 

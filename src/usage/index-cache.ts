@@ -35,7 +35,7 @@ export function getUsageCacheRoot(
 ): string {
   const configured = env.XDG_CACHE_HOME?.trim();
   const base = configured ? configured : path.join(homedir, ".cache");
-  return path.join(base, "claude-cli", "usage", provider);
+  return path.join(base, "cairn", "usage", provider);
 }
 
 /** Keeps a shard name to one path segment, whatever the project directory is called. */

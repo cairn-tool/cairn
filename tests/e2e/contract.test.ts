@@ -57,7 +57,7 @@ function staleToc(): string {
   temporary.push(root);
   fs.writeFileSync(
     path.join(root, "stale.md"),
-    "# Doc\n\n<!-- claude-cli:toc:start -->\nold\n<!-- claude-cli:toc:end -->\n\n## Section\n",
+    "# Doc\n\n<!-- cairn:toc:start -->\nold\n<!-- cairn:toc:end -->\n\n## Section\n",
   );
   return root;
 }
@@ -73,9 +73,9 @@ function auditBaseline(): string {
   fs.writeFileSync(
     file,
     JSON.stringify({
-      baselineFormat: "claude-cli-md-audit-baseline",
+      baselineFormat: "cairn-md-audit-baseline",
       version: "1",
-      generator: { name: "@bstockus/claude-cli", version: "0.0.0" },
+      generator: { name: "@bstockus/cairn", version: "0.0.0" },
       entries: [{ checker: "toc", file: "gone.md", message: "stale", count: 1 }],
     }),
   );
@@ -148,7 +148,7 @@ describe("describe", () => {
     const result = await run("describe", "--format", "json");
     expect(result.exitCode).toBe(0);
     const described = JSON.parse(result.stdout);
-    expect(described.schemaVersion).toBe("1");
+    expect(described.schemaVersion).toBe("2");
     const ids = described.commands.map((command: { id: string }) => command.id);
     for (const id of ["md graph", "agent convert", "agent doctor", "describe", "schema"])
       expect(ids).toContain(id);

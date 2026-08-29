@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage providers [options]
+cairn usage providers [options]
 ```
 
 Lists the log sources `usage` can report on, whether each has left anything on this

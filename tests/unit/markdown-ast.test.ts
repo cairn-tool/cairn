@@ -216,10 +216,10 @@ describe("extractCodeBlocks", () => {
   });
 
   it("captures the fence info string after the language", () => {
-    const content = '```ts title="x" claude-cli:snippet=a.ts#r\nconst x = 1;\n```\n';
+    const content = '```ts title="x" cairn:snippet=a.ts#r\nconst x = 1;\n```\n';
     const blocks = extractCodeBlocks(parseMarkdown(content));
     expect(blocks[0].lang).toBe("ts");
-    expect(blocks[0].meta).toBe('title="x" claude-cli:snippet=a.ts#r');
+    expect(blocks[0].meta).toBe('title="x" cairn:snippet=a.ts#r');
   });
 
   it("reports null meta for a bare fence and an indented block", () => {

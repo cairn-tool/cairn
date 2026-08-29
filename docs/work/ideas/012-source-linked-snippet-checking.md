@@ -12,7 +12,7 @@ also available as [`md fix --rule snippets`](../../commands/md-fix.md) and as a
 the implementation diverged, the command's own documentation is authoritative.
 
 The metadata syntax chosen was a namespaced fence attribute,
-`claude-cli:snippet=<path>[#<region>]`, read from the parsed fence rather than from the raw
+`cairn:snippet=<path>[#<region>]`, read from the parsed fence rather than from the raw
 document — which is what makes a fenced example demonstrating the syntax unreachable rather
 than merely guarded. Line spans were deliberately not implemented; a named region or the whole
 file are the only selectors.
@@ -20,8 +20,8 @@ file are the only selectors.
 **Command sketch:**
 
 ```text
-claude-cli md check-snippets docs
-claude-cli md check-snippets docs --write
+cairn md check-snippets docs
+cairn md check-snippets docs --write
 ```
 
 Allow fenced code blocks to declare a source file and named region or line span. The checker

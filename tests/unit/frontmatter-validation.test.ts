@@ -8,7 +8,7 @@ import { Workspace, parseFrontmatter } from "../../src/workspace.js";
 
 let directory: string;
 beforeEach(() => {
-  directory = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-frontmatter-"));
+  directory = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-frontmatter-"));
 });
 afterEach(() => {
   fs.rmSync(directory, { recursive: true, force: true });

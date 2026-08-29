@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md stats <file> [options]
+cairn md stats <file> [options]
 ```
 
 Reports word count, heading totals by depth, link and image counts, fenced-code counts by

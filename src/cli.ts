@@ -162,7 +162,7 @@ installUpdateNotifier({
 });
 
 const program = new Command()
-  .name("claude-cli")
+  .name("cairn")
   .description("An agent-agnostic CLI toolkit for working with markdown files and related assets")
   .version(version);
 
@@ -444,7 +444,7 @@ agent
   .option("--envelope", "Wrap --format json output in the versioned result envelope")
   .addHelpText(
     "after",
-    "\nRemoves exactly the inventory recorded in .claude-cli-install.json and\nnothing else. --scope is optional: both scopes are searched, and two matches\nis an error rather than a guess.\n\nExit codes:\n  0  Removed, already absent under --check, or dry run completed\n  1  Invocation or I/O error\n  2  Manifest missing or malformed, or --check found the install still present",
+    "\nRemoves exactly the inventory recorded in .cairn-install.json and\nnothing else. --scope is optional: both scopes are searched, and two matches\nis an error rather than a guess.\n\nExit codes:\n  0  Removed, already absent under --check, or dry run completed\n  1  Invocation or I/O error\n  2  Manifest missing or malformed, or --check found the install still present",
   )
   .action((name: string, opts: Parameters<typeof agentUninstallAction>[1]) =>
     agentActionBoundary("uninstall", opts, () => agentUninstallAction(name, opts)),
@@ -460,7 +460,7 @@ agent
   .option("--envelope", "Wrap --format json output in the versioned result envelope")
   .addHelpText(
     "after",
-    "\nScans the install roots declared on the target profiles and lists every\n.claude-cli-install.json it finds.\n\nExit codes:\n  0  Listing written to stdout\n  1  Invocation error",
+    "\nScans the install roots declared on the target profiles and lists every\n.cairn-install.json it finds.\n\nExit codes:\n  0  Listing written to stdout\n  1  Invocation error",
   )
   .action((opts: Parameters<typeof agentInstalledAction>[0]) =>
     agentActionBoundary("installed", opts, () => agentInstalledAction(opts)),
@@ -498,7 +498,7 @@ program
   .option("--format <fmt>", "Output format: llm, human, json", "llm")
   .addHelpText(
     "after",
-    "\nExamples:\n  claude-cli describe --format json\n  claude-cli describe md graph --format json\n\nReports the static contract; project configuration is not applied.\n\nExit codes:\n  0  Description written to stdout\n  1  Unknown command path or invalid format",
+    "\nExamples:\n  cairn describe --format json\n  cairn describe md graph --format json\n\nReports the static contract; project configuration is not applied.\n\nExit codes:\n  0  Description written to stdout\n  1  Unknown command path or invalid format",
   )
   .action((commandPath: string[], opts: { format: string }) =>
     describeAction(program, commandPath, {
@@ -526,7 +526,7 @@ program
   .option("--format <fmt>", "Output format: llm, human, json", "llm")
   .addHelpText(
     "after",
-    "\nThe script is written to stdout regardless of --format, and is generated from the\nsame command tree `describe` walks, so it cannot drift from the real options.\n\nInstall:\n  claude-cli completion bash       >> ~/.bashrc          (or a bash-completion.d file)\n  claude-cli completion zsh        > ~/.zfunc/_claude-cli (a directory on $fpath)\n  claude-cli completion fish       > ~/.config/fish/completions/claude-cli.fish\n  claude-cli completion powershell >> $PROFILE\n\nRegenerate after upgrading; the script embeds the command tree rather than calling\nback into the CLI, so a shell never pays a process spawn per keystroke.\n\nExit codes:\n  0  Script written to stdout\n  1  Unknown shell or invalid format",
+    "\nThe script is written to stdout regardless of --format, and is generated from the\nsame command tree `describe` walks, so it cannot drift from the real options.\n\nInstall:\n  cairn completion bash       >> ~/.bashrc          (or a bash-completion.d file)\n  cairn completion zsh        > ~/.zfunc/_cairn (a directory on $fpath)\n  cairn completion fish       > ~/.config/fish/completions/cairn.fish\n  cairn completion powershell >> $PROFILE\n\nRegenerate after upgrading; the script embeds the command tree rather than calling\nback into the CLI, so a shell never pays a process spawn per keystroke.\n\nExit codes:\n  0  Script written to stdout\n  1  Unknown shell or invalid format",
   )
   .action((shell: string | undefined, opts: { format: string }) =>
     completionAction(program, shell, {
@@ -547,7 +547,7 @@ program
   .option("--concurrency <n>", "Parallel lints during audit_markdown")
   .addHelpText(
     "after",
-    "\nSpeaks the Model Context Protocol over stdio, exposing the Markdown workspace\nengine as read-only tools. stdout carries JSON-RPC frames rather than a payload,\nso --format does not apply; diagnostics go to stderr.\n\nEvery tool is read-only and every path argument is confined to --root, resolved\nthrough symlinks. Configuration is discovered from --root, so a tool answers the\nsame as the equivalent md command in that workspace.\n\nRegister with a host:\n  claude mcp add markdown -- claude-cli serve mcp --root docs\n\nExit codes:\n  0  The client closed the connection\n  1  Unknown protocol, unreadable root, or invalid configuration",
+    "\nSpeaks the Model Context Protocol over stdio, exposing the Markdown workspace\nengine as read-only tools. stdout carries JSON-RPC frames rather than a payload,\nso --format does not apply; diagnostics go to stderr.\n\nEvery tool is read-only and every path argument is confined to --root, resolved\nthrough symlinks. Configuration is discovered from --root, so a tool answers the\nsame as the equivalent md command in that workspace.\n\nRegister with a host:\n  claude mcp add markdown -- cairn serve mcp --root docs\n\nExit codes:\n  0  The client closed the connection\n  1  Unknown protocol, unreadable root, or invalid configuration",
   )
   .action((protocol: string, opts: Record<string, unknown>) =>
     serveAction(protocol, opts as unknown as ServeOptions),
@@ -555,10 +555,10 @@ program
 
 const scripts = program
   .command("scripts")
-  .description("Resolve and run named scripts declared in .claude-cli.yml")
+  .description("Resolve and run named scripts declared in .cairn.yml")
   .addHelpText(
     "after",
-    "\nA script name resolves the same from any directory: every .claude-cli.yml from the\nworking directory up to the repository root is consulted, and the nearest file that\ndefines the name wins. The script runs with its working directory pinned to the\nregistry that declared it, which is what makes a hook survive a change of directory.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+    "\nA script name resolves the same from any directory: every .cairn.yml from the\nworking directory up to the repository root is consulted, and the nearest file that\ndefines the name wins. The script runs with its working directory pinned to the\nregistry that declared it, which is what makes a hook survive a change of directory.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   );
 
 const scriptsCommon = (command: Command): Command =>
@@ -566,16 +566,16 @@ const scriptsCommon = (command: Command): Command =>
     .option("--format <fmt>", "Output format: llm, human, json", "llm")
     .option("--envelope", "Wrap --format json output in the versioned result envelope")
     .option("--root <dir>", "Stop the upward walk at this directory")
-    .option("--config <file>", "Use a specific .claude-cli.yml configuration file")
+    .option("--config <file>", "Use a specific .cairn.yml configuration file")
     .option("--no-config", "Disable project configuration discovery");
 
 scriptsCommon(scripts.command("run"))
   .description("Run a named script from anywhere in the tree")
-  .argument("<name>", "Script name declared under scripts: in a .claude-cli.yml")
+  .argument("<name>", "Script name declared under scripts: in a .cairn.yml")
   .argument("[args...]", "Arguments forwarded to the script, after --")
   .addHelpText(
     "after",
-    "\nExamples:\n  claude-cli scripts run gather-context\n  claude-cli scripts run lint-changed -- --since main\n\nIn llm and human formats the script's streams pass through untouched and its exit\nstatus becomes this process's exit status, so a hook reads the real code. With\n--format json the streams are captured into the payload instead.\n\nRefuses to run outside a Git repository unless --root sets the boundary explicitly.\n\nExit codes:\n  *  llm and human: the script's own exit status, verbatim\n  0  --format json: the script exited 0\n  1  Unresolvable name, or the script could not be started\n  2  --format json: the script exited non-zero or was killed by a signal",
+    "\nExamples:\n  cairn scripts run gather-context\n  cairn scripts run lint-changed -- --since main\n\nIn llm and human formats the script's streams pass through untouched and its exit\nstatus becomes this process's exit status, so a hook reads the real code. With\n--format json the streams are captured into the payload instead.\n\nRefuses to run outside a Git repository unless --root sets the boundary explicitly.\n\nExit codes:\n  *  llm and human: the script's own exit status, verbatim\n  0  --format json: the script exited 0\n  1  Unresolvable name, or the script could not be started\n  2  --format json: the script exited non-zero or was killed by a signal",
   )
   .action((name: string, args: string[], opts: Record<string, unknown>) =>
     scriptsRunAction(name, args, opts as ScriptsOptions),
@@ -586,7 +586,7 @@ scriptsCommon(scripts.command("which"))
   .argument("<name>", "Script name")
   .addHelpText(
     "after",
-    "\nReports the winning .claude-cli.yml, the working directory the script would run in,\nand any same-named definitions it shadows.\n\nExit codes:\n  0  The name resolved\n  1  Invocation error\n  2  No script by that name",
+    "\nReports the winning .cairn.yml, the working directory the script would run in,\nand any same-named definitions it shadows.\n\nExit codes:\n  0  The name resolved\n  1  Invocation error\n  2  No script by that name",
   )
   .action((name: string, opts: Record<string, unknown>) =>
     scriptsWhichAction(name, opts as ScriptsOptions),
@@ -750,7 +750,7 @@ program
 const md = program
   .command("md")
   .description("Agent-agnostic Markdown validation and analysis commands")
-  .option("--config <file>", "Use a specific .claude-cli.yml configuration file")
+  .option("--config <file>", "Use a specific .cairn.yml configuration file")
   .option("--no-config", "Disable project configuration discovery")
   .addHelpText(
     "after",
@@ -1471,7 +1471,7 @@ common(md.command("check-snippets"))
   .option("--exclude <glob>", "Workspace exclude glob (repeatable)", collect)
   .addHelpText(
     "after",
-    "\nOnly fences whose info string carries claude-cli:snippet=<path>[#<region>] are\n" +
+    "\nOnly fences whose info string carries cairn:snippet=<path>[#<region>] are\n" +
       "considered. A snippet is never executed; the source file is only read.\n\n" +
       "The mode defaults to --check, and --check, --dry-run, and --write are mutually\n" +
       "exclusive. The mode cannot be set from project configuration, so a checked-in\n" +

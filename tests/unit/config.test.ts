@@ -7,7 +7,7 @@ import { findConfig, loadConfig, resolveCommandOptions, selectConfig } from "../
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-config-"));
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-config-"));
 });
 
 afterEach(() => {
@@ -15,13 +15,13 @@ afterEach(() => {
 });
 
 function writeConfig(content: string): string {
-  const configPath = path.join(tmpDir, ".claude-cli.yml");
+  const configPath = path.join(tmpDir, ".cairn.yml");
   fs.writeFileSync(configPath, content);
   return configPath;
 }
 
 describe("configuration", () => {
-  it("discovers .claude-cli.yml upward", () => {
+  it("discovers .cairn.yml upward", () => {
     const configPath = writeConfig("version: 1\n");
     const nested = path.join(tmpDir, "a", "b");
     fs.mkdirSync(nested, { recursive: true });

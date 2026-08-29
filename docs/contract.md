@@ -1,6 +1,6 @@
 # Machine-readable result contract
 
-`claude-cli` is meant to be run by agents and CI, not only by people. This document is the
+`cairn` is meant to be run by agents and CI, not only by people. This document is the
 contract those consumers can rely on: what each command emits, which stream it lands on, what
 the exit code means, and how all of that is allowed to change.
 
@@ -8,15 +8,15 @@ Two commands make the contract self-describing, so nothing here needs to be scra
 `--help`:
 
 ```bash
-claude-cli describe --format json          # every command, option, exit code, and schema id
-claude-cli describe md graph --format json # one command
-claude-cli schema                          # the published schemas
-claude-cli schema md-graph                 # one schema document
+cairn describe --format json          # every command, option, exit code, and schema id
+cairn describe md graph --format json # one command
+cairn schema                          # the published schemas
+cairn schema md-graph                 # one schema document
 ```
 
 ## Contract version
 
-`schemaVersion` (currently `1`) versions the **contract surface**: the envelope shape, the
+`schemaVersion` (currently `2`) versions the **contract surface**: the envelope shape, the
 `describe` payload, the schema id scheme, and the machine-stream guarantees below. It is
 hand-owned and unrelated to the package version, which semantic-release manages.
 
@@ -43,10 +43,10 @@ A normal release bumps none of them.
 Schema ids look like URLs:
 
 ```text
-https://github.com/bstockus/claude-cli/schema/v1/md-graph.json
+https://github.com/bstockus/cairn/schema/v1/md-graph.json
 ```
 
-They are **identifiers, not fetchable URLs**. Retrieve a schema with `claude-cli schema <id>`.
+They are **identifiers, not fetchable URLs**. Retrieve a schema with `cairn schema <id>`.
 Every schema is self-contained — no `$ref` leaves its own document — so a retrieved schema can
 be compiled on its own.
 
@@ -106,7 +106,7 @@ breaking:
 The advisory update notice is written to **stderr only**, and only when every one of these
 holds:
 
-- `CLAUDE_CLI_NO_UPDATE_NOTIFIER` is not `1`
+- `CAIRN_NO_UPDATE_NOTIFIER` is not `1`
 - `CI` is unset
 - stderr is a TTY
 - `--format` is not `json`, `jsonl`, or `sarif`, including a format selected by project
@@ -124,17 +124,17 @@ By default every command emits its own payload shape, unchanged from previous re
 `--envelope` alongside `--format json` for a uniform wrapper:
 
 ```bash
-claude-cli md graph docs --format json --envelope
+cairn md graph docs --format json --envelope
 ```
 
 ```json
 {
-  "schemaVersion": "1",
-  "tool": { "name": "@bstockus/claude-cli", "version": "1.6.0" },
+  "schemaVersion": "2",
+  "tool": { "name": "@bstockus/cairn", "version": "1.6.0" },
   "command": "md graph",
   "ok": false,
   "exitCode": 2,
-  "schema": "https://github.com/bstockus/claude-cli/schema/v1/md-graph.json",
+  "schema": "https://github.com/bstockus/cairn/schema/v1/md-graph.json",
   "data": {},
   "summary": { "broken": 2, "unreachable": 1 }
 }
@@ -154,7 +154,7 @@ agent lifecycle commands added most recently are declared `stability: "experimen
 version:
 
 ```bash
-claude-cli describe -fj | jq -r '.commands[] | select(.stability=="experimental") | .id'
+cairn describe -fj | jq -r '.commands[] | select(.stability=="experimental") | .id'
 ```
 
 They share the `agent-result` schema with the stable agent commands. The stable commands'
@@ -195,17 +195,34 @@ is explicitly non-breaking.
 
 ```bash
 # Discover commands instead of parsing --help.
-claude-cli describe --format json | jq '.commands[] | select(.writes) | .id'
+cairn describe --format json | jq '.commands[] | select(.writes) | .id'
 
 # Find which stream a command puts findings on.
-claude-cli describe md audit -fj | jq '.commands[0].stream'
+cairn describe md audit -fj | jq '.commands[0].stream'
 
 # Validate CI output against the declared schema.
-claude-cli schema md-audit > md-audit.schema.json
-claude-cli md audit docs --format json > audit.json || true
+cairn schema md-audit > md-audit.schema.json
+cairn md audit docs --format json > audit.json || true
 # ...then validate audit.json with any JSON Schema 2020-12 validator.
 ```
 
-`describe` reports the **static** contract. Project configuration from `.claude-cli.yml` is not
+`describe` reports the **static** contract. Project configuration from `.cairn.yml` is not
 applied, so `defaultFormat` is the built-in default rather than the resolved one and the answer
 does not depend on the working directory.
+
+## Compatibility with claude-cli
+
+`schemaVersion` went to `2` when the tool was renamed from `claude-cli` to Cairn. No payload
+_shape_ changed; two published values did, which is what the bump signals:
+
+- Schema `$id`s moved from `https://github.com/bstockus/claude-cli/schema/v1/<id>.json` to
+  `https://github.com/bstockus/cairn/schema/v1/<id>.json`. The `v1` segment is unchanged —
+  the payloads are identical — and the short ids `cairn schema <id>` takes are unchanged.
+- `machineStreams.optOutEnv` is now `CAIRN_NO_UPDATE_NOTIFIER`. The pre-rename variable is
+  still honored, but only the current one is published here.
+- `tool.name` in the envelope and in `describe` is now `@bstockus/cairn`.
+
+Identifiers Cairn writes into a workspace — `.cairn.yml`, the TOC markers, the
+`cairn:snippet=` attribute, `.cairn-install.json`, and the two baseline discriminators —
+are all still _read_ under their pre-rename spellings, so no committed file needs editing.
+The README's migration table lists each pair.

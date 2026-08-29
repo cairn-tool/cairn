@@ -17,7 +17,7 @@ the implementation diverged, the command pages are authoritative. The material c
 - **A script's resolved `cwd` is containment-checked too**, not just the registry file. `cwd`
   decides where the script's own relative paths land, which makes it the more attractive escape.
 - **Registries under `node_modules` are skipped.** Nearest-definition-wins is the feature; a
-  vendored package shipping a `.claude-cli.yml` is where it would otherwise become a
+  vendored package shipping a `.cairn.yml` is where it would otherwise become a
   supply-chain hole, which the trust-boundary section below does not acknowledge.
 - **Outside a Git repository, `scripts run` refuses** unless `--root` is given; `which` and
   `list` still report. The proposal left the no-repository case unspecified, and it is where the
@@ -33,7 +33,7 @@ the implementation diverged, the command pages are authoritative. The material c
 - The depth counter is a footgun guard, not a security control; it is script-clearable and does
   not belong in the trust-boundary list below.
 
-Not done: the repository does not dogfood its own `scripts:` block. Any `.claude-cli.yml` here
+Not done: the repository does not dogfood its own `scripts:` block. Any `.cairn.yml` here
 sets `config.root` to the repository, which confines the workspace and breaks the contract
 suite's temporary-workspace cases. Insulating that suite is a prerequisite.
 
@@ -51,7 +51,7 @@ execution that pins the working directory to the project rather than inheriting 
 
 ## Concept
 
-A `scripts:` section in `.claude-cli.yml`, and a `scripts` toolset that resolves a name by
+A `scripts:` section in `.cairn.yml`, and a `scripts` toolset that resolves a name by
 walking the directory tree upward from the invocation directory.
 
 ```yaml
@@ -69,16 +69,16 @@ scripts:
 **Command sketch:**
 
 ```text
-claude-cli scripts run gather-context -- --since main
-claude-cli scripts which gather-context
-claude-cli scripts list
+cairn scripts run gather-context -- --since main
+cairn scripts which gather-context
+cairn scripts list
 ```
 
 ## Resolution
 
 Resolution is a **chain** walk, not the first-hit walk `findConfig` performs. `findConfig`
-returns the nearest `.claude-cli.yml` and stops; a nested configuration that exists but does
-not define `gather-context` must not shadow the root definition. So every `.claude-cli.yml`
+returns the nearest `.cairn.yml` and stops; a nested configuration that exists but does
+not define `gather-context` must not shadow the root definition. So every `.cairn.yml`
 from the invocation directory up to the boundary is read, and the nearest file that defines
 the requested _name_ wins. Nearest-definition-wins also yields per-package overrides without
 any additional mechanism.
@@ -100,8 +100,8 @@ The working directory defaults to the directory of the registry file that define
 which is what fixes the second half of the problem. `cwd:` accepts `registry` (default),
 `invocation`, or a path relative to the registry. Arguments after `--` are appended for
 `exec:` and exposed as positional parameters for `run:`. The child receives
-`CLAUDE_CLI_SCRIPT_NAME`, `CLAUDE_CLI_SCRIPT_ROOT` (the registry directory), and
-`CLAUDE_CLI_INVOKED_FROM` (the original working directory), so a script that genuinely needs
+`CAIRN_SCRIPT_NAME`, `CAIRN_SCRIPT_ROOT` (the registry directory), and
+`CAIRN_INVOKED_FROM` (the original working directory), so a script that genuinely needs
 the caller's location can still get it.
 
 ## Trust boundary

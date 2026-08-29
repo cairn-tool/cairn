@@ -42,7 +42,7 @@ function context(): FixerContext {
 }
 
 beforeEach(() => {
-  tmpDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-fixers-")));
+  tmpDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "cairn-fixers-")));
   initializeRuntime(loadConfig({ disabled: true }, tmpDir));
 });
 
@@ -52,8 +52,7 @@ afterEach(() => {
 });
 
 describe("toc fixer", () => {
-  const STALE =
-    "# Doc\n\n<!-- claude-cli:toc:start -->\nold\n<!-- claude-cli:toc:end -->\n\n## S\n";
+  const STALE = "# Doc\n\n<!-- cairn:toc:start -->\nold\n<!-- cairn:toc:end -->\n\n## S\n";
 
   it("edits exactly the marker interior", async () => {
     const file = write("a.md", STALE);
@@ -63,14 +62,14 @@ describe("toc fixer", () => {
     expect(edit.expected).toBe("\nold\n");
     expect(edit.replacement).toBe("\n- [Doc](#doc)\n  - [S](#s)\n");
     expect(applyEdits(STALE, [edit])).toBe(
-      "# Doc\n\n<!-- claude-cli:toc:start -->\n- [Doc](#doc)\n  - [S](#s)\n<!-- claude-cli:toc:end -->\n\n## S\n",
+      "# Doc\n\n<!-- cairn:toc:start -->\n- [Doc](#doc)\n  - [S](#s)\n<!-- cairn:toc:end -->\n\n## S\n",
     );
   });
 
   it("produces nothing for a current block or a document with no markers", async () => {
     const current = write(
       "current.md",
-      "# Doc\n\n<!-- claude-cli:toc:start -->\n- [Doc](#doc)\n<!-- claude-cli:toc:end -->\n",
+      "# Doc\n\n<!-- cairn:toc:start -->\n- [Doc](#doc)\n<!-- cairn:toc:end -->\n",
     );
     const plain = write("plain.md", "# Doc\n\n## S\n");
     const result = await tocFixer.plan([current, plain], context());
@@ -81,7 +80,7 @@ describe("toc fixer", () => {
   it("reports malformed markers instead of throwing", async () => {
     const file = write(
       "bad.md",
-      "# Doc\n<!-- claude-cli:toc:start -->\n<!-- claude-cli:toc:start -->\n<!-- claude-cli:toc:end -->\n",
+      "# Doc\n<!-- cairn:toc:start -->\n<!-- cairn:toc:start -->\n<!-- cairn:toc:end -->\n",
     );
     const result = await tocFixer.plan([file], context());
     expect(result.edits).toEqual([]);
@@ -93,7 +92,7 @@ describe("toc fixer", () => {
     // synchronize; writing a table of contents into it would corrupt the docs.
     const file = write(
       "doc.md",
-      "# Doc\n\nSyntax:\n\n```markdown\n<!-- claude-cli:toc:start -->\n<!-- claude-cli:toc:end -->\n```\n\n## S\n",
+      "# Doc\n\nSyntax:\n\n```markdown\n<!-- cairn:toc:start -->\n<!-- cairn:toc:end -->\n```\n\n## S\n",
     );
     const result = await tocFixer.plan([file], context());
     expect(result.edits).toEqual([]);
@@ -104,7 +103,7 @@ describe("toc fixer", () => {
   it("still synchronizes a real block in a document that also documents one", async () => {
     const file = write(
       "doc.md",
-      "# Doc\n\n```markdown\n<!-- claude-cli:toc:start -->\n<!-- claude-cli:toc:end -->\n```\n\n<!-- claude-cli:toc:start -->\nold\n<!-- claude-cli:toc:end -->\n\n## S\n",
+      "# Doc\n\n```markdown\n<!-- cairn:toc:start -->\n<!-- cairn:toc:end -->\n```\n\n<!-- cairn:toc:start -->\nold\n<!-- cairn:toc:end -->\n\n## S\n",
     );
     const content = fs.readFileSync(file, "utf-8");
     const result = await tocFixer.plan([file], context());
@@ -112,7 +111,7 @@ describe("toc fixer", () => {
     // The edit targets the second, real pair.
     expect(result.edits[0].start).toBeGreaterThan(content.indexOf("```markdown"));
     expect(applyEdits(content, result.edits)).toContain(
-      "<!-- claude-cli:toc:start -->\n- [Doc](#doc)\n  - [S](#s)\n<!-- claude-cli:toc:end -->",
+      "<!-- cairn:toc:start -->\n- [Doc](#doc)\n  - [S](#s)\n<!-- cairn:toc:end -->",
     );
   });
 

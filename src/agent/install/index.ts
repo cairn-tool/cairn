@@ -24,7 +24,26 @@ import {
 import { placeSymlink, writeArtifactsAtomically } from "../writer.js";
 import { packageName, packageVersion } from "../../version.js";
 
-export const INSTALL_MANIFEST = ".claude-cli-install.json";
+export const INSTALL_MANIFEST = ".cairn-install.json";
+
+/** The pre-rename manifest, still read so existing installs stay removable. */
+export const LEGACY_INSTALL_MANIFEST = ".claude-cli-install.json";
+
+/**
+ * The manifest file in `destination`, preferring the current name.
+ *
+ * Only the paths this module reads off *disk* go through here. Comparisons
+ * against `artifact.path` elsewhere in this file stay exact equality against
+ * `INSTALL_MANIFEST` on purpose: those artifacts come from a plan this run just
+ * built, which never emits the legacy name.
+ */
+export function installManifestIn(destination: string): string | undefined {
+  for (const name of [INSTALL_MANIFEST, LEGACY_INSTALL_MANIFEST]) {
+    const candidate = path.join(destination, name);
+    if (existsAt(candidate)) return candidate;
+  }
+  return undefined;
+}
 export const INSTALL_CACHE = ".install";
 
 export const INSTALL_SCOPES = ["user", "project"] as const;
@@ -334,8 +353,16 @@ function parseManifest(value: unknown): InstallManifest | null {
 export function readInstallManifest(
   destination: string,
 ): InstallManifest | "missing" | "malformed" {
-  const file = path.join(destination, INSTALL_MANIFEST);
-  if (!existsAt(file)) return "missing";
+  // Two manifests in one destination is the "two matches is an error rather than
+  // a guess" rule again: only a hand edit produces it, and picking one would
+  // silently orphan the other install's file list.
+  if (
+    existsAt(path.join(destination, INSTALL_MANIFEST)) &&
+    existsAt(path.join(destination, LEGACY_INSTALL_MANIFEST))
+  )
+    return "malformed";
+  const file = installManifestIn(destination);
+  if (!file) return "missing";
   try {
     const parsed = parseManifest(JSON.parse(fs.readFileSync(file, "utf8")));
     return parsed ?? "malformed";
@@ -814,7 +841,9 @@ export function planUninstall(
     if (read === "malformed")
       diagnostics.push(
         error("AB806", `Install manifest missing or malformed at ${candidate.destination}`, {
-          path: path.join(candidate.destination, INSTALL_MANIFEST),
+          path:
+            installManifestIn(candidate.destination) ??
+            path.join(candidate.destination, INSTALL_MANIFEST),
           target,
           remediation: "Inspect the destination; uninstall refuses to guess.",
         }),
@@ -879,9 +908,11 @@ export function missingInstallDiagnostic(
       ? `Install manifest missing or malformed at ${destination}`
       : `No install named '${name}' for ${target}`,
     {
-      ...(destination ? { path: path.join(destination, INSTALL_MANIFEST) } : {}),
+      ...(destination
+        ? { path: installManifestIn(destination) ?? path.join(destination, INSTALL_MANIFEST) }
+        : {}),
       target,
-      remediation: "Nothing to uninstall, or the destination is not a claude-cli install.",
+      remediation: "Nothing to uninstall, or the destination is not a Cairn install.",
     },
   );
 }
@@ -901,7 +932,8 @@ export function commitUninstall(plan: UninstallPlan): void {
       removePath(path.join(destination, file.path));
       pruneEmptyAncestors(destination, file.path);
     }
-    removePath(path.join(destination, INSTALL_MANIFEST));
+    const manifestFile = installManifestIn(destination);
+    if (manifestFile) removePath(manifestFile);
     if (
       manifest.layout !== "merge" &&
       existsAt(destination) &&

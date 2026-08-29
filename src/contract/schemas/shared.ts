@@ -4,7 +4,7 @@ export const DRAFT = "https://json-schema.org/draft/2020-12/schema";
 
 /**
  * The shared finding record. Duplicated inline into every schema that needs it
- * rather than cross-referenced: a schema retrieved with `claude-cli schema <id>`
+ * rather than cross-referenced: a schema retrieved with `cairn schema <id>`
  * must be independently compilable, so no `$ref` may leave its own document.
  */
 export const ISSUE_DEF: JsonSchema = {

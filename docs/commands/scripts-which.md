@@ -3,10 +3,10 @@
 ## Synopsis
 
 ```text
-claude-cli scripts which <name> [options]
+cairn scripts which <name> [options]
 ```
 
-Reports which `.claude-cli.yml` defines a script for the current working directory, and where
+Reports which `.cairn.yml` defines a script for the current working directory, and where
 that script would run — without executing anything. This is the command to reach for when a
 hook runs the wrong thing and you need to see which registry won.
 

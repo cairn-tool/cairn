@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md orphans [directory] [options]
+cairn md orphans [directory] [options]
 ```
 
 Builds inbound-reference information for selected Markdown documents and reports files that

@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage tokens [options]
+cairn usage tokens [options]
 ```
 
 Token usage rolled up along one dimension.

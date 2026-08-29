@@ -51,7 +51,7 @@ const OPTION_ALIASES: Record<string, string[]> = {
  * Commander hands back defaults and typed values indistinguishably, so this
  * re-reads argv. Config resolution needs it to know what to override, and a
  * command that rejects conflicting options needs it to avoid misfiring on a
- * value that came from `.claude-cli.yml` rather than the command line.
+ * value that came from `.cairn.yml` rather than the command line.
  */
 export function explicitOptionKeys(cli: Record<string, unknown>): Set<string> {
   const argv = process.argv.slice(2);

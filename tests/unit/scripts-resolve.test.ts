@@ -10,7 +10,7 @@ let root: string;
 beforeEach(() => {
   // Realpathed because /tmp is a symlink on macOS and the walk resolves both
   // sides of every containment check.
-  root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-scripts-")));
+  root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "cairn-scripts-")));
   execFileSync("git", ["init", "-q", root]);
 });
 
@@ -36,7 +36,7 @@ const SCRIPT = (name: string, body: string) =>
 
 describe("script resolution", () => {
   it("resolves a name declared three levels up", () => {
-    write(".claude-cli.yml", SCRIPT("build", "echo root"));
+    write(".cairn.yml", SCRIPT("build", "echo root"));
     const deep = directory("a/b/c");
     const resolution = resolveScript("build", { cwd: deep });
     expect(resolution.winner?.registry.directory).toBe(root);
@@ -45,44 +45,40 @@ describe("script resolution", () => {
   });
 
   it("does not let a nested file without the name shadow an ancestor", () => {
-    write(".claude-cli.yml", SCRIPT("build", "echo root"));
-    write("pkg/.claude-cli.yml", SCRIPT("other", "echo other"));
+    write(".cairn.yml", SCRIPT("build", "echo root"));
+    write("pkg/.cairn.yml", SCRIPT("other", "echo other"));
     const resolution = resolveScript("build", { cwd: directory("pkg") });
-    expect(resolution.winner?.registry.file).toBe(path.join(root, ".claude-cli.yml"));
+    expect(resolution.winner?.registry.file).toBe(path.join(root, ".cairn.yml"));
     // The nested file was still opened, and reports that it declares something.
     expect(resolution.consulted[0].status).toBe("declares");
     expect(resolution.consulted[0].names).toEqual(["other"]);
   });
 
   it("lets the nearest definition win and records what it shadows", () => {
-    write(".claude-cli.yml", SCRIPT("build", "echo root"));
-    write("pkg/.claude-cli.yml", SCRIPT("build", "echo nested"));
+    write(".cairn.yml", SCRIPT("build", "echo root"));
+    write("pkg/.cairn.yml", SCRIPT("build", "echo nested"));
     const resolution = resolveScript("build", { cwd: directory("pkg") });
-    expect(resolution.winner?.registry.file).toBe(path.join(root, "pkg", ".claude-cli.yml"));
-    expect(resolution.shadowed.map((entry) => entry.file)).toEqual([
-      path.join(root, ".claude-cli.yml"),
-    ]);
+    expect(resolution.winner?.registry.file).toBe(path.join(root, "pkg", ".cairn.yml"));
+    expect(resolution.shadowed.map((entry) => entry.file)).toEqual([path.join(root, ".cairn.yml")]);
   });
 
   it("stops at the git root", () => {
     // An inner repository bounds the walk at itself, so the outer repository's
     // registry — a real ancestor on disk — is never consulted.
-    write(".claude-cli.yml", SCRIPT("build", "echo outer"));
+    write(".cairn.yml", SCRIPT("build", "echo outer"));
     const inner = directory("inner");
     execFileSync("git", ["init", "-q", inner]);
-    write("inner/.claude-cli.yml", SCRIPT("other", "echo other"));
+    write("inner/.cairn.yml", SCRIPT("other", "echo other"));
 
     const resolution = resolveScript("build", { cwd: inner });
     expect(resolution.boundary.directory).toBe(inner);
     expect(resolution.winner).toBeUndefined();
-    expect(resolution.consulted.map((file) => file.file)).toEqual([
-      path.join(inner, ".claude-cli.yml"),
-    ]);
+    expect(resolution.consulted.map((file) => file.file)).toEqual([path.join(inner, ".cairn.yml")]);
   });
 
   it("takes the deeper of --root and the git root", () => {
-    write(".claude-cli.yml", SCRIPT("build", "echo root"));
-    write("pkg/.claude-cli.yml", SCRIPT("other", "echo other"));
+    write(".cairn.yml", SCRIPT("build", "echo root"));
+    write("pkg/.cairn.yml", SCRIPT("other", "echo other"));
     const resolution = resolveScript("build", {
       cwd: directory("pkg"),
       root: path.join(root, "pkg"),
@@ -100,23 +96,23 @@ describe("script resolution", () => {
   });
 
   it("skips a registry under node_modules", () => {
-    write(".claude-cli.yml", SCRIPT("build", "echo root"));
-    write("node_modules/evil/.claude-cli.yml", SCRIPT("build", "echo pwned"));
+    write(".cairn.yml", SCRIPT("build", "echo root"));
+    write("node_modules/evil/.cairn.yml", SCRIPT("build", "echo pwned"));
     const resolution = resolveScript("build", { cwd: directory("node_modules/evil") });
-    expect(resolution.winner?.registry.file).toBe(path.join(root, ".claude-cli.yml"));
+    expect(resolution.winner?.registry.file).toBe(path.join(root, ".cairn.yml"));
   });
 
   it("reports an unreadable ancestor without throwing, and flags only a shadowing one", () => {
-    write(".claude-cli.yml", SCRIPT("build", "echo root"));
-    write("pkg/.claude-cli.yml", "scripts:\n  build:\n    run: [unclosed\n");
+    write(".cairn.yml", SCRIPT("build", "echo root"));
+    write("pkg/.cairn.yml", "scripts:\n  build:\n    run: [unclosed\n");
     const nearer = resolveScript("build", { cwd: directory("pkg") });
     expect(nearer.consulted[0].status).toBe("invalid");
     expect(shadowingFailure(nearer)).toBeDefined();
 
     // The same broken file farther away than the winner cannot change the answer.
-    write("pkg/deep/.claude-cli.yml", SCRIPT("build", "echo deep"));
+    write("pkg/deep/.cairn.yml", SCRIPT("build", "echo deep"));
     const farther = resolveScript("build", { cwd: directory("pkg/deep") });
-    expect(farther.winner?.registry.file).toBe(path.join(root, "pkg", "deep", ".claude-cli.yml"));
+    expect(farther.winner?.registry.file).toBe(path.join(root, "pkg", "deep", ".cairn.yml"));
     expect(shadowingFailure(farther)).toBeUndefined();
   });
 
@@ -124,7 +120,7 @@ describe("script resolution", () => {
     const outside = path.join(path.dirname(root), `${path.basename(root)}-evil.yml`);
     fs.writeFileSync(outside, SCRIPT("build", "echo pwned"));
     try {
-      fs.symlinkSync(outside, path.join(root, ".claude-cli.yml"));
+      fs.symlinkSync(outside, path.join(root, ".cairn.yml"));
       const resolution = resolveScript("build", { cwd: root });
       expect(resolution.winner).toBeUndefined();
       expect(resolution.consulted[0].status).toBe("skipped");
@@ -135,40 +131,40 @@ describe("script resolution", () => {
   });
 
   it("rejects a cwd that escapes the boundary", () => {
-    write(".claude-cli.yml", "version: 1\nscripts:\n  build:\n    run: pwd\n    cwd: ../..\n");
+    write(".cairn.yml", "version: 1\nscripts:\n  build:\n    run: pwd\n    cwd: ../..\n");
     expect(() => resolveScript("build", { cwd: root })).toThrow(
       "resolves a working directory outside the boundary",
     );
   });
 
   it("resolves cwd: invocation to the caller's directory", () => {
-    write(".claude-cli.yml", "version: 1\nscripts:\n  here:\n    run: pwd\n    cwd: invocation\n");
+    write(".cairn.yml", "version: 1\nscripts:\n  here:\n    run: pwd\n    cwd: invocation\n");
     const deep = directory("a/b");
     expect(resolveScript("here", { cwd: deep }).winner?.workingDirectory).toBe(deep);
   });
 
   it("lists with nearest-wins applied and records shadowed files", () => {
     write(
-      ".claude-cli.yml",
+      ".cairn.yml",
       "version: 1\nscripts:\n  build:\n    run: echo root\n  only-root:\n    run: echo x\n",
     );
-    write("pkg/.claude-cli.yml", SCRIPT("build", "echo nested"));
+    write("pkg/.cairn.yml", SCRIPT("build", "echo nested"));
     const listing = listScripts({ cwd: directory("pkg") });
     expect(listing.scripts.map((entry) => entry.name)).toEqual(["build", "only-root"]);
     const build = listing.scripts.find((entry) => entry.name === "build")!;
-    expect(build.file).toBe(path.join(root, "pkg", ".claude-cli.yml"));
-    expect(build.shadows).toEqual([path.join(root, ".claude-cli.yml")]);
+    expect(build.file).toBe(path.join(root, "pkg", ".cairn.yml"));
+    expect(build.shadows).toEqual([path.join(root, ".cairn.yml")]);
   });
 
   it("consults nothing when discovery is disabled", () => {
-    write(".claude-cli.yml", SCRIPT("build", "echo root"));
+    write(".cairn.yml", SCRIPT("build", "echo root"));
     const resolution = resolveScript("build", { cwd: root, selection: { disabled: true } });
     expect(resolution.consulted).toEqual([]);
     expect(resolution.winner).toBeUndefined();
   });
 
   it("reads only the explicit file when --config pins one", () => {
-    write(".claude-cli.yml", SCRIPT("build", "echo root"));
+    write(".cairn.yml", SCRIPT("build", "echo root"));
     const pinned = write("other/pinned.yml", SCRIPT("build", "echo pinned"));
     const resolution = resolveScript("build", {
       cwd: root,

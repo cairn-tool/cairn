@@ -1,27 +1,27 @@
 # Complete command listing
 
-`claude-cli` contains four toolsets plus update and contract commands. Angle brackets in usage
+`cairn` contains four toolsets plus update and contract commands. Angle brackets in usage
 signatures are required arguments; square brackets are optional arguments.
 
 ## Global interface
 
-| Command                                                   | Description                                                            |
-| --------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `claude-cli --help`                                       | Show top-level help.                                                   |
-| `claude-cli --version`                                    | Print the installed version.                                           |
-| `claude-cli check-update`                                 | Query the configured npm registry for the latest published version.    |
-| `claude-cli describe`                                     | Describe the CLI contract: commands, options, exit codes, and schemas. |
-| `claude-cli schema`                                       | Print a published output schema, or list the available schemas.        |
-| [`claude-cli completion <shell>`](commands/completion.md) | Print a shell completion script for bash, zsh, fish, or powershell.    |
-| [`claude-cli serve <protocol>`](commands/serve.md)        | Serve the workspace engine over a machine protocol, read-only.         |
-| `claude-cli agent`                                        | Convert, validate, and inspect portable agent bundles.                 |
-| `claude-cli md`                                           | Validate, query, analyze, and modify Markdown workspaces.              |
-| `claude-cli scripts`                                      | Resolve and run named scripts declared in `.claude-cli.yml`.           |
-| `claude-cli usage`                                        | Report on Claude Code usage from its own session logs.                 |
+| Command                                              | Description                                                            |
+| ---------------------------------------------------- | ---------------------------------------------------------------------- |
+| `cairn --help`                                       | Show top-level help.                                                   |
+| `cairn --version`                                    | Print the installed version.                                           |
+| `cairn check-update`                                 | Query the configured npm registry for the latest published version.    |
+| `cairn describe`                                     | Describe the CLI contract: commands, options, exit codes, and schemas. |
+| `cairn schema`                                       | Print a published output schema, or list the available schemas.        |
+| [`cairn completion <shell>`](commands/completion.md) | Print a shell completion script for bash, zsh, fish, or powershell.    |
+| [`cairn serve <protocol>`](commands/serve.md)        | Serve the workspace engine over a machine protocol, read-only.         |
+| `cairn agent`                                        | Convert, validate, and inspect portable agent bundles.                 |
+| `cairn md`                                           | Validate, query, analyze, and modify Markdown workspaces.              |
+| `cairn scripts`                                      | Resolve and run named scripts declared in `.cairn.yml`.                |
+| `cairn usage`                                        | Report on Claude Code usage from its own session logs.                 |
 
 ## Script commands
 
-Resolution walks every `.claude-cli.yml` from the working directory to the repository root, and
+Resolution walks every `.cairn.yml` from the working directory to the repository root, and
 the nearest file that defines the name wins. The script runs with its working directory pinned
 to the registry that declared it, so a hook keeps working after the caller changes directory.
 
@@ -81,7 +81,7 @@ Agent targets are `claude-code`, `codex`, `cursor`, and `all`.
 
 ## Markdown commands
 
-The `md` parent accepts `--config <file>` to select a `.claude-cli.yml` file and
+The `md` parent accepts `--config <file>` to select a `.cairn.yml` file and
 `--no-config` to disable discovery. These two options are mutually exclusive.
 
 | Command                                                                                 | Description                                                                       |

@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md frontmatter <file> [options]
+cairn md frontmatter <file> [options]
 ```
 
 Parses YAML frontmatter and displays the resulting mapping. With `--key`, retrieves one value

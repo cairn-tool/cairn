@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage tools [options]
+cairn usage tools [options]
 ```
 
 Tool calls rolled up by name, kind, MCP server, day, or session.

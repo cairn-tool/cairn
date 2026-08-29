@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli scripts list [options]
+cairn scripts list [options]
 ```
 
 Lists every script name visible from the working directory, after nearest-definition-wins has

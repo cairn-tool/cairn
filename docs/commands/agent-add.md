@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent add <kind> <name> [bundle] [options]
+cairn agent add <kind> <name> [bundle] [options]
 ```
 
 Adds exactly one component to an existing bundle. Like [`agent init`](agent-init.md) it never
@@ -78,17 +78,17 @@ map.
 
 ```bash
 # Manifest stays byte-identical.
-claude-cli agent add skill prepare-release ./release-helper
+cairn agent add skill prepare-release ./release-helper
 
 # A file-scoped rule.
-claude-cli agent add rule typescript ./release-helper \
+cairn agent add rule typescript ./release-helper \
   --activation files --glob 'src/**/*.ts'
 
 # A hook, named by its portable event.
-claude-cli agent add hook pre-tool-use ./release-helper
+cairn agent add hook pre-tool-use ./release-helper
 
 # A non-default root; this one does edit the manifest.
-claude-cli agent add skill other ./release-helper --path lib/skills
+cairn agent add skill other ./release-helper --path lib/skills
 ```
 
 ## Exit codes

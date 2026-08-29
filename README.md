@@ -1,11 +1,15 @@
-# claude-cli
+# Cairn
 
-An agent-agnostic CLI toolkit for working with Markdown files and related assets. Despite
-the name, `claude-cli` is intended to support all LLM coding agents, as well as humans and
-CI systems; its commands do not depend on Claude or any model-provider API.
+An agent-agnostic CLI toolkit for working with Markdown files and related assets. Cairn
+supports all LLM coding agents, as well as humans and CI systems; its commands do not
+depend on Claude or any model-provider API.
 
-Published as `@bstockus/claude-cli` on the GitHub Packages npm registry; the installed
-binary is named `claude-cli`.
+Published as `@bstockus/cairn` on the GitHub Packages npm registry; the installed binary
+is named `cairn`.
+
+> **Renamed from `claude-cli`.** The old name implied a coupling that never existed. Every
+> identifier Cairn writes into your files or environment is still _read_ under its
+> pre-rename spelling — see [Migrating from claude-cli](#migrating-from-claude-cli).
 
 ## Install
 
@@ -21,8 +25,8 @@ with the `read:packages` scope:
 Then:
 
 ```bash
-npm install -g @bstockus/claude-cli   # global `claude-cli` binary
-npx @bstockus/claude-cli md lint FILE # one-off, no install
+npm install -g @bstockus/cairn   # global `cairn` binary
+npx @bstockus/cairn md lint FILE # one-off, no install
 ```
 
 ### Keeping a stable path across Node upgrades
@@ -33,7 +37,7 @@ holding an absolute path to the CLI (Claude Code hooks, for example). Pin a stab
 
 ```bash
 mkdir -p ~/.local/bin
-ln -sf "$(npm root -g)/@bstockus/claude-cli/dist/cli.js" ~/.local/bin/claude-cli
+ln -sf "$(npm root -g)/@bstockus/cairn/dist/cli.js" ~/.local/bin/cairn
 ```
 
 Make sure `~/.local/bin` is on your `PATH`.
@@ -44,26 +48,67 @@ Skip the registry entirely and link a local clone if you don't have a GitHub Pac
 token, or want to run a specific commit instead of the latest published release:
 
 ```bash
-git clone git@github.com:bstockus/claude-cli.git
-cd claude-cli
+git clone git@github.com:bstockus/cairn.git
+cd cairn
 npm ci
 npm run build   # tsc -> dist/cli.js
-npm link        # symlinks the global `claude-cli` binary to this working tree
+npm link        # symlinks the global `cairn` binary to this working tree
 ```
 
-`npm link` points the global `claude-cli` binary at `dist/cli.js` in this working tree
+`npm link` points the global `cairn` binary at `dist/cli.js` in this working tree
 instead of copying files, so pulling new commits only requires `npm run build` again — no
 need to re-run `npm link`. Remove the link with:
 
 ```bash
-npm unlink -g @bstockus/claude-cli
+npm unlink -g @bstockus/cairn
 ```
+
+## Migrating from claude-cli
+
+Cairn was named `claude-cli` through v1.11.0. The rename changes what Cairn _writes_, never
+what it _reads_: every identifier the old name put into your files, your repositories, or
+your environment is still accepted, so nothing on disk has to be touched.
+
+| What                          | Cairn writes                        | Still read                      |
+| ----------------------------- | ----------------------------------- | ------------------------------- |
+| Config file                   | `.cairn.yml`                        | `.claude-cli.yml`               |
+| TOC markers                   | `<!-- cairn:toc:start -->` / `:end` | `<!-- claude-cli:toc:… -->`     |
+| Snippet attribute             | `cairn:snippet=`                    | `claude-cli:snippet=`           |
+| Snippet region markers        | `cairn:snippet:start NAME`          | `claude-cli:snippet:start NAME` |
+| Agent install manifest        | `.cairn-install.json`               | `.claude-cli-install.json`      |
+| `md audit` baseline           | `cairn-md-audit-baseline`           | `claude-cli-md-audit-baseline`  |
+| Package inventory `bomFormat` | `cairn-inventory`                   | `claude-cli-inventory`          |
+| Update-notice opt-out         | `CAIRN_NO_UPDATE_NOTIFIER`          | `CLAUDE_CLI_NO_UPDATE_NOTIFIER` |
+
+A document already carrying `claude-cli:toc` markers keeps them: `md toc --write` rewrites
+only the list between the markers, so a legacy document that is already current stays
+current rather than reporting drift for a cosmetic change. The same holds for a fence's
+`claude-cli:snippet=` attribute, which `md check-snippets --write` never rewrites. Migrate a
+file by editing the marker yourself, or leave it — both spellings are equal indefinitely.
+
+`scripts run` exports every variable under both spellings, so a script reading
+`CLAUDE_CLI_SCRIPT_ROOT` needs no change:
+
+```text
+CAIRN_SCRIPT_NAME       CLAUDE_CLI_SCRIPT_NAME
+CAIRN_SCRIPT_ROOT       CLAUDE_CLI_SCRIPT_ROOT
+CAIRN_SCRIPT_REGISTRY   CLAUDE_CLI_SCRIPT_REGISTRY
+CAIRN_SCRIPT_DEPTH      CLAUDE_CLI_SCRIPT_DEPTH
+CAIRN_SCRIPT_STACK      CLAUDE_CLI_SCRIPT_STACK
+CAIRN_INVOKED_FROM      CLAUDE_CLI_INVOKED_FROM
+```
+
+What **does** change for consumers: the package is now `@bstockus/cairn`, the binary is
+`cairn`, the envelope's `tool.name` reports the new package name, schema `$id`s are rooted
+at `https://github.com/bstockus/cairn/schema`, and the contract `schemaVersion` is `2`.
+Regenerate your shell completion script after upgrading, and re-point anything holding an
+absolute path to the old binary.
 
 ## Development
 
 ```bash
-git clone git@github.com:bstockus/claude-cli.git
-cd claude-cli
+git clone git@github.com:bstockus/cairn.git
+cd cairn
 npm ci
 
 npm test           # builds dist/ via `pretest`, then runs unit/integration/e2e suites
@@ -73,8 +118,8 @@ npm run lint       # ESLint
 npm run format     # Prettier (write); `npm run format:check` in CI
 npm run typecheck  # tsc --noEmit
 
-npm link           # expose the working tree as the global `claude-cli`, see Install above
-npm unlink -g @bstockus/claude-cli
+npm link           # expose the working tree as the global `cairn`, see Install above
+npm unlink -g @bstockus/cairn
 ```
 
 The e2e suite spawns the **compiled** `dist/cli.js`, so a build must precede it — `pretest`
@@ -104,7 +149,7 @@ The CLI checks whether a newer version has been published and prints a notice:
 
 ```text
 Update available 1.0.3 → 1.1.0
-Run npm install -g @bstockus/claude-cli to update.
+Run npm install -g @bstockus/cairn to update.
 ```
 
 The check runs **at most once every 24 hours**, in a detached background process, so it
@@ -116,12 +161,12 @@ It is deliberately silent unless it is safe and useful to speak. No notice is pr
 - stderr is not a TTY — output is being piped or parsed
 - `--format json`, `jsonl`, or `sarif` is in use
 - `CI` is set
-- `CLAUDE_CLI_NO_UPDATE_NOTIFIER=1` is set
+- `CAIRN_NO_UPDATE_NOTIFIER=1` is set
 
-Set `CLAUDE_CLI_NO_UPDATE_NOTIFIER=1` to disable the feature entirely, including the
+Set `CAIRN_NO_UPDATE_NOTIFIER=1` to disable the feature entirely, including the
 background refresh.
 
-The cached result lives at `${XDG_CACHE_HOME:-~/.cache}/claude-cli/update-check.json` and
+The cached result lives at `${XDG_CACHE_HOME:-~/.cache}/cairn/update-check.json` and
 can be deleted at any time to force a fresh check.
 
 ### `check-update`
@@ -129,8 +174,8 @@ can be deleted at any time to force a fresh check.
 Checks immediately, querying the registry directly rather than reading the 24h cache.
 
 ```bash
-claude-cli check-update
-claude-cli check-update --format json
+cairn check-update
+cairn check-update --format json
 ```
 
 Exit codes:
@@ -142,10 +187,10 @@ Exit codes:
 ## Shell completion
 
 ```bash
-claude-cli completion bash       >> ~/.bashrc
-claude-cli completion zsh        > ~/.zfunc/_claude-cli    # a directory on $fpath
-claude-cli completion fish       > ~/.config/fish/completions/claude-cli.fish
-claude-cli completion powershell >> $PROFILE
+cairn completion bash       >> ~/.bashrc
+cairn completion zsh        > ~/.zfunc/_cairn    # a directory on $fpath
+cairn completion fish       > ~/.config/fish/completions/cairn.fish
+cairn completion powershell >> $PROFILE
 ```
 
 The script is generated from the same command tree `describe` walks, so it cannot drift from
@@ -155,7 +200,7 @@ each command's contract, so `md audit --format` offers `jsonl` and `sarif` while
 `md graph --format` does not. File and directory values defer to the shell's own completion.
 
 The script embeds the command tree rather than calling back into the CLI, so completing costs
-no process spawn; regenerate it after upgrading. `claude-cli` never writes to a shell profile
+no process spawn; regenerate it after upgrading. `cairn` never writes to a shell profile
 itself, and the update notice is suppressed for this command so the `eval` install idiom cannot
 print on every shell start.
 
@@ -169,13 +214,13 @@ All `md` subcommands support:
 - `-fj` - Shorthand for `--format=json`
 - `--paths <style>` - Display paths as `absolute` (default) or `relative` to the workspace
 - `--stdin-name <path>` - Give stdin a workspace path when file-relative links must be resolved
-- `--config <file>` - Use a specific `.claude-cli.yml`
+- `--config <file>` - Use a specific `.cairn.yml`
 - `--no-config` - Disable automatic project configuration discovery
 
 ### Project configuration
 
 For `md` commands, the CLI searches from the current directory upward for
-`.claude-cli.yml`. Command-line options override command-specific settings, which override
+`.cairn.yml`. Command-line options override command-specific settings, which override
 top-level settings, which override built-in defaults. Configuration-derived paths are
 relative to the configuration file; explicit CLI paths remain relative to the invocation
 directory.
@@ -273,10 +318,10 @@ command with its options, exit code meanings, output stream, and output schema i
 retrieves the schemas themselves.
 
 ```bash
-claude-cli describe --format json           # the whole contract
-claude-cli describe md graph --format json  # one command
-claude-cli schema                           # published schemas
-claude-cli schema md-graph                  # one schema document
+cairn describe --format json           # the whole contract
+cairn describe md graph --format json  # one command
+cairn schema                           # published schemas
+cairn schema md-graph                  # one schema document
 ```
 
 Existing payloads are unchanged. Pass `--envelope` alongside `--format json` for a uniform
@@ -284,7 +329,7 @@ wrapper carrying the command id, exit code, and schema id, with the payload verb
 `data`:
 
 ```bash
-claude-cli md graph docs --format json --envelope
+cairn md graph docs --format json --envelope
 ```
 
 See [docs/contract.md](docs/contract.md) for the versioning rules, the stream guarantees, and
@@ -296,32 +341,32 @@ what does and does not count as a breaking change.
 
 The top-level `agent` toolset converts one neutral bundle into Claude Code, Codex, and
 Cursor artifacts. Agent-bundle defaults deliberately live in `agent-bundle.yaml`; the
-`.claude-cli.yml` configuration described above remains scoped to `md` commands.
+`.cairn.yml` configuration described above remains scoped to `md` commands.
 
 ```bash
-claude-cli agent init release-helper --output ./my-bundle
-claude-cli agent import ./existing-plugin --output ./my-bundle
-claude-cli agent add skill prepare-release ./my-bundle
-claude-cli agent add hook pre-tool-use ./my-bundle
-claude-cli agent upgrade ./my-bundle --to-schema 2 --check
-claude-cli agent validate ./my-bundle --target all
-claude-cli agent inspect ./my-bundle --format json
-claude-cli agent inspect ./my-bundle --target codex --profile plugin
-claude-cli agent compat
-claude-cli agent compat ./my-bundle --target codex --target cursor
-claude-cli agent specs --format json
-claude-cli agent doctor ./my-bundle --target all --output ./dist
-claude-cli agent convert ./my-bundle --target all --output ./dist --profile both
-claude-cli agent package ./my-bundle --target all --output ./release --archive
-claude-cli agent install ./my-bundle --target cursor --scope user
-claude-cli agent install ./my-bundle --target claude-code --scope user --register
-claude-cli agent installed
-claude-cli agent uninstall markdown --target cursor --scope user
-claude-cli agent audit ./my-bundle --target all --format sarif
-claude-cli agent test ./my-bundle --target all --strict
-claude-cli agent convert ./my-bundle --target cursor --output ./dist --dry-run
-claude-cli agent convert ./my-bundle --target all --output ./dist --check
-claude-cli agent convert ./my-bundle --target all --output ./dist --dry-run --report ./ci/convert.json
+cairn agent init release-helper --output ./my-bundle
+cairn agent import ./existing-plugin --output ./my-bundle
+cairn agent add skill prepare-release ./my-bundle
+cairn agent add hook pre-tool-use ./my-bundle
+cairn agent upgrade ./my-bundle --to-schema 2 --check
+cairn agent validate ./my-bundle --target all
+cairn agent inspect ./my-bundle --format json
+cairn agent inspect ./my-bundle --target codex --profile plugin
+cairn agent compat
+cairn agent compat ./my-bundle --target codex --target cursor
+cairn agent specs --format json
+cairn agent doctor ./my-bundle --target all --output ./dist
+cairn agent convert ./my-bundle --target all --output ./dist --profile both
+cairn agent package ./my-bundle --target all --output ./release --archive
+cairn agent install ./my-bundle --target cursor --scope user
+cairn agent install ./my-bundle --target claude-code --scope user --register
+cairn agent installed
+cairn agent uninstall markdown --target cursor --scope user
+cairn agent audit ./my-bundle --target all --format sarif
+cairn agent test ./my-bundle --target all --strict
+cairn agent convert ./my-bundle --target cursor --output ./dist --dry-run
+cairn agent convert ./my-bundle --target all --output ./dist --check
+cairn agent convert ./my-bundle --target all --output ./dist --dry-run --report ./ci/convert.json
 ```
 
 `agent import` is the inverse of `agent convert`: it turns an existing native plugin or
@@ -357,7 +402,7 @@ scans: Cursor's user plugin directory, a Claude Code local marketplace, or a pro
 merge. Copy is the default; `--link` materializes once under the bundle's `.install/` tree
 and symlinks the host path at it. `--register` is the only flag that edits host config, and
 only Claude Code's marketplace layout needs it. `agent uninstall` removes exactly the
-inventory recorded in `.claude-cli-install.json`, and `agent installed` lists what those
+inventory recorded in `.cairn-install.json`, and `agent installed` lists what those
 manifests describe.
 
 `agent audit` answers the question validation does not: what should a reviewer inspect before
@@ -502,7 +547,7 @@ recognized during migration.
 | Command policy | `.claude/settings.json` project | `.codex/rules/*.rules` project          | Unsupported without an explicit hook override |
 | MCP/assets     | Normalized/pass-through         | Normalized/pass-through                 | Normalized/pass-through                       |
 
-This table is a summary. `claude-cli agent specs --format json` is the authoritative,
+This table is a summary. `cairn agent specs --format json` is the authoritative,
 machine-readable form, and is generated from the same profiles the renderer uses.
 
 Point `agent convert` directly at an existing Claude plugin containing
@@ -519,9 +564,9 @@ the old Python converter can then be retired independently.
 Run checks on a single markdown file (mermaid, KaTeX, references).
 
 ```bash
-claude-cli md lint path/to/file.md
-claude-cli md lint --style path/to/file.md
-claude-cli md lint "docs/**/*.md" --changed-since origin/main --format sarif
+cairn md lint path/to/file.md
+cairn md lint --style path/to/file.md
+cairn md lint "docs/**/*.md" --changed-since origin/main --format sarif
 ```
 
 Options:
@@ -537,9 +582,9 @@ Options:
 Run checks on all markdown files in a directory.
 
 ```bash
-claude-cli md lint-dir path/to/directory/
-claude-cli md lint-dir --style path/to/directory/
-claude-cli md lint-dir --summary path/to/directory/
+cairn md lint-dir path/to/directory/
+cairn md lint-dir --style path/to/directory/
+cairn md lint-dir --summary path/to/directory/
 ```
 
 Options:
@@ -557,10 +602,10 @@ Validate external URLs in files, directories, globs, or stdin. URLs are deduplic
 selection while every source occurrence is retained in the report.
 
 ```bash
-claude-cli md check-urls path/to/file.md
-claude-cli md check-urls --include-ok --timeout 10000 path/to/file.md
-claude-cli md check-urls docs "guides/**/*.md" --report-redirects --format jsonl
-cat doc.md | claude-cli md check-urls - --stdin-name docs/doc.md
+cairn md check-urls path/to/file.md
+cairn md check-urls --include-ok --timeout 10000 path/to/file.md
+cairn md check-urls docs "guides/**/*.md" --report-redirects --format jsonl
+cat doc.md | cairn md check-urls - --stdin-name docs/doc.md
 ```
 
 Options:
@@ -576,7 +621,7 @@ Options:
 - `--report-redirects` - Include redirect state and final destinations
 - `--changed-since <revision>` - Intersect the input selection with Git changes
 
-The cache is `${XDG_CACHE_HOME:-~/.cache}/claude-cli/url-checks.json`; missing, stale, corrupt,
+The cache is `${XDG_CACHE_HOME:-~/.cache}/cairn/url-checks.json`; missing, stale, corrupt,
 or unwritable cache data is treated as a miss. HEAD falls back to GET on 400, 403, 405, and 501
 by default.
 
@@ -588,7 +633,7 @@ cumulatively. Repeated `--include` and `--exclude` options override workspace se
 Files, directories, globs, stdin, and `--changed-since` are supported.
 
 ```bash
-claude-cli md validate-frontmatter docs --schema schemas/document.yml
+cairn md validate-frontmatter docs --schema schemas/document.yml
 ```
 
 #### `md check-snippets [inputs...]`
@@ -597,16 +642,16 @@ Compare fenced code blocks against the source files and regions they declare, an
 refresh them. A snippet is never executed; the source file is only read.
 
 ```bash
-claude-cli md check-snippets docs
-claude-cli md check-snippets docs --dry-run
-claude-cli md check-snippets docs --write
+cairn md check-snippets docs
+cairn md check-snippets docs --dry-run
+cairn md check-snippets docs --write
 ```
 
 A block opts in through its fence info string, so every other fence costs one substring test and
 never appears in the output:
 
 ````text
-```ts claude-cli:snippet=src/toc.ts#render
+```ts cairn:snippet=src/toc.ts#render
 export function renderToc(headings: MdHeading[], ordered = false): string {
   ...
 }
@@ -618,9 +663,9 @@ comment leader does not matter and anything after the name is ignored — `//`, 
 and `<!--` all work:
 
 ```ts
-// claude-cli:snippet:start render
+// cairn:snippet:start render
 export function renderToc(...) { ... }
-// claude-cli:snippet:end render
+// cairn:snippet:end render
 ```
 
 Omitting the `#region` selects the whole file. The language is required: a fence without one
@@ -654,11 +699,11 @@ Frontmatter and TOC checks run when configured; external URLs stay offline unles
 explicitly.
 
 ```bash
-claude-cli md audit
-claude-cli md audit docs --summary --external
-claude-cli md audit docs --no-frontmatter --no-toc
-claude-cli md audit docs --write-baseline .audit-baseline.json
-claude-cli md audit docs --baseline .audit-baseline.json
+cairn md audit
+cairn md audit docs --summary --external
+cairn md audit docs --no-frontmatter --no-toc
+cairn md audit docs --write-baseline .audit-baseline.json
+cairn md audit docs --baseline .audit-baseline.json
 ```
 
 A **baseline** records the findings that already exist, so an audit fails only on new ones —
@@ -690,8 +735,8 @@ Paths are absolute unless `--paths relative` is selected.
 List all references from a markdown file and check if targets exist.
 
 ```bash
-claude-cli md refs path/to/file.md
-claude-cli md refs --external --anchors --images path/to/file.md
+cairn md refs path/to/file.md
+cairn md refs --external --anchors --images path/to/file.md
 ```
 
 Options:
@@ -707,8 +752,8 @@ By default, only local file link references are listed.
 Find all markdown files that reference a given file.
 
 ```bash
-claude-cli md refs-to path/to/target.md
-claude-cli md refs-to path/to/target.md path/to/search/dir/
+cairn md refs-to path/to/target.md
+cairn md refs-to path/to/target.md path/to/search/dir/
 ```
 
 If no directory is provided, searches from the current working directory.
@@ -721,9 +766,9 @@ With project configuration, the default is the configured workspace root. `--inc
 List all links with context, grouped by type (internal, external, image, anchor).
 
 ```bash
-claude-cli md links path/to/file.md
-claude-cli md links --broken-only path/to/file.md
-claude-cli md links --type external path/to/file.md
+cairn md links path/to/file.md
+cairn md links --broken-only path/to/file.md
+cairn md links --type external path/to/file.md
 ```
 
 Options:
@@ -736,8 +781,8 @@ Options:
 Find markdown files not referenced by any other markdown file.
 
 ```bash
-claude-cli md orphans path/to/docs/
-claude-cli md orphans path/to/docs/ --entry README.md --ignore "archive/**"
+cairn md orphans path/to/docs/
+cairn md orphans path/to/docs/ --entry README.md --ignore "archive/**"
 ```
 
 Options:
@@ -754,11 +799,11 @@ reachability from `--entry` or configured entry points. Without an applicable en
 reachability is reported as unevaluated.
 
 ```bash
-claude-cli md graph docs --entry docs/README.md
-claude-cli md graph docs --output mermaid
-claude-cli md graph docs --output dot
-claude-cli md graph docs --focus docs/commands.md --depth 1
-claude-cli md graph docs --focus docs/commands.md --output mermaid
+cairn md graph docs --entry docs/README.md
+cairn md graph docs --output mermaid
+cairn md graph docs --output dot
+cairn md graph docs --focus docs/commands.md --depth 1
+cairn md graph docs --focus docs/commands.md --output mermaid
 ```
 
 `report` (the default) follows `--format`; Mermaid and DOT are deterministic raw stdout
@@ -777,14 +822,14 @@ Run focused, informational queries across the selected workspace. Query matches 
 invalid kinds or options exit `1`.
 
 ```bash
-claude-cli md query links-to --target docs/guide.md#getting-started
-claude-cli md query duplicates --field title
-claude-cli md query duplicates --field frontmatter:id --format json
-claude-cli md query unused-assets --asset-extension .png --asset-extension .svg
-claude-cli md query code-blocks --lang typescript --content
-claude-cli md query tasks --status pending
-claude-cli md query missing-h1
-claude-cli md query frontmatter-keys
+cairn md query links-to --target docs/guide.md#getting-started
+cairn md query duplicates --field title
+cairn md query duplicates --field frontmatter:id --format json
+cairn md query unused-assets --asset-extension .png --asset-extension .svg
+cairn md query code-blocks --lang typescript --content
+cairn md query tasks --status pending
+cairn md query missing-h1
+cairn md query frontmatter-keys
 ```
 
 Available kinds are `links-to`, `duplicates`, `unused-assets`, `code-blocks`, `tasks`,
@@ -797,10 +842,10 @@ Passing `--where`, `--select`, or `--group-by` switches to the **composable** mo
 kind names an entity instead:
 
 ```bash
-claude-cli md query documents --where has:h1 --select file,title
-claude-cli md query links --where links-to:docs/api.md --select file,line,linkText
-claude-cli md query tasks --where status=pending --group-by frontmatter.owner
-claude-cli md query headings --where 'depth>=2' --where text~api
+cairn md query documents --where has:h1 --select file,title
+cairn md query links --where links-to:docs/api.md --select file,line,linkText
+cairn md query tasks --where status=pending --group-by frontmatter.owner
+cairn md query headings --where 'depth>=2' --where text~api
 ```
 
 Entities are `documents`, `headings`, `links`, `tasks`, `code-blocks`, and `frontmatter`, and
@@ -828,14 +873,14 @@ because one row per key across the workspace is not something the projection mod
 Inspect and manage the persistent parsed-workspace cache.
 
 ```bash
-claude-cli md index status
-claude-cli md index build docs
-claude-cli md index clear
+cairn md index status
+cairn md index build docs
+cairn md index clear
 ```
 
 `status` reports current, stale, and missing entries. `build` forces reparsing of the selected
 Markdown files, while `clear` removes only the current workspace index. The index lives at
-`${XDG_CACHE_HOME:-~/.cache}/claude-cli/workspaces/<workspace-hash>.json`. Normal commands
+`${XDG_CACHE_HOME:-~/.cache}/cairn/workspaces/<workspace-hash>.json`. Normal commands
 validate file size and modification time before reuse; missing, corrupt, incompatible, or
 unwritable cache data is treated as a cache miss and never makes analysis fail.
 
@@ -845,9 +890,9 @@ Assemble a reproducible context pack for an agent: ordered Markdown with source 
 provenance, plus a manifest explaining why each piece was included.
 
 ```bash
-claude-cli md context docs/architecture.md --depth 2 --budget 24000
-claude-cli md context docs/release.md --section "Release process" --format json
-claude-cli md context --target src/cli.ts --backlinks
+cairn md context docs/architecture.md --depth 2 --budget 24000
+cairn md context docs/release.md --section "Release process" --format json
+cairn md context --target src/cli.ts --backlinks
 ```
 
 Starting from the seeds, it walks the reference graph up to `--depth` hops and emits each
@@ -870,9 +915,9 @@ Options: `--depth <n>` (0–6, default 1), `--section <heading>` (repeatable), `
 Summarize Markdown changes by structure rather than by text.
 
 ```bash
-claude-cli md diff --since origin/main docs
-claude-cli md diff old.md new.md --format json
-claude-cli md diff --since HEAD~1 --summary
+cairn md diff --since origin/main docs
+cairn md diff old.md new.md --format json
+cairn md diff --since HEAD~1 --summary
 ```
 
 Reports headings added, removed, moved, or renamed; frontmatter keys; links whose resolved
@@ -900,8 +945,8 @@ Options: `--since <revision>`, `--summary`, `--include`, `--exclude`.
 Extract all headings with their line numbers.
 
 ```bash
-claude-cli md headers path/to/file.md
-claude-cli md headers --max-depth 2 path/to/file.md
+cairn md headers path/to/file.md
+cairn md headers --max-depth 2 path/to/file.md
 ```
 
 Options:
@@ -913,7 +958,7 @@ Options:
 Show headings in an indented outline/tree format.
 
 ```bash
-claude-cli md outline path/to/file.md
+cairn md outline path/to/file.md
 ```
 
 Options:
@@ -925,11 +970,11 @@ Options:
 Generate a markdown-formatted table of contents from headings.
 
 ```bash
-claude-cli md toc path/to/file.md
-claude-cli md toc --min-depth 2 --ordered path/to/file.md
-claude-cli md toc path/to/file.md --check
-claude-cli md toc path/to/file.md --dry-run
-claude-cli md toc path/to/file.md --write
+cairn md toc path/to/file.md
+cairn md toc --min-depth 2 --ordered path/to/file.md
+cairn md toc path/to/file.md --check
+cairn md toc path/to/file.md --dry-run
+cairn md toc path/to/file.md --write
 ```
 
 Options:
@@ -944,8 +989,8 @@ Options:
 Synchronization uses exactly one ordered marker pair:
 
 ```markdown
-<!-- claude-cli:toc:start -->
-<!-- claude-cli:toc:end -->
+<!-- cairn:toc:start -->
+<!-- cairn:toc:end -->
 ```
 
 Markers inside a fenced code block are ignored, so documenting the syntax — as the block above
@@ -959,7 +1004,7 @@ and the file's line-ending style, and current files are not rewritten.
 Show document statistics: word count, heading counts by depth, link/image counts, code block counts by language, paragraph count, and list counts.
 
 ```bash
-claude-cli md stats path/to/file.md
+cairn md stats path/to/file.md
 ```
 
 #### `md code-blocks <file>`
@@ -967,8 +1012,8 @@ claude-cli md stats path/to/file.md
 List fenced code blocks with language, line range, and line count.
 
 ```bash
-claude-cli md code-blocks path/to/file.md
-claude-cli md code-blocks --lang typescript --content path/to/file.md
+cairn md code-blocks path/to/file.md
+cairn md code-blocks --lang typescript --content path/to/file.md
 ```
 
 Options:
@@ -981,7 +1026,7 @@ Options:
 Show a bird's-eye structural skeleton of the document — headings, code blocks, math blocks, and lists with their line ranges.
 
 ```bash
-claude-cli md structure path/to/file.md
+cairn md structure path/to/file.md
 ```
 
 #### `md section <file> <heading>`
@@ -989,9 +1034,9 @@ claude-cli md structure path/to/file.md
 Extract the full content of a section identified by its heading text or slug (case-insensitive match).
 
 ```bash
-claude-cli md section path/to/file.md "Getting Started"
-claude-cli md section path/to/file.md getting-started --raw
-claude-cli md section path/to/file.md "Usage" --no-children
+cairn md section path/to/file.md "Getting Started"
+cairn md section path/to/file.md getting-started --raw
+cairn md section path/to/file.md "Usage" --no-children
 ```
 
 Options:
@@ -1005,8 +1050,8 @@ Options:
 Parse and display YAML frontmatter from a markdown file.
 
 ```bash
-claude-cli md frontmatter path/to/file.md
-claude-cli md frontmatter path/to/file.md --key author.name
+cairn md frontmatter path/to/file.md
+cairn md frontmatter path/to/file.md --key author.name
 ```
 
 Options:
@@ -1018,9 +1063,9 @@ Options:
 Extract GFM task list items (`- [ ]` / `- [x]`) with their completion status.
 
 ```bash
-claude-cli md tasks path/to/file.md
-claude-cli md tasks --status pending path/to/file.md
-claude-cli md tasks --summary path/to/file.md
+cairn md tasks path/to/file.md
+cairn md tasks --status pending path/to/file.md
+cairn md tasks --summary path/to/file.md
 ```
 
 Options:
@@ -1033,8 +1078,8 @@ Options:
 List or extract GFM tables with location, dimensions, and optionally content.
 
 ```bash
-claude-cli md tables path/to/file.md
-claude-cli md tables --index 1 --content path/to/file.md
+cairn md tables path/to/file.md
+cairn md tables --index 1 --content path/to/file.md
 ```
 
 Options:
@@ -1049,16 +1094,16 @@ Options:
 Turn deterministic findings into reviewable edits.
 
 ```bash
-claude-cli md fix docs --check
-claude-cli md fix docs --dry-run --rule toc
-claude-cli md fix docs --write
+cairn md fix docs --check
+cairn md fix docs --dry-run --rule toc
+cairn md fix docs --write
 ```
 
 Each fixer produces a plan — byte ranges, the exact text expected at each range, the
 replacement, and the originating diagnostic — and `--write` applies the whole plan as one
 transaction. The mode defaults to `--check`, which is the form that belongs in CI; `--write`
 is the only mode that mutates, and it **cannot be enabled from project configuration**, so a
-checked-in `.claude-cli.yml` can never turn a check into a write.
+checked-in `.cairn.yml` can never turn a check into a write.
 
 `--write` refuses entirely if any two edits overlap, any input changed after planning, or any
 target resolves outside the containment root, including through a symlink. Conflicts name both
@@ -1070,7 +1115,7 @@ than advisory — a mismatch aborts instead of corrupting a document containing 
 
 Available rules — every one below except `snippets` runs when `--rule` is omitted:
 
-- `toc` — synchronize the content between existing `claude-cli:toc` markers. Inserting markers
+- `toc` — synchronize the content between existing `cairn:toc` markers. Inserting markers
   is an authoring decision, not a fix.
 - `relative-links` — normalize a local link's path. A `./` prefix and percent-encoding are
   preserved rather than normalized, so a first run causes no churn. The rewritten target always
@@ -1094,8 +1139,8 @@ reference-style links/images. Query strings, fragments, root-relative style, and
 preserved; outbound relative links in a moved Markdown document are recomputed.
 
 ```bash
-claude-cli md rename-file docs/old.md guides/new.md --dry-run --format json
-claude-cli md rename-file images/old-name.png assets/new-name.png
+cairn md rename-file docs/old.md guides/new.md --dry-run --format json
+cairn md rename-file images/old-name.png assets/new-name.png
 ```
 
 The source and destination must remain inside the workspace. The command refuses symlink or
@@ -1107,8 +1152,8 @@ non-file sources, existing destinations, and missing destination parents. `--inc
 Rename a heading and update all internal anchor references that point to it.
 
 ```bash
-claude-cli md rename-heading path/to/file.md "Old Name" "New Name" --dry-run
-claude-cli md rename-heading path/to/file.md "Old Name" "New Name" --directory path/to/docs/
+cairn md rename-heading path/to/file.md "Old Name" "New Name" --dry-run
+cairn md rename-heading path/to/file.md "Old Name" "New Name" --directory path/to/docs/
 ```
 
 Options:
@@ -1128,8 +1173,8 @@ Expose the workspace engine to an agent host as [Model Context Protocol](https:/
 tools, so the host calls the engine directly instead of spawning the CLI and parsing its output.
 
 ```bash
-claude-cli serve mcp --root docs
-claude mcp add markdown -- claude-cli serve mcp --root docs
+cairn serve mcp --root docs
+claude mcp add markdown -- cairn serve mcp --root docs
 ```
 
 Eleven read-only tools are exposed: `list_documents`, `get_section`, `query_workspace`,
@@ -1159,7 +1204,7 @@ calling process changes directory — and absolute paths are not portable across
 pinned to the project.
 
 ```yaml
-# .claude-cli.yml
+# .cairn.yml
 version: 1
 scripts:
   gather-context:
@@ -1170,13 +1215,13 @@ scripts:
 ```
 
 ```bash
-claude-cli scripts run gather-context          # same result from any directory
-claude-cli scripts run lint-changed -- --fix   # arguments after -- are forwarded
-claude-cli scripts which gather-context        # which registry wins, without running it
-claude-cli scripts list                        # every name visible from here
+cairn scripts run gather-context          # same result from any directory
+cairn scripts run lint-changed -- --fix   # arguments after -- are forwarded
+cairn scripts which gather-context        # which registry wins, without running it
+cairn scripts list                        # every name visible from here
 ```
 
-Every `.claude-cli.yml` from the working directory up to the repository root is consulted, and
+Every `.cairn.yml` from the working directory up to the repository root is consulted, and
 the nearest file that **defines the requested name** wins — so a nested package can override one
 script without redeclaring the rest. Files under `node_modules` are skipped.
 
@@ -1200,18 +1245,18 @@ and nothing outside the scan cache is written.
 Three log sources are registered: **Claude Code**, **Codex CLI**, and **Antigravity CLI**.
 
 ```bash
-claude-cli usage summary                        # headline totals across every project
-claude-cli usage summary --since 7d --project . # this week, this repository
-claude-cli usage tokens --by day --since 30d    # spend over time
-claude-cli usage tools --by server --kind mcp   # which MCP servers get used
-claude-cli usage sessions --sort tokens --top 10
-claude-cli usage agents                         # what delegation really costs
-claude-cli usage hooks                          # hook latency and failures
+cairn usage summary                        # headline totals across every project
+cairn usage summary --since 7d --project . # this week, this repository
+cairn usage tokens --by day --since 30d    # spend over time
+cairn usage tools --by server --kind mcp   # which MCP servers get used
+cairn usage sessions --sort tokens --top 10
+cairn usage agents                         # what delegation really costs
+cairn usage hooks                          # hook latency and failures
 
-claude-cli usage providers                      # what is registered, and what each records
-claude-cli usage summary --provider codex
-claude-cli usage summary --provider all         # every assistant, merged
-claude-cli usage tokens --by provider --provider all
+cairn usage providers                      # what is registered, and what each records
+cairn usage summary --provider codex
+cairn usage summary --provider all         # every assistant, merged
+cairn usage tokens --by provider --provider all
 ```
 
 Two things make the numbers trustworthy, and both are easy to get wrong. One API response is

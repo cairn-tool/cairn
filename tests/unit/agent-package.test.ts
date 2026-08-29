@@ -214,7 +214,7 @@ describe("integrity", () => {
       artifact("a.md", "# Hi"),
     ];
     const sbom = JSON.parse(buildSbom(loadBundle(bundle()), payload).content.toString());
-    expect(sbom.bomFormat).toBe("claude-cli-inventory");
+    expect(sbom.bomFormat).toBe("cairn-inventory");
     expect(
       Object.fromEntries(
         sbom.components.map((c: { path: string; type: string }) => [c.path, c.type]),

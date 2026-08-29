@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent specs [options]
+cairn agent specs [options]
 ```
 
 Prints the versioned target conformance profiles — the data that drives conversion,
@@ -47,13 +47,13 @@ host release. `agent doctor` reports this honestly rather than assuming a range.
 
 ```bash
 # The full machine-readable profiles.
-claude-cli agent specs --format json
+cairn agent specs --format json
 
 # What does Cursor support, and how well?
-claude-cli agent specs --target cursor
+cairn agent specs --target cursor
 
 # The declared native layout for Codex projects.
-claude-cli agent specs --target codex -fj | jq '.specs.targets.codex.outputs.project'
+cairn agent specs --target codex -fj | jq '.specs.targets.codex.outputs.project'
 ```
 
 ## Exit codes

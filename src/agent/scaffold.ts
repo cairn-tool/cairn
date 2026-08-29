@@ -70,7 +70,7 @@ export const YAML_OPTIONS = { lineWidth: 0, indentSeq: false } as const;
 function manifestTemplate(spec: BundleScaffoldSpec): string {
   const lines = [
     "# Portable agent bundle. Render it with:",
-    "#   claude-cli agent convert . --target all --output ./dist",
+    "#   cairn agent convert . --target all --output ./dist",
     `schemaVersion: "${CURRENT_BUNDLE_SCHEMA}"`,
     `name: ${spec.name}`,
     `version: ${spec.version}`,

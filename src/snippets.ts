@@ -20,7 +20,13 @@ import type { PlannedEdit } from "./edit-plan.js";
  * scan would reintroduce exactly the hazard `synchronizeToc` has to guard
  * against, with no guard available on this side.
  */
-export const SNIPPET_ATTRIBUTE = "claude-cli:snippet";
+export const SNIPPET_ATTRIBUTE = "cairn:snippet";
+
+/** The pre-rename attribute, still read so existing fences keep resolving. */
+export const LEGACY_SNIPPET_ATTRIBUTE = "claude-cli:snippet";
+
+/** Alternation over both spellings, for the two patterns below. */
+const ATTRIBUTE_ALTERNATION = "(?:cairn|claude-cli):snippet";
 
 /**
  * A region delimiter in a source file of unknown language.
@@ -28,14 +34,24 @@ export const SNIPPET_ATTRIBUTE = "claude-cli:snippet";
  * Deliberately unanchored: the comment leader (`//`, `#`, `--`, `/*`, `<!--`)
  * is not knowable, and whatever trails the name on the line is ignored. A
  * regex rather than a substring test so that the name is captured and so that
- * `claude-cli:snippet:startup` cannot match `…:start`.
+ * `cairn:snippet:startup` cannot match `…:start`.
+ *
+ * Region markers live in source files, which this command only ever reads, so
+ * accepting both spellings costs nothing and there is never anything to migrate.
  */
-export const REGION_MARKER = /claude-cli:snippet:(start|end)[ \t]+([A-Za-z0-9][A-Za-z0-9._-]*)/;
+export const REGION_MARKER = new RegExp(
+  `${ATTRIBUTE_ALTERNATION}:(start|end)[ \\t]+([A-Za-z0-9][A-Za-z0-9._-]*)`,
+);
 
 /** Sources above this are refused unread; a snippet is never this large. */
 export const MAX_SOURCE_BYTES = 2 * 1024 * 1024;
 
-const ATTRIBUTE_PATTERN = new RegExp(`(?:^|\\s)${SNIPPET_ATTRIBUTE}=("[^"]*"|'[^']*'|\\S+)`, "g");
+// Alternating over both spellings also makes the duplicate check right for free:
+// a fence carrying one of each counts two matches, which is what it is.
+const ATTRIBUTE_PATTERN = new RegExp(
+  `(?:^|\\s)${ATTRIBUTE_ALTERNATION}=("[^"]*"|'[^']*'|\\S+)`,
+  "g",
+);
 const REGION_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const BLANK_LINE = /^[ \t]*$/;
 const MARKDOWN_SOURCE = /\.(?:md|markdown|mdown)$/i;
@@ -98,10 +114,17 @@ export type SnippetLinkParse =
  * link at all.
  */
 export function parseSnippetLink(block: Pick<MdCodeBlock, "lang" | "meta">): SnippetLinkParse {
-  if (!block.meta?.includes(`${SNIPPET_ATTRIBUTE}=`)) {
+  // Both spellings gate the fast path, or a legacy fence would report `unlinked`
+  // without the regex below ever seeing it.
+  const carries = (text: string, at: "anywhere" | "start"): boolean =>
+    [SNIPPET_ATTRIBUTE, LEGACY_SNIPPET_ATTRIBUTE].some((attribute) =>
+      at === "start" ? text.startsWith(`${attribute}=`) : text.includes(`${attribute}=`),
+    );
+
+  if (!block.meta || !carries(block.meta, "anywhere")) {
     // A fence with no language puts the whole info string into `lang`, so the
     // attribute lands there and would otherwise be silently inert forever.
-    if (block.lang?.startsWith(`${SNIPPET_ATTRIBUTE}=`)) {
+    if (block.lang && carries(block.lang, "start")) {
       return {
         status: "malformed",
         ...fail(

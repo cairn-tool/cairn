@@ -3,11 +3,11 @@
 ## Synopsis
 
 ```text
-claude-cli agent uninstall <name> --target <target> [options]
+cairn agent uninstall <name> --target <target> [options]
 ```
 
 Removes a bundle previously placed by [`agent install`](agent-install.md). It reads
-`.claude-cli-install.json` at the destination and deletes **exactly that inventory** — never
+`.cairn-install.json` at the destination and deletes **exactly that inventory** — never
 neighboring files the host or another tool may have added.
 
 **Stability: experimental.** The payload shape may change before it hardens.
@@ -51,13 +51,13 @@ destination.
 ## Examples
 
 ```bash
-claude-cli agent uninstall markdown --target cursor --scope user
+cairn agent uninstall markdown --target cursor --scope user
 
 # Search both scopes; fail if both have a copy.
-claude-cli agent uninstall markdown --target claude-code
+cairn agent uninstall markdown --target claude-code
 
 # CI: fail while the named install is still present.
-claude-cli agent uninstall markdown --target cursor --scope user --check
+cairn agent uninstall markdown --target cursor --scope user --check
 ```
 
 ## Exit codes

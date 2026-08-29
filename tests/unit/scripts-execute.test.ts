@@ -16,8 +16,8 @@ let root: string;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
-  root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-exec-")));
-  for (const key of ["CLAUDE_CLI_SCRIPT_DEPTH", "CLAUDE_CLI_SCRIPT_STACK"]) {
+  root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "cairn-exec-")));
+  for (const key of ["CAIRN_SCRIPT_DEPTH", "CAIRN_SCRIPT_STACK"]) {
     saved[key] = process.env[key];
     delete process.env[key];
   }
@@ -35,7 +35,7 @@ function execution(definition: ScriptDefinition, overrides: Partial<ScriptExecut
   return {
     mode: "capture" as const,
     definition,
-    registry: { file: path.join(root, ".claude-cli.yml"), directory: root, scripts: new Map() },
+    registry: { file: path.join(root, ".cairn.yml"), directory: root, scripts: new Map() },
     workingDirectory: root,
     invokedFrom: root,
     args: [],
@@ -132,23 +132,23 @@ describe("execution", () => {
 
   it("passes the script's identity and origin in the environment", () => {
     const env = scriptEnvironment(execution(run("true")));
-    expect(env.CLAUDE_CLI_SCRIPT_NAME).toBe("demo");
-    expect(env.CLAUDE_CLI_SCRIPT_ROOT).toBe(root);
-    expect(env.CLAUDE_CLI_SCRIPT_REGISTRY).toBe(path.join(root, ".claude-cli.yml"));
-    expect(env.CLAUDE_CLI_INVOKED_FROM).toBe(root);
-    expect(env.CLAUDE_CLI_SCRIPT_DEPTH).toBe("1");
-    expect(env.CLAUDE_CLI_NO_UPDATE_NOTIFIER).toBe("1");
+    expect(env.CAIRN_SCRIPT_NAME).toBe("demo");
+    expect(env.CAIRN_SCRIPT_ROOT).toBe(root);
+    expect(env.CAIRN_SCRIPT_REGISTRY).toBe(path.join(root, ".cairn.yml"));
+    expect(env.CAIRN_INVOKED_FROM).toBe(root);
+    expect(env.CAIRN_SCRIPT_DEPTH).toBe("1");
+    expect(env.CAIRN_NO_UPDATE_NOTIFIER).toBe("1");
   });
 
   it("refuses a script that is already on the stack", async () => {
-    process.env.CLAUDE_CLI_SCRIPT_STACK = `${path.join(root, ".claude-cli.yml")}#demo`;
+    process.env.CAIRN_SCRIPT_STACK = `${path.join(root, ".cairn.yml")}#demo`;
     await expect(executeScript(execution(run("true")))).rejects.toThrow(
       "Script recursion detected: 'demo' is already running",
     );
   });
 
   it("refuses past the depth limit", async () => {
-    process.env.CLAUDE_CLI_SCRIPT_DEPTH = String(MAX_SCRIPT_DEPTH);
+    process.env.CAIRN_SCRIPT_DEPTH = String(MAX_SCRIPT_DEPTH);
     await expect(executeScript(execution(run("true")))).rejects.toThrow(
       `Script recursion limit exceeded (${MAX_SCRIPT_DEPTH})`,
     );

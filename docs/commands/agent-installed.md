@@ -3,11 +3,11 @@
 ## Synopsis
 
 ```text
-claude-cli agent installed [options]
+cairn agent installed [options]
 ```
 
 Lists bundles this CLI has installed, by scanning the roots declared on the target profiles
-for `.claude-cli-install.json`. It reports observed state and never writes.
+for `.cairn-install.json`. It reports observed state and never writes.
 
 **Stability: experimental.** The payload shape may change before it hardens.
 
@@ -28,9 +28,9 @@ is the command that refuses to guess (`AB806`).
 ## Examples
 
 ```bash
-claude-cli agent installed
-claude-cli agent installed --target cursor --scope user
-claude-cli agent installed --into ./plugins -fj | jq '.install.installs'
+cairn agent installed
+cairn agent installed --target cursor --scope user
+cairn agent installed --into ./plugins -fj | jq '.install.installs'
 ```
 
 ## Exit codes

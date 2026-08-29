@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { CONFIG_FILENAME, findConfig } from "../config.js";
+import { configIn, findConfig } from "../config.js";
 import type { ConfigSelection } from "../config.js";
 import { isInside, object } from "../config-schema.js";
 import { repositoryFor } from "../git.js";
@@ -13,7 +13,7 @@ import type { ScriptDefinition, ScriptRegistry } from "./registry.js";
  * directory.
  *
  * The walk here is deliberately not `findConfig`, which returns the nearest
- * `.claude-cli.yml` and stops. A nested configuration that exists but does not
+ * `.cairn.yml` and stops. A nested configuration that exists but does not
  * define the requested name must not shadow an ancestor that does, so every file
  * from the invocation directory up to the boundary is consulted and the nearest
  * *definition of the name* wins.
@@ -22,7 +22,7 @@ import type { ScriptDefinition, ScriptRegistry } from "./registry.js";
 /** A registry file larger than this is not one anybody wrote by hand. */
 const MAX_REGISTRY_BYTES = 1024 * 1024;
 
-/** Enough of the head to catch a binary file mistakenly named `.claude-cli.yml`. */
+/** Enough of the head to catch a binary file mistakenly named `.cairn.yml`. */
 const NUL_PROBE_BYTES = 8 * 1024;
 
 export type ScriptBoundaryKind =
@@ -259,12 +259,14 @@ function walk(boundary: ScriptBoundary, options: ScriptsWalkOptions): WalkStep[]
   let current = invokedFrom;
   let distance = 0;
   while (true) {
-    // A vendored package that ships a `.claude-cli.yml` would otherwise win over
+    // A vendored package that ships a `.cairn.yml` would otherwise win over
     // the project's own registry for any invocation inside it.
     if (!hasNodeModules(current)) {
-      const candidate = path.join(current, CONFIG_FILENAME);
-      if (fs.existsSync(candidate))
-        steps.push(readRegistry(candidate, boundary.directory, distance));
+      // `configIn` stops at the first name it finds, so a directory holding both
+      // the current and the legacy filename contributes one step rather than two
+      // — the legacy file must not read as a registry the new one shadows.
+      const candidate = configIn(current);
+      if (candidate) steps.push(readRegistry(candidate, boundary.directory, distance));
     }
     if (current === boundary.directory) break;
     const parent = path.dirname(current);

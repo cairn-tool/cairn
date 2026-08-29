@@ -16,8 +16,8 @@ read-only by default.
 **Command sketch:**
 
 ```text
-claude-cli serve mcp --root docs
-claude-cli serve mcp --root . --allow-refactors
+cairn serve mcp --root docs
+cairn serve mcp --root . --allow-refactors
 ```
 
 Expose the deterministic workspace engine as MCP tools such as `list_documents`,

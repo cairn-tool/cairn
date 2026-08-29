@@ -4,7 +4,7 @@ import { DRAFT, stringArray } from "./shared.js";
 
 /**
  * The consulted-file record, inlined into both documents rather than shared by
- * `$ref`: a schema retrieved with `claude-cli schema <id>` must compile alone.
+ * `$ref`: a schema retrieved with `cairn schema <id>` must compile alone.
  */
 const CONSULTED = {
   type: "array",
@@ -75,7 +75,7 @@ export const scriptRunSchema: SchemaEntry = {
     ],
     properties: {
       name: { type: "string" },
-      registry: { type: "string", description: "The .claude-cli.yml that defined the script." },
+      registry: { type: "string", description: "The .cairn.yml that defined the script." },
       workingDirectory: { type: "string", description: "Directory the script ran in." },
       invokedFrom: { type: "string", description: "Directory the command was invoked from." },
       command: COMMAND,

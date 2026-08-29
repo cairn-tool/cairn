@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md lint <files...> [options]
+cairn md lint <files...> [options]
 ```
 
 Runs Mermaid, KaTeX, and local-reference checks over one or more Markdown files, directories,

@@ -38,7 +38,7 @@ beforeEach(() => {
   // Deliberately NOT realpath'd: on macOS os.tmpdir() is a symlink, and the
   // symlink-vs-real path mismatch is exactly what repositoryRelative must
   // survive. Resolving it here would hide the bug this guards.
-  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-git-"));
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-git-"));
   git("init", "-q", "-b", "main");
   write("a.md", "# A\nfirst\n");
   write("docs/b.md", "# B\n");
@@ -56,7 +56,7 @@ describe("repositoryFor", () => {
     const repository = repositoryFor(tmpDir);
     expect(repository.root).toBe(fs.realpathSync(tmpDir));
 
-    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-nogit-"));
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-nogit-"));
     try {
       // A bare mkdtemp may still sit inside an enclosing repository on some
       // machines, so only assert the failure shape when it genuinely is not.

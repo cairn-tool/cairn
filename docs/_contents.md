@@ -1,6 +1,6 @@
 # Documentation contents
 
-This directory is the reference documentation for `claude-cli`.
+This directory is the reference documentation for `cairn`.
 
 ## Reference
 

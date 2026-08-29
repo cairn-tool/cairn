@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md validate-frontmatter <paths...> [options]
+cairn md validate-frontmatter <paths...> [options]
 ```
 
 Validates YAML frontmatter across selected Markdown inputs. A JSON or YAML Schema and the

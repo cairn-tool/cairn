@@ -1,6 +1,6 @@
 # Shared usage command behavior
 
-Every command below `claude-cli usage` reads an assistant's own session logs and reports on
+Every command below `cairn usage` reads an assistant's own session logs and reports on
 them. Nothing is sent anywhere, and nothing outside the scan cache is written.
 
 ## Common options
@@ -161,7 +161,7 @@ insensitively.
 
 ## The scan cache
 
-Each transcript is reduced once and stored under `$XDG_CACHE_HOME/claude-cli/usage/<provider>/`
+Each transcript is reduced once and stored under `$XDG_CACHE_HOME/cairn/usage/<provider>/`
 (or `~/.cache/...`), one shard per project. The key is each file's path, size, and modification
 time: a transcript that has not changed cannot hold a record the stored aggregate is missing, so
 only files that grew are reopened. Providers cache separately, so adding one does not invalidate

@@ -369,7 +369,7 @@ export function classify(artifact: Artifact): string {
  */
 export function buildSbom(bundle: AgentBundle, payload: Artifact[]): Artifact {
   const document = {
-    bomFormat: "claude-cli-inventory",
+    bomFormat: "cairn-inventory",
     specVersion: "1",
     generator: { name: packageName, version: packageVersion },
     subject: { name: bundle.name, version: bundle.version },

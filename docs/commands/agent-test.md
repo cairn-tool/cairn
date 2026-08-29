@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent test <source> [options]
+cairn agent test <source> [options]
 ```
 
 [`agent validate`](agent-validate.md) answers "is this structurally valid?" and
@@ -210,19 +210,19 @@ through [`agent specs`](agent-specs.md) so you can run it yourself.
 
 ```bash
 # Run the tests stored with a bundle.
-claude-cli agent test ./bundle
+cairn agent test ./bundle
 
 # One target, machine-readable.
-claude-cli agent test ./bundle --target codex -fj | jq '.test.counts'
+cairn agent test ./bundle --target codex -fj | jq '.test.counts'
 
 # One case, while writing it.
-claude-cli agent test ./bundle --case 'the rule reaches the project profile only'
+cairn agent test ./bundle --case 'the rule reaches the project profile only'
 
 # CI gate: fail on any unmet expectation, any lossy mapping, and on a bundle with no tests.
-claude-cli agent test ./bundle --target all --strict
+cairn agent test ./bundle --target all --strict
 
 # What is the digest now?
-claude-cli agent test ./bundle -fj | jq '.test.cases[].failures[] | {expected, actual}'
+cairn agent test ./bundle -fj | jq '.test.cases[].failures[] | {expected, actual}'
 ```
 
 ## Exit codes

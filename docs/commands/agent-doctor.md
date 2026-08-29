@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent doctor [source] [options]
+cairn agent doctor [source] [options]
 ```
 
 Checks a bundle, and optionally an already-generated output tree, against the versioned
@@ -68,7 +68,7 @@ does not describe is exactly what an overlay is for, so those paths are listed u
 | `AB412` | warning  | The installed host is newer than the profile's verified ceiling. |
 | `AB414` | notice   | No host version was supplied, or the profile records no range.   |
 
-`AB400` and `AB401` indicate a defect in `claude-cli` itself rather than a problem with your
+`AB400` and `AB401` indicate a defect in `cairn` itself rather than a problem with your
 bundle; please report them.
 
 ## Host versions
@@ -81,14 +81,14 @@ change in the profile, not a change to this command. A malformed or ambiguous
 ## Examples
 
 ```bash
-# What does this build of claude-cli know about each target?
-claude-cli agent doctor --target all
+# What does this build of cairn know about each target?
+cairn agent doctor --target all
 
 # Has the generated tree drifted from the bundle?
-claude-cli agent doctor ./bundle --target codex --output ./dist
+cairn agent doctor ./bundle --target codex --output ./dist
 
 # Fail CI on anything short of a clean, current tree.
-claude-cli agent doctor ./bundle --target all --output ./dist --strict --format json
+cairn agent doctor ./bundle --target all --output ./dist --strict --format json
 ```
 
 ## Exit codes

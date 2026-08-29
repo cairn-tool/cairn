@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage agents [options]
+cairn usage agents [options]
 ```
 
 Subagent activity by agent type, with the tokens each actually cost.

@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage hooks [options]
+cairn usage hooks [options]
 ```
 
 Hook executions by event and tool, with failure counts and latency.

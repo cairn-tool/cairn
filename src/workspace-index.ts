@@ -41,7 +41,7 @@ export function getWorkspaceIndexPath(
 ): string {
   const base = env.XDG_CACHE_HOME || path.join(home, ".cache");
   const key = crypto.createHash("sha256").update(path.resolve(root)).digest("hex").slice(0, 24);
-  return path.join(base, "claude-cli", "workspaces", `${key}.json`);
+  return path.join(base, "cairn", "workspaces", `${key}.json`);
 }
 
 export function fingerprint(filePath: string): FileFingerprint {

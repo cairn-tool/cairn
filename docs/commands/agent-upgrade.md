@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent upgrade <source> --to-schema <version> [options]
+cairn agent upgrade <source> --to-schema <version> [options]
 ```
 
 Migrates a portable bundle between neutral schema versions. Only `agent-bundle.yaml` is
@@ -33,7 +33,7 @@ what schema 1 could not express.
 `--check` and `--dry-run` cannot be combined.
 
 **`--to-schema` is required rather than defaulting to the newest version.** An implicit
-"latest" would make a CI run's result depend on which `claude-cli` happened to be installed.
+"latest" would make a CI run's result depend on which `cairn` happened to be installed.
 
 ## What the 1 → 2 migration does
 
@@ -61,13 +61,13 @@ target and both profiles. If the two differ it emits `AB224` and refuses to writ
 
 ## Diagnostics
 
-| Code    | Severity | Meaning                                                                                       |
-| ------- | -------- | --------------------------------------------------------------------------------------------- |
-| `AB220` | notice   | The bundle is already at the requested schema; nothing was written.                           |
-| `AB221` | notice   | Marketplace metadata cannot be derived and needs human judgment.                              |
-| `AB222` | error    | The requested target schema is not supported.                                                 |
-| `AB223` | error    | A legacy Claude plugin has no neutral manifest to upgrade.                                    |
-| `AB224` | error    | The migration would change generated output. This is a `claude-cli` defect; please report it. |
+| Code    | Severity | Meaning                                                                                  |
+| ------- | -------- | ---------------------------------------------------------------------------------------- |
+| `AB220` | notice   | The bundle is already at the requested schema; nothing was written.                      |
+| `AB221` | notice   | Marketplace metadata cannot be derived and needs human judgment.                         |
+| `AB222` | error    | The requested target schema is not supported.                                            |
+| `AB223` | error    | A legacy Claude plugin has no neutral manifest to upgrade.                               |
+| `AB224` | error    | The migration would change generated output. This is a `cairn` defect; please report it. |
 
 An `AB221` notice does **not** fail the command. Only errors, and a stale `--check`, do.
 
@@ -75,13 +75,13 @@ An `AB221` notice does **not** fail the command. Only errors, and a stale `--che
 
 ```bash
 # Would this bundle change? Exits 2 if so. Suitable for CI.
-claude-cli agent upgrade ./release-helper --to-schema 2 --check
+cairn agent upgrade ./release-helper --to-schema 2 --check
 
 # See the change list and the human-judgment notes first.
-claude-cli agent upgrade ./release-helper --to-schema 2 --dry-run -fj | jq '.upgrade'
+cairn agent upgrade ./release-helper --to-schema 2 --dry-run -fj | jq '.upgrade'
 
 # Migrate.
-claude-cli agent upgrade ./release-helper --to-schema 2
+cairn agent upgrade ./release-helper --to-schema 2
 ```
 
 ## Exit codes

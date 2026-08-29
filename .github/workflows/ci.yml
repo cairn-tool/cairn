@@ -104,6 +104,6 @@ jobs:
 
       # The tool validating its own docs. Advisory for now — flip off
       # continue-on-error once the repo's markdown is clean under --style.
-      - name: claude-cli md lint-dir
+      - name: cairn md lint-dir
         continue-on-error: true
         run: node dist/cli.js md lint-dir . --style --summary

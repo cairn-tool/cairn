@@ -5,7 +5,10 @@ import { diagnostic } from "../types.js";
 import { classify } from "../package/index.js";
 
 /** The `sbom.json` format `agent package` writes. */
-export const BASELINE_FORMAT = "claude-cli-inventory";
+export const BASELINE_FORMAT = "cairn-inventory";
+
+/** The pre-rename discriminator, still accepted on committed inventories. */
+export const LEGACY_BASELINE_FORMAT = "claude-cli-inventory";
 
 export interface BaselineComponent {
   path: string;
@@ -97,7 +100,7 @@ export function diffBaseline(
     modeChanged: [],
   };
 
-  if (document.bomFormat !== BASELINE_FORMAT)
+  if (document.bomFormat !== BASELINE_FORMAT && document.bomFormat !== LEGACY_BASELINE_FORMAT)
     return {
       report,
       diagnostics: [

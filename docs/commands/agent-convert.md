@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent convert <source> --target <target> --output <dir> [options]
+cairn agent convert <source> --target <target> --output <dir> [options]
 ```
 
 Converts a portable agent bundle, or a legacy Claude plugin, into deterministic native
@@ -106,17 +106,17 @@ portable artifacts omit the field entirely.
 `conversion-report.json` at the output root records the result of the conversion plus the
 provenance of the build:
 
-| Field                  | Description                                                  |
-| ---------------------- | ------------------------------------------------------------ |
-| `generator`            | Name and version of the `claude-cli` that produced the tree. |
-| `profileSchemaVersion` | Version of the target conformance profile structure.         |
-| `targetProfiles`       | The documentation revision of each target profile used.      |
+| Field                  | Description                                             |
+| ---------------------- | ------------------------------------------------------- |
+| `generator`            | Name and version of the `cairn` that produced the tree. |
+| `profileSchemaVersion` | Version of the target conformance profile structure.    |
+| `targetProfiles`       | The documentation revision of each target profile used. |
 
 [`agent doctor`](agent-doctor.md) reads these to tell a tree generated against an older
 target profile from a current one.
 
 Because the report embeds the generator version, `--check` compares it by **existence only**
-rather than byte for byte — otherwise every tree would report as stale after any `claude-cli`
+rather than byte for byte — otherwise every tree would report as stale after any `cairn`
 upgrade. This loses nothing: the report is derived from artifacts that `--check` already
 compares byte for byte.
 
@@ -126,7 +126,7 @@ compares byte for byte.
 without keeping the rendered tree:
 
 ```bash
-claude-cli agent convert ./bundle --target all --output ./dist --dry-run --report ./ci/convert.json
+cairn agent convert ./bundle --target all --output ./dist --dry-run --report ./ci/convert.json
 ```
 
 It is the **same shape** as `conversion-report.json`, provenance included, and differs in

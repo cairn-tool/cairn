@@ -187,7 +187,7 @@ export async function agentAddAction(
   const root = path.resolve(source ?? ".");
   const manifestPath = path.join(root, "agent-bundle.yaml");
   if (!fs.existsSync(manifestPath))
-    throw new Error(`No agent-bundle.yaml found in ${root}. Run 'claude-cli agent init' first.`);
+    throw new Error(`No agent-bundle.yaml found in ${root}. Run 'cairn agent init' first.`);
 
   const diagnostics: AgentDiagnostic[] = [];
   // A hook is named by its event, not freely, so it is validated against the

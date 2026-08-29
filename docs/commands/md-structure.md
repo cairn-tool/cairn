@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md structure <file> [options]
+cairn md structure <file> [options]
 ```
 
 Produces a compact document skeleton containing headings, fenced code blocks, lists, and

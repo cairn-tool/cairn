@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md code-blocks <file> [options]
+cairn md code-blocks <file> [options]
 ```
 
 Lists fenced code blocks with their language, source line range, and line count. An optional

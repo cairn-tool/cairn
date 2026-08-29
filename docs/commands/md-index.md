@@ -3,11 +3,11 @@
 ## Synopsis
 
 ```text
-claude-cli md index <action> [directory] [options]
+cairn md index <action> [directory] [options]
 ```
 
 Inspects or manages the persistent parsed-workspace cache at
-`${XDG_CACHE_HOME:-~/.cache}/claude-cli/workspaces/<workspace-hash>.json`. Normal commands
+`${XDG_CACHE_HOME:-~/.cache}/cairn/workspaces/<workspace-hash>.json`. Normal commands
 reuse current entries after checking file size and modification time. Missing, corrupt,
 incompatible, or unwritable cache data is treated as a cache miss.
 

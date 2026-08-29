@@ -8,7 +8,7 @@ import { Workspace } from "../../src/workspace.js";
 let tmpDir: string;
 
 beforeEach(() => {
-  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-workspace-"));
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-workspace-"));
 });
 
 afterEach(() => {
@@ -18,7 +18,7 @@ afterEach(() => {
 describe("Workspace", () => {
   it("applies include, exclude, permanent exclusions, and stable sorting", () => {
     fs.writeFileSync(
-      path.join(tmpDir, ".claude-cli.yml"),
+      path.join(tmpDir, ".cairn.yml"),
       'version: 1\nfiles:\n  include: ["**/*.md"]\n  exclude: ["drafts/**"]\n',
     );
     fs.mkdirSync(path.join(tmpDir, "drafts"));
@@ -84,7 +84,7 @@ describe("Workspace", () => {
   });
 
   it("refuses configured scans outside the workspace", () => {
-    fs.writeFileSync(path.join(tmpDir, ".claude-cli.yml"), "version: 1\n");
+    fs.writeFileSync(path.join(tmpDir, ".cairn.yml"), "version: 1\n");
     const workspace = new Workspace(loadConfig({ disabled: false }, tmpDir));
     expect(() => workspace.markdownFiles(path.dirname(tmpDir))).toThrow("outside configured");
   });

@@ -5,6 +5,7 @@ import path from "node:path";
 import { loadBundle } from "../../src/agent/parser.js";
 import {
   INSTALL_MANIFEST,
+  LEGACY_INSTALL_MANIFEST,
   commitInstall,
   commitUninstall,
   expandInstallRoot,
@@ -195,6 +196,43 @@ describe("commitInstall and uninstall", () => {
     commitUninstall(removed);
     expect(fs.readFileSync(path.join(project, "README.md"), "utf8")).toBe("keep\n");
     expect(fs.existsSync(path.join(project, INSTALL_MANIFEST))).toBe(false);
+  });
+
+  it("reads, lists, and removes an install left behind under the legacy manifest name", () => {
+    const into = workspace();
+    const plan = planInstall(loadBundle(bundle()), "cursor", { scope: "user", into });
+    commitInstall(plan);
+    const dest = plan.destination;
+
+    // Rename in place, as an install written before the Cairn rename would be.
+    fs.renameSync(path.join(dest, INSTALL_MANIFEST), path.join(dest, LEGACY_INSTALL_MANIFEST));
+
+    const manifest = readInstallManifest(dest);
+    expect(manifest).not.toBe("missing");
+    expect(manifest).not.toBe("malformed");
+    if (manifest === "missing" || manifest === "malformed") return;
+    expect(manifest.bundle.name).toBe("hello");
+
+    expect(listInstalled(["cursor"], { scope: "user", into }).map((entry) => entry.name)).toContain(
+      "hello",
+    );
+
+    const removed = planUninstall("hello", "cursor", { scope: "user", into });
+    commitUninstall(removed);
+    expect(fs.existsSync(path.join(dest, LEGACY_INSTALL_MANIFEST))).toBe(false);
+    expect(fs.existsSync(dest)).toBe(false);
+  });
+
+  it("refuses to guess when a destination holds both manifest names", () => {
+    const into = workspace();
+    const plan = planInstall(loadBundle(bundle()), "cursor", { scope: "user", into });
+    commitInstall(plan);
+    const dest = plan.destination;
+    fs.copyFileSync(path.join(dest, INSTALL_MANIFEST), path.join(dest, LEGACY_INSTALL_MANIFEST));
+
+    // Same rule as two matching scopes: picking one would silently orphan the
+    // other install's recorded file list.
+    expect(readInstallManifest(dest)).toBe("malformed");
   });
 
   it("materializes .install and symlinks the host path under --link", () => {

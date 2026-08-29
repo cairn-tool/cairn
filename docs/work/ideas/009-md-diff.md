@@ -12,8 +12,8 @@ where the implementation diverged, the command's own documentation is authoritat
 **Command sketch:**
 
 ```text
-claude-cli md diff --since origin/main docs
-claude-cli md diff old.md new.md --format json
+cairn md diff --since origin/main docs
+cairn md diff old.md new.md --format json
 ```
 
 Provide an AST-aware change summary instead of another textual diff. Report added, removed,

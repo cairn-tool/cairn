@@ -1,9 +1,9 @@
 # Shared Markdown command behavior
 
-All commands below `claude-cli md` participate in project configuration and workspace path
+All commands below `cairn md` participate in project configuration and workspace path
 resolution. Configuration discovery walks upward from the current directory looking for
-`.claude-cli.yml`. Use `claude-cli md --config <file> <command>` to select a file explicitly,
-or `claude-cli md --no-config <command>` to use built-in defaults.
+`.cairn.yml`. Use `cairn md --config <file> <command>` to select a file explicitly,
+or `cairn md --no-config <command>` to use built-in defaults.
 
 ## Common options
 
@@ -26,7 +26,7 @@ completeness.
 Option values resolve in this order, from highest to lowest priority:
 
 1. Explicit CLI option.
-2. `commands.<command>.<option>` in `.claude-cli.yml`.
+2. `commands.<command>.<option>` in `.cairn.yml`.
 3. Relevant top-level project setting.
 4. Built-in command default.
 

@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md outline <file> [options]
+cairn md outline <file> [options]
 ```
 
 Renders the selected headings as an indented outline. JSON output represents the same heading

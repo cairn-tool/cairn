@@ -12,9 +12,9 @@ where the implementation diverged, the command's own documentation is authoritat
 **Command sketch:**
 
 ```text
-claude-cli md query documents --where frontmatter.status=published --where has:h1
-claude-cli md query documents --where links-to:docs/api.md --select file,title,line
-claude-cli md query tasks --where status=pending --group-by frontmatter.owner
+cairn md query documents --where frontmatter.status=published --where has:h1
+cairn md query documents --where links-to:docs/api.md --select file,title,line
+cairn md query tasks --where status=pending --group-by frontmatter.owner
 ```
 
 The existing query kinds prove the value of the workspace index, but adding one enum value

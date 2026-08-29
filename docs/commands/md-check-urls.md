@@ -3,13 +3,13 @@
 ## Synopsis
 
 ```text
-claude-cli md check-urls <inputs...> [options]
+cairn md check-urls <inputs...> [options]
 ```
 
 Extracts and deduplicates external URLs across files, directories, globs, or stdin while
 retaining every source occurrence in reports. Requests use HEAD first and fall back to GET
 for configured statuses. Raw results can be cached at
-`${XDG_CACHE_HOME:-~/.cache}/claude-cli/url-checks.json`; cache failures are non-fatal.
+`${XDG_CACHE_HOME:-~/.cache}/cairn/url-checks.json`; cache failures are non-fatal.
 
 ## Arguments
 

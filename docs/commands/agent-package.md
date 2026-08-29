@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent package <source> --target <target> --output <dir> [options]
+cairn agent package <source> --target <target> --output <dir> [options]
 ```
 
 Turns a bundle into a distributable package: the rendered payload plus marketplace catalogs,
@@ -111,7 +111,7 @@ A schema-1 bundle cannot declare a `marketplace` block at all (`AB127`), so pack
 `checksums.sha256` is GNU coreutils format, so `sha256sum -c checksums.sha256` works verbatim
 from the package root.
 
-`sbom.json` is a file inventory, and says so: `"bomFormat": "claude-cli-inventory"`. It is
+`sbom.json` is a file inventory, and says so: `"bomFormat": "cairn-inventory"`. It is
 **not** a CycloneDX document. Each component carries its path, a content-derived type
 (`script`, `executable`, `binary`, `config`, `document`, `asset`), digest, size, mode, and
 whether it came from the portable layer or a native overlay.
@@ -139,16 +139,16 @@ carries them, and they say nothing about publish readiness. Only errors, and war
 
 ```bash
 # Full package with archives.
-claude-cli agent package ./bundle --target all --output ./dist --archive
+cairn agent package ./bundle --target all --output ./dist --archive
 
 # Release-CI gate: no writes, exit 2 on any finding or drift.
-claude-cli agent package ./bundle --target codex --output ./dist --check --strict
+cairn agent package ./bundle --target codex --output ./dist --check --strict
 
 # Verify the tree CI already converted.
-claude-cli agent package ./bundle --target all --output ./dist --from-dist ./converted
+cairn agent package ./bundle --target all --output ./dist --from-dist ./converted
 
 # What is stopping this from shipping?
-claude-cli agent package ./bundle --target codex --output ./dist --dry-run -fj \
+cairn agent package ./bundle --target codex --output ./dist --dry-run -fj \
   | jq '.diagnostics[] | select(.severity == "error")'
 ```
 

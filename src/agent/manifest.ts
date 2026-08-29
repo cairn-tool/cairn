@@ -319,7 +319,7 @@ export function normalizeManifest(
           "AB127",
           `Bundle field '${field}' requires schemaVersion 2`,
           manifestPath,
-          "Run claude-cli agent upgrade --to-schema 2.",
+          "Run cairn agent upgrade --to-schema 2.",
         );
 
   if (layer === 2)

@@ -199,7 +199,7 @@ const CONTRACTS: CommandContract[] = [
     writes: false,
     stability: "experimental",
     notes:
-      "The only command that executes anything. In llm and human formats the child inherits all three streams and its exit status passes through unchanged, so a hook reads the real code and this command writes nothing of its own to stdout; `exitCodes` describes --format json, which captures the streams into the payload instead. A script that never started exits 1 rather than 2, so a typo in exec[0] stays distinguishable from a script that ran and failed. The payload goes to stdout in every outcome, including a failed script, so a consumer never has to switch streams. Resolution walks every .claude-cli.yml from the working directory to the repository root and the nearest definition of the name wins; files under node_modules are skipped, and running outside a Git repository is refused unless --root sets the boundary. Configuration cannot change what executes: scripts commands accept no `commands:` defaults. The update notice is suppressed, because the child owns the real stderr.",
+      "The only command that executes anything. In llm and human formats the child inherits all three streams and its exit status passes through unchanged, so a hook reads the real code and this command writes nothing of its own to stdout; `exitCodes` describes --format json, which captures the streams into the payload instead. A script that never started exits 1 rather than 2, so a typo in exec[0] stays distinguishable from a script that ran and failed. The payload goes to stdout in every outcome, including a failed script, so a consumer never has to switch streams. Resolution walks every .cairn.yml from the working directory to the repository root and the nearest definition of the name wins; files under node_modules are skipped, and running outside a Git repository is refused unless --root sets the boundary. Configuration cannot change what executes: scripts commands accept no `commands:` defaults. The update notice is suppressed, because the child owns the real stderr.",
   },
   {
     id: "scripts which",
@@ -414,7 +414,7 @@ const CONTRACTS: CommandContract[] = [
       FINDINGS("Manifest missing or malformed, or --check found the install still present"),
     ],
     notes:
-      "Removes exactly the inventory recorded in .claude-cli-install.json and nothing else. --scope is optional: both scopes are searched, and two matches is an error rather than a guess.",
+      "Removes exactly the inventory recorded in .cairn-install.json and nothing else. --scope is optional: both scopes are searched, and two matches is an error rather than a guess.",
   }),
   agentCommand("installed", {
     stability: "experimental",
@@ -476,7 +476,7 @@ const CONTRACTS: CommandContract[] = [
       ),
     ],
     notes:
-      "Experimental because the fence authoring syntax may still change. A snippet is never executed; the source file is only read. Only fences whose info string carries claude-cli:snippet= are considered, and unlinked fences never appear in the payload. Unlike md fix, a finding with no available fix — a deleted source file, a deleted region, a fence the refreshed body cannot fit into — fails every mode including --write, because this command's job is checking rather than fixing; drift alone fails only --check and --dry-run. Comparison ignores line endings, trailing horizontal whitespace, and trailing blank lines, and nothing else. Source reads are confined to the workspace root and refuse non-regular files, files over 2 MiB, and files containing NUL; writes are confined to the md fix containment root. The mode is deliberately not settable from project configuration.",
+      "Experimental because the fence authoring syntax may still change. A snippet is never executed; the source file is only read. Only fences whose info string carries cairn:snippet= are considered, and unlinked fences never appear in the payload. Unlike md fix, a finding with no available fix — a deleted source file, a deleted region, a fence the refreshed body cannot fit into — fails every mode including --write, because this command's job is checking rather than fixing; drift alone fails only --check and --dry-run. Comparison ignores line endings, trailing horizontal whitespace, and trailing blank lines, and nothing else. Source reads are confined to the workspace root and refuse non-regular files, files over 2 MiB, and files containing NUL; writes are confined to the md fix containment root. The mode is deliberately not settable from project configuration.",
   }),
 
   // Markdown: references and graph

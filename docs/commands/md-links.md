@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md links <file> [options]
+cairn md links <file> [options]
 ```
 
 Lists links in one document with source context and groups them as internal, external, image,

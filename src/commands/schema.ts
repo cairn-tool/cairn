@@ -24,7 +24,7 @@ export async function schemaAction(
     const entry = SCHEMA_BY_ID.get(id);
     if (!entry)
       throw new Error(
-        `Unknown schema id: ${id}. Run "claude-cli schema" to list the published schemas.`,
+        `Unknown schema id: ${id}. Run "cairn schema" to list the published schemas.`,
       );
     process.stdout.write(JSON.stringify(entry.schema, null, 2) + "\n");
     return;

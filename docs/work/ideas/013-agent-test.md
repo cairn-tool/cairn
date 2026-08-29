@@ -26,8 +26,8 @@ scope for the same reason the proposal gives.
 **Command sketch:**
 
 ```text
-claude-cli agent test ./bundle
-claude-cli agent test ./bundle --target all --native
+cairn agent test ./bundle
+cairn agent test ./bundle --target all --native
 ```
 
 Support model-free contract tests stored with a bundle. Test cases could assert selected

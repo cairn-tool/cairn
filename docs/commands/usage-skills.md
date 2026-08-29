@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage skills [options]
+cairn usage skills [options]
 ```
 
 Skill invocations by name, with how many sessions each reached.

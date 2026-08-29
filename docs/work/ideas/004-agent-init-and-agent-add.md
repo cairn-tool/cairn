@@ -13,9 +13,9 @@ implementation diverged, the command's own documentation is authoritative.
 **Command sketch:**
 
 ```text
-claude-cli agent init release-helper --output ./release-helper
-claude-cli agent add skill prepare-release ./release-helper
-claude-cli agent add hook pre-tool-use ./release-helper
+cairn agent init release-helper --output ./release-helper
+cairn agent add skill prepare-release ./release-helper
+cairn agent add hook pre-tool-use ./release-helper
 ```
 
 Provide a noninteractive scaffold for the neutral format. The differentiator from each

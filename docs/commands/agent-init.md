@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent init <name> [options]
+cairn agent init <name> [options]
 ```
 
 Scaffolds a new portable agent bundle at `schemaVersion: '2'`. The differentiator from each
@@ -72,15 +72,15 @@ Every operation is reported under `plan.operations`, so a caller never has to pa
 
 ```bash
 # The smallest useful bundle.
-claude-cli agent init release-helper
+cairn agent init release-helper
 
 # Every component type, with overlay roots for two targets.
-claude-cli agent init release-helper --output ./rh \
+cairn agent init release-helper --output ./rh \
   --component skill --component agent --component hook \
   --overlays --target claude-code --target codex
 
 # Machine-readable plan without touching the filesystem.
-claude-cli agent init demo --output ./demo --dry-run -fj
+cairn agent init demo --output ./demo --dry-run -fj
 ```
 
 ## Exit codes

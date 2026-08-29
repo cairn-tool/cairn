@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli serve <protocol> [options]
+cairn serve <protocol> [options]
 ```
 
 Serves the Markdown workspace engine over a machine protocol. The only protocol today is
@@ -36,7 +36,7 @@ nothing for a format to select; diagnostics go to stderr, which MCP treats as th
 ## Registering with a host
 
 ```bash
-claude mcp add markdown -- claude-cli serve mcp --root docs
+claude mcp add markdown -- cairn serve mcp --root docs
 ```
 
 The server is spawned by the host, reads requests on stdin, and writes responses on stdout.

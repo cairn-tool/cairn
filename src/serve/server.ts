@@ -124,7 +124,7 @@ export async function serveStdio(context: ServeContext): Promise<void> {
   // so these are reported rather than thrown.
   const report = (label: string, error: unknown): void => {
     const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`claude-cli serve: ${label}: ${message}\n`);
+    process.stderr.write(`cairn serve: ${label}: ${message}\n`);
   };
   server.onerror = (error) => report("protocol error", error);
   const onRejection = (reason: unknown): void => report("unhandled rejection", reason);

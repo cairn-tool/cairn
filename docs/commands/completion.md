@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli completion <shell>
+cairn completion <shell>
 ```
 
 Prints a shell completion script to stdout. The script is generated from the same command tree
@@ -29,10 +29,10 @@ already publishes the command tree it is generated from.
 ## Installing
 
 ```bash
-claude-cli completion bash       >> ~/.bashrc
-claude-cli completion zsh        > ~/.zfunc/_claude-cli    # a directory on $fpath
-claude-cli completion fish       > ~/.config/fish/completions/claude-cli.fish
-claude-cli completion powershell >> $PROFILE
+cairn completion bash       >> ~/.bashrc
+cairn completion zsh        > ~/.zfunc/_cairn    # a directory on $fpath
+cairn completion fish       > ~/.config/fish/completions/cairn.fish
+cairn completion powershell >> $PROFILE
 ```
 
 The command never writes to a shell profile itself; redirection is yours to choose.
@@ -68,7 +68,7 @@ there is nothing to gain in exchange.
 
 ## Update notices
 
-The update notice is suppressed for this command. The `eval "$(claude-cli completion zsh)"`
+The update notice is suppressed for this command. The `eval "$(cairn completion zsh)"`
 idiom runs from an interactive rc file, where stderr **is** a TTY — without the suppression the
 notice would print on every shell start and a background refresh would spawn on every shell
 start. See [the contract](../contract.md).

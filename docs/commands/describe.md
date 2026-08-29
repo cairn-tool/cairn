@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli describe [command...] [options]
+cairn describe [command...] [options]
 ```
 
 Describes the CLI contract: every command with its arguments, options, accepted formats, exit
@@ -50,7 +50,7 @@ Hidden internal commands are excluded.
 
 ## Static, not resolved
 
-`describe` reports the **static** contract. Project configuration from `.claude-cli.yml` is not
+`describe` reports the **static** contract. Project configuration from `.cairn.yml` is not
 applied, so `defaultFormat` is the built-in default rather than the format that would be used
 in a given directory. This keeps the answer independent of the working directory.
 
@@ -58,16 +58,16 @@ in a given directory. This keeps the answer independent of the working directory
 
 ```bash
 # The full contract.
-claude-cli describe --format json
+cairn describe --format json
 
 # One command.
-claude-cli describe md graph --format json
+cairn describe md graph --format json
 
 # Which commands can modify files?
-claude-cli describe -fj | jq -r '.commands[] | select(.writes) | .id'
+cairn describe -fj | jq -r '.commands[] | select(.writes) | .id'
 
 # Which commands publish a JSON schema?
-claude-cli describe -fj | jq -r '.commands[] | select(.outputSchema) | "\(.id) -> \(.outputSchema)"'
+cairn describe -fj | jq -r '.commands[] | select(.outputSchema) | "\(.id) -> \(.outputSchema)"'
 ```
 
 ## Exit codes

@@ -356,7 +356,7 @@ describe("rendered checks", () => {
 
 describe("baseline drift", () => {
   const inventory = (components: unknown[]): string =>
-    JSON.stringify({ bomFormat: "claude-cli-inventory", components });
+    JSON.stringify({ bomFormat: "cairn-inventory", components });
 
   function baselineFile(body: string): string {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "agent-audit-baseline-"));

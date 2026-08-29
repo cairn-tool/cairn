@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md tables <file> [options]
+cairn md tables <file> [options]
 ```
 
 Lists GFM tables with source range, column count, row count, alignment, headers, and parsed

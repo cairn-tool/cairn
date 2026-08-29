@@ -42,7 +42,7 @@ export function temporarySibling(file: string): string {
   for (let index = 0; index < 100; index++) {
     const candidate = path.join(
       path.dirname(file),
-      `.${path.basename(file)}.claude-cli-${process.pid}-${index}.tmp`,
+      `.${path.basename(file)}.cairn-${process.pid}-${index}.tmp`,
     );
     if (!fs.existsSync(candidate)) return candidate;
   }
@@ -334,7 +334,7 @@ export function applyPlan(plan: EditPlan, options: ApplyOptions = {}): AppliedPl
  *
  * A configured workspace is the authority when there is one. Without a config
  * file `config.root` is only the working directory, and refusing an absolute
- * path outside it would reject `claude-cli md fix /elsewhere/docs` for no
+ * path outside it would reject `cairn md fix /elsewhere/docs` for no
  * benefit — so the boundary becomes the directory containing the files the
  * caller actually selected. Either way an edit cannot reach beyond what was
  * asked for, which is what the guard is for.

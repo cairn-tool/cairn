@@ -9,7 +9,7 @@
 Not implemented. This page records the original proposal, not current behavior.
 
 First expose a documented ESM API from the existing package (or a later
-`@bstockus/claude-cli-core` package) for workspace loading, queries, diagnostics, context
+`@bstockus/cairn-core` package) for workspace loading, queries, diagnostics, context
 packing, and edit plans. This is a prerequisite for integrations that should not parse shell
 output.
 

@@ -44,16 +44,16 @@ function entry(overrides: Partial<FileAggregate> = {}): FileAggregate {
 describe("getUsageCacheRoot", () => {
   it("honours XDG_CACHE_HOME, and falls back to ~/.cache", () => {
     expect(getUsageCacheRoot("claude-code", { XDG_CACHE_HOME: "/xdg" }, "/home/u")).toBe(
-      "/xdg/claude-cli/usage/claude-code",
+      "/xdg/cairn/usage/claude-code",
     );
     expect(getUsageCacheRoot("claude-code", {}, "/home/u")).toBe(
-      "/home/u/.cache/claude-cli/usage/claude-code",
+      "/home/u/.cache/cairn/usage/claude-code",
     );
   });
 
   it("gives each provider its own directory", () => {
     expect(getUsageCacheRoot("other", { XDG_CACHE_HOME: "/xdg" }, "/home/u")).toBe(
-      "/xdg/claude-cli/usage/other",
+      "/xdg/cairn/usage/other",
     );
   });
 });

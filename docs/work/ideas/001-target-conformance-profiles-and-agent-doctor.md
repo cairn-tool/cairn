@@ -13,9 +13,9 @@ implementation diverged, the command's own documentation is authoritative.
 **Command sketch:**
 
 ```text
-claude-cli agent doctor --target all
-claude-cli agent doctor ./bundle --target codex --host-version 1.2.3
-claude-cli agent specs --format json
+cairn agent doctor --target all
+cairn agent doctor ./bundle --target codex --host-version 1.2.3
+cairn agent specs --format json
 ```
 
 The converter currently encodes platform behavior directly in parser and renderer code.

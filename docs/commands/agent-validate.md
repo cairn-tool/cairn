@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli agent validate <source> [options]
+cairn agent validate <source> [options]
 ```
 
 Loads and validates a portable agent bundle without generating output. It checks the bundle

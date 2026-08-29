@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md lint-dir [directory] [options]
+cairn md lint-dir [directory] [options]
 ```
 
 Runs the lint check set over every selected Markdown file in a directory. Files are processed

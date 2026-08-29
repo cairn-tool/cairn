@@ -32,7 +32,7 @@ export interface CommandContract {
   formats: readonly OutputFormat[] | null;
   /** Built-in default, before any project configuration is applied. */
   defaultFormat: OutputFormat | null;
-  /** True when `.claude-cli.yml` may override the format for this command. */
+  /** True when `.cairn.yml` may override the format for this command. */
   formatConfigurable: boolean;
   /** Schema id for `--format json`, or `null` when none is published yet. */
   outputSchema: string | null;

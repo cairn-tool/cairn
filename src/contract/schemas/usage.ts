@@ -4,7 +4,7 @@ import { DRAFT, stringArray } from "./shared.js";
 
 /**
  * Fragments are inlined into every document that needs them rather than shared
- * by `$ref`: a schema retrieved with `claude-cli schema <id>` must compile on
+ * by `$ref`: a schema retrieved with `cairn schema <id>` must compile on
  * its own.
  */
 const TOKENS: JsonSchema = {

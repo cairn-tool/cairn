@@ -27,8 +27,10 @@ const MAX_CAPTURE_BYTES = 8 * 1024 * 1024;
 /** Deep enough for real composition, shallow enough to stop a runaway. */
 export const MAX_SCRIPT_DEPTH = 8;
 
-const DEPTH_VARIABLE = "CLAUDE_CLI_SCRIPT_DEPTH";
-const STACK_VARIABLE = "CLAUDE_CLI_SCRIPT_STACK";
+const DEPTH_VARIABLE = "CAIRN_SCRIPT_DEPTH";
+const STACK_VARIABLE = "CAIRN_SCRIPT_STACK";
+const LEGACY_DEPTH_VARIABLE = "CLAUDE_CLI_SCRIPT_DEPTH";
+const LEGACY_STACK_VARIABLE = "CLAUDE_CLI_SCRIPT_STACK";
 
 /** `$1`, `${1}`, `$@`, `$*` — any reference to a positional parameter. */
 const POSITIONAL_PARAMETER = /\$\{?[0-9@*]/;
@@ -57,13 +59,16 @@ export interface ScriptOutcome {
   startupError?: string;
 }
 
+// Both spellings are read as well as written. A script from before the rename
+// may re-export only the legacy variable, and reading just the current one there
+// would reset the counter to zero and defeat the recursion guard entirely.
 function currentDepth(env: NodeJS.ProcessEnv = process.env): number {
-  const parsed = Number.parseInt(env[DEPTH_VARIABLE] ?? "0", 10);
+  const parsed = Number.parseInt(env[DEPTH_VARIABLE] ?? env[LEGACY_DEPTH_VARIABLE] ?? "0", 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 function currentStack(env: NodeJS.ProcessEnv = process.env): string[] {
-  const raw = env[STACK_VARIABLE];
+  const raw = env[STACK_VARIABLE] ?? env[LEGACY_STACK_VARIABLE];
   return raw ? raw.split("\n").filter(Boolean) : [];
 }
 
@@ -71,18 +76,35 @@ function frameFor(execution: ScriptExecution): string {
   return `${execution.registry.file}#${execution.definition.name}`;
 }
 
+/**
+ * The child's environment.
+ *
+ * Every variable is exported under both the current and the pre-rename spelling.
+ * A script is user code this tool does not get to edit, so one already reading
+ * `CLAUDE_CLI_SCRIPT_ROOT` has to keep working; duplicating six variables is the
+ * cheap half of that bargain.
+ */
 export function scriptEnvironment(execution: ScriptExecution): NodeJS.ProcessEnv {
+  const depth = String(currentDepth() + 1);
+  const stack = [...currentStack(), frameFor(execution)].join("\n");
   return {
     ...process.env,
+    CAIRN_SCRIPT_NAME: execution.definition.name,
+    CAIRN_SCRIPT_ROOT: execution.registry.directory,
+    CAIRN_SCRIPT_REGISTRY: execution.registry.file,
+    CAIRN_INVOKED_FROM: execution.invokedFrom,
+    [DEPTH_VARIABLE]: depth,
+    [STACK_VARIABLE]: stack,
     CLAUDE_CLI_SCRIPT_NAME: execution.definition.name,
     CLAUDE_CLI_SCRIPT_ROOT: execution.registry.directory,
     CLAUDE_CLI_SCRIPT_REGISTRY: execution.registry.file,
     CLAUDE_CLI_INVOKED_FROM: execution.invokedFrom,
-    [DEPTH_VARIABLE]: String(currentDepth() + 1),
-    [STACK_VARIABLE]: [...currentStack(), frameFor(execution)].join("\n"),
-    // A nested `claude-cli` must not write an update notice into a stream the
-    // outer hook is capturing. The argv gate in src/update-notifier.ts covers
-    // this invocation; this covers every one the script makes.
+    [LEGACY_DEPTH_VARIABLE]: depth,
+    [LEGACY_STACK_VARIABLE]: stack,
+    // A nested `cairn` must not write an update notice into a stream the outer
+    // hook is capturing. The argv gate in src/update-notifier.ts covers this
+    // invocation; this covers every one the script makes.
+    CAIRN_NO_UPDATE_NOTIFIER: "1",
     CLAUDE_CLI_NO_UPDATE_NOTIFIER: "1",
   };
 }

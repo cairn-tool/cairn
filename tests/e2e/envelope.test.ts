@@ -149,7 +149,7 @@ describe("--envelope", () => {
     expect(validateEnvelope(envelope), `${label}: ${JSON.stringify(validateEnvelope.errors)}`).toBe(
       true,
     );
-    expect(envelope.schemaVersion, label).toBe("1");
+    expect(envelope.schemaVersion, label).toBe("2");
     expect(envelope.command, label).toBe(`${command[0]} ${command[1]}`);
     expect(envelope.exitCode, label).toBe(plain.code);
     expect(envelope.ok, label).toBe(plain.code === 0);

@@ -511,7 +511,7 @@ export const mdCheckSnippetsSchema: SchemaEntry = {
     $id: schemaUri("v1", "md-check-snippets"),
     title: "Snippet check report",
     description:
-      "Emitted by `md check-snippets --format json`. Counts and findings describe only fences whose info string carries a claude-cli:snippet= attribute; every other fence is absent.",
+      "Emitted by `md check-snippets --format json`. Counts and findings describe only fences whose info string carries a cairn:snippet= attribute; every other fence is absent.",
     type: "object",
     required: [
       "mode",

@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage projects [options]
+cairn usage projects [options]
 ```
 
 Usage rolled up by the working directory each session ran in.

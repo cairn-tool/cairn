@@ -1,7 +1,7 @@
 import { knownKeys, object, optionalString } from "../config-schema.js";
 
 /**
- * Parsing and validation for the `scripts:` block of a `.claude-cli.yml` file.
+ * Parsing and validation for the `scripts:` block of a `.cairn.yml` file.
  *
  * This module is deliberately pure — no filesystem access, no child process, no
  * knowledge of how a configuration file is discovered. That seam is what lets
@@ -27,7 +27,7 @@ export interface ScriptDefinition {
 }
 
 export interface ScriptRegistry {
-  /** Absolute path of the `.claude-cli.yml` that declared these scripts. */
+  /** Absolute path of the `.cairn.yml` that declared these scripts. */
   file: string;
   /** Directory of that file; the default working directory for its scripts. */
   directory: string;

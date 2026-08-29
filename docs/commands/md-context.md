@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md context [seeds...] [options]
+cairn md context [seeds...] [options]
 ```
 
 Assembles a reproducible context pack: ordered Markdown content with source and line

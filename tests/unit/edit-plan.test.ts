@@ -45,7 +45,7 @@ function snapshots(...files: string[]): Map<string, FileSnapshot> {
 }
 
 beforeEach(() => {
-  tmpDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-edit-")));
+  tmpDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "cairn-edit-")));
 });
 
 afterEach(() => {
@@ -79,7 +79,7 @@ describe("temporarySibling", () => {
     const file = write("a.md", "x");
     const temporary = temporarySibling(file);
     expect(path.dirname(temporary)).toBe(path.dirname(file));
-    expect(path.basename(temporary)).toMatch(/^\.a\.md\.claude-cli-\d+-0\.tmp$/);
+    expect(path.basename(temporary)).toMatch(/^\.a\.md\.cairn-\d+-0\.tmp$/);
   });
 });
 
@@ -118,7 +118,7 @@ describe("buildPlan conflicts", () => {
   });
 
   it("rejects a target outside the workspace root", () => {
-    const outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-out-")));
+    const outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "cairn-out-")));
     try {
       const file = path.join(outside, "a.md");
       fs.writeFileSync(file, "abc");
@@ -131,7 +131,7 @@ describe("buildPlan conflicts", () => {
   });
 
   it("rejects a target reachable only through a symlinked directory", () => {
-    const outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-link-")));
+    const outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "cairn-link-")));
     try {
       fs.writeFileSync(path.join(outside, "a.md"), "abc");
       fs.symlinkSync(outside, path.join(tmpDir, "escape"));
@@ -185,7 +185,7 @@ describe("applyPlan", () => {
     expect(fs.readFileSync(a, "utf-8")).toBe("HELLO");
     expect(fs.readFileSync(b, "utf-8")).toBe("WORLD");
     expect(fs.statSync(a).mode & 0o777).toBe(0o600);
-    expect(fs.readdirSync(tmpDir).filter((name) => name.includes("claude-cli-"))).toEqual([]);
+    expect(fs.readdirSync(tmpDir).filter((name) => name.includes("cairn-"))).toEqual([]);
   });
 
   it("refuses to write anything when the plan has a conflict", () => {
@@ -214,7 +214,7 @@ describe("applyPlan", () => {
     // Every file is rechecked before any file is staged, so b is untouched too.
     expect(fs.readFileSync(a, "utf-8")).toBe("changed underneath");
     expect(fs.readFileSync(b, "utf-8")).toBe("world");
-    expect(fs.readdirSync(tmpDir).filter((name) => name.includes("claude-cli-"))).toEqual([]);
+    expect(fs.readdirSync(tmpDir).filter((name) => name.includes("cairn-"))).toEqual([]);
   });
 
   it("rolls committed files back when a later rename fails", () => {
@@ -241,7 +241,7 @@ describe("applyPlan", () => {
 
     expect(fs.readFileSync(a, "utf-8")).toBe("hello");
     expect(fs.readFileSync(b, "utf-8")).toBe("world");
-    expect(fs.readdirSync(tmpDir).filter((name) => name.includes("claude-cli-"))).toEqual([]);
+    expect(fs.readdirSync(tmpDir).filter((name) => name.includes("cairn-"))).toEqual([]);
     // The rolled-back file must be invalidated too, or a stale cache survives.
     expect(invalidated).toContain(a);
   });

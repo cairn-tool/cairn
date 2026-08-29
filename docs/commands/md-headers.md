@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md headers <file> [options]
+cairn md headers <file> [options]
 ```
 
 Extracts Markdown headings with source line, depth, rendered text, and GitHub-compatible slug.

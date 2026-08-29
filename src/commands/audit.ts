@@ -320,7 +320,7 @@ export async function auditAction(directory: string, opts: AuditOptions): Promis
         file: path.resolve(opts.baseline),
         line: 1,
         checker: "baseline",
-        message: "Not a claude-cli-md-audit-baseline document; no findings were suppressed",
+        message: "Not a cairn-md-audit-baseline document; no findings were suppressed",
       });
       findings.sort(
         (a, b) =>

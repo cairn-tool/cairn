@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage sessions [options]
+cairn usage sessions [options]
 ```
 
 One row per session, with its subagent transcripts folded in.

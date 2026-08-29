@@ -53,7 +53,7 @@ describe("published schemas", () => {
   });
 
   it("never references another document", () => {
-    // A schema retrieved with `claude-cli schema <id>` must be independently
+    // A schema retrieved with `cairn schema <id>` must be independently
     // compilable, so every $ref stays within its own document.
     for (const entry of SCHEMAS)
       walk(entry.schema, (node) => {
@@ -174,6 +174,6 @@ describe("schema id resolution", () => {
   });
 
   it("pins the contract version", () => {
-    expect(CONTRACT_VERSION).toBe("1");
+    expect(CONTRACT_VERSION).toBe("2");
   });
 });

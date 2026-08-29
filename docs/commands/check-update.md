@@ -3,10 +3,10 @@
 ## Synopsis
 
 ```text
-claude-cli check-update [options]
+cairn check-update [options]
 ```
 
-Queries npm directly for the latest published `@bstockus/claude-cli` version. It deliberately
+Queries npm directly for the latest published `@bstockus/cairn` version. It deliberately
 bypasses the passive notifier's 24-hour cache, then refreshes that cache with the result. npm
 performs registry and authentication resolution, including scoped-registry settings in
 `.npmrc`.

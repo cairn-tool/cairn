@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md query <kind> [directory] [options]
+cairn md query <kind> [directory] [options]
 ```
 
 Runs a read-only query across selected Markdown documents. Matches are informational and

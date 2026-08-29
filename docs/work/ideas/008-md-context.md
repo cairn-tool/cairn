@@ -12,9 +12,9 @@ text; where the implementation diverged, the command's own documentation is auth
 **Command sketch:**
 
 ```text
-claude-cli md context docs/architecture.md --depth 2 --budget 24000
-claude-cli md context --section "Release process" --entry README.md --format json
-claude-cli md context --target src/cli.ts --include-backlinks
+cairn md context docs/architecture.md --depth 2 --budget 24000
+cairn md context --section "Release process" --entry README.md --format json
+cairn md context --target src/cli.ts --include-backlinks
 ```
 
 Turn the existing AST, graph, section extraction, backlinks, and workspace index into

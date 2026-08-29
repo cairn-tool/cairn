@@ -3,8 +3,8 @@
 ## Synopsis
 
 ```text
-claude-cli md diff <a> <b> [options]
-claude-cli md diff --since <revision> [directory] [options]
+cairn md diff <a> <b> [options]
+cairn md diff --since <revision> [directory] [options]
 ```
 
 Summarizes Markdown changes by structure rather than by text: headings added, removed, moved,

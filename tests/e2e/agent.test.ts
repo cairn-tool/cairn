@@ -199,7 +199,7 @@ describe("agent CLI", () => {
     // Truthful about the run, unlike the in-tree artifact which describes a tree.
     expect(dryReport.dryRun).toBe(true);
     expect(dryReport.command).toBe("convert");
-    expect(dryReport.generator.name).toBe("@bstockus/claude-cli");
+    expect(dryReport.generator.name).toBe("@bstockus/cairn");
     expect(dryReport.targetProfiles["claude-code"]).toBeDefined();
     // Never listed among the artifacts, whose paths are output-root relative.
     expect(dryReport.artifacts.some((a: { path: string }) => a.path.includes("reports"))).toBe(
@@ -1358,7 +1358,7 @@ describe("agent install", () => {
     expect(payload.install.installs[0].layout).toBe("plugin-dir");
     const dest = payload.install.installs[0].destination as string;
     expect(dest.startsWith(home)).toBe(true);
-    expect(fs.existsSync(path.join(dest, ".claude-cli-install.json"))).toBe(true);
+    expect(fs.existsSync(path.join(dest, ".cairn-install.json"))).toBe(true);
 
     const listed = await runHome(home, "agent", "installed", "--target", "cursor", "-fj");
     expect(listed.exitCode).toBe(0);

@@ -8,7 +8,7 @@ import { Workspace } from "../../src/workspace.js";
 
 let directory: string;
 beforeEach(() => {
-  directory = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-graph-"));
+  directory = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-graph-"));
 });
 afterEach(() => {
   fs.rmSync(directory, { recursive: true, force: true });

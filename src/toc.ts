@@ -6,8 +6,21 @@ import {
   type MdHeading,
 } from "./markdown-ast.js";
 
-export const TOC_START = "<!-- claude-cli:toc:start -->";
-export const TOC_END = "<!-- claude-cli:toc:end -->";
+export const TOC_START = "<!-- cairn:toc:start -->";
+export const TOC_END = "<!-- cairn:toc:end -->";
+
+/**
+ * The pre-rename markers, still recognized so documents already carrying them
+ * keep synchronizing.
+ *
+ * A found pair keeps its own spelling: `synchronizeToc` only ever rewrites the
+ * interior between the markers, never the markers themselves. Migrating them on
+ * `--write` would report every legacy document as stale for a change that alters
+ * no table of contents, so the two spellings are equal forever and only an
+ * inserted pair uses the current one.
+ */
+export const LEGACY_TOC_START = "<!-- claude-cli:toc:start -->";
+export const LEGACY_TOC_END = "<!-- claude-cli:toc:end -->";
 
 export function renderToc(headings: MdHeading[], ordered = false): string {
   if (!headings.length) return "";
@@ -75,19 +88,32 @@ export function synchronizeToc(
   const outsideFence = (match: RegExpExecArray | RegExpMatchArray): boolean =>
     !isLineInCodeBlock(lineOf(content, match.index!), [...fenced]);
 
-  const starts = [...content.matchAll(new RegExp(TOC_START, "g"))].filter(outsideFence);
-  const ends = [...content.matchAll(new RegExp(TOC_END, "g"))].filter(outsideFence);
+  const matches = (marker: string): RegExpExecArray[] =>
+    [...content.matchAll(new RegExp(marker, "g"))].filter(outsideFence) as RegExpExecArray[];
+
+  const starts = [...matches(TOC_START), ...matches(LEGACY_TOC_START)];
+  const ends = [...matches(TOC_END), ...matches(LEGACY_TOC_END)];
   if (!starts.length && !ends.length) return { status: "missing" };
   if (starts.length !== 1 || ends.length !== 1)
     return { status: "malformed", message: "Expected exactly one TOC marker pair" };
-  const startEnd = starts[0].index! + TOC_START.length;
+
+  // Both spellings are read, but a pair may not mix them: the two halves of one
+  // block always came from the same writer, so a mixed pair is a hand edit that
+  // silently lost half a rename rather than something to guess at.
+  const legacy = starts[0][0] === LEGACY_TOC_START;
+  if (legacy !== (ends[0][0] === LEGACY_TOC_END))
+    return { status: "malformed", message: "TOC start and end markers use different spellings" };
+  const startMarker = legacy ? LEGACY_TOC_START : TOC_START;
+  const endMarker = legacy ? LEGACY_TOC_END : TOC_END;
+
+  const startEnd = starts[0].index! + startMarker.length;
   const endStart = ends[0].index!;
   if (endStart < startEnd)
     return { status: "malformed", message: "TOC end marker appears before start marker" };
   const eol = content.includes("\r\n") ? "\r\n" : "\n";
   const normalizedToc = toc.replace(/\r?\n/g, eol);
   const interior = `${eol}${normalizedToc}${normalizedToc ? eol : ""}`;
-  const block = `${TOC_START}${interior}${TOC_END}`;
+  const block = `${startMarker}${interior}${endMarker}`;
   const range = { start: startEnd, end: endStart };
   if (content.slice(startEnd, endStart) === interior)
     return { status: "current", content, block, range };

@@ -40,7 +40,7 @@ review's original priority summary, so priority and status cannot drift apart.
 
 ## Product Reading
 
-`claude-cli` has grown into two related products behind one deterministic, local CLI:
+`cairn` has grown into two related products behind one deterministic, local CLI:
 
 1. A Markdown workspace engine for humans, coding agents, and CI. It parses documents,
    validates content, builds a persistent index and link graph, answers structured queries,
@@ -101,7 +101,7 @@ These do not need to become major roadmap items.
 
 **Still open:**
 
-- Add a neutral binary alias in a future major packaging pass while retaining `claude-cli` for
+- Add a neutral binary alias in a future major packaging pass while retaining `cairn` for
   compatibility; the current name understates the agent-agnostic positioning.
 
 ## Suggested Delivery Sequence

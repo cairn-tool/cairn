@@ -44,8 +44,8 @@ export function sarifDocument(
         {
           tool: {
             driver: {
-              name: "claude-cli",
-              informationUri: "https://github.com/bstockus/claude-cli",
+              name: "cairn",
+              informationUri: "https://github.com/bstockus/cairn",
               rules,
             },
           },

@@ -25,7 +25,7 @@ export function getUrlCachePath(
 ): string {
   const configured = env.XDG_CACHE_HOME?.trim();
   const base = configured ? configured : path.join(homedir, ".cache");
-  return path.join(base, "claude-cli", "url-checks.json");
+  return path.join(base, "cairn", "url-checks.json");
 }
 
 export function urlCacheKey(

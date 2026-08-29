@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { parseScriptsBlock } from "../../src/scripts/registry.js";
 
-const CONTEXT = { file: "/repo/.claude-cli.yml", directory: "/repo" };
+const CONTEXT = { file: "/repo/.cairn.yml", directory: "/repo" };
 
 function parse(yaml: string) {
   const document = parseYaml(yaml) as { scripts?: unknown };

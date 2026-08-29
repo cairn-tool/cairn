@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli usage index [options]
+cairn usage index [options]
 ```
 
 Shows, rebuilds, or clears the scan cache.
@@ -19,7 +19,7 @@ Shows, rebuilds, or clears the scan cache.
 ## The cache
 
 Each transcript is reduced once and stored under
-`$XDG_CACHE_HOME/claude-cli/usage/<provider>/`, one shard per project. The key is each file's
+`$XDG_CACHE_HOME/cairn/usage/<provider>/`, one shard per project. The key is each file's
 path, size, and modification time, so an unchanged transcript is never reopened.
 
 With no flag this reports where the cache is, how many shards and transcripts it holds, its

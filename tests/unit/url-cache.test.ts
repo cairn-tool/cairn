@@ -8,7 +8,7 @@ let directory: string;
 let cachePath: string;
 
 beforeEach(() => {
-  directory = fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-url-cache-"));
+  directory = fs.mkdtempSync(path.join(os.tmpdir(), "cairn-url-cache-"));
   cachePath = path.join(directory, "cache.json");
 });
 

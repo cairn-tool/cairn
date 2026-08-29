@@ -12,9 +12,9 @@ where the implementation diverged, the command's own documentation is authoritat
 **Command sketch:**
 
 ```text
-claude-cli md fix docs --check
-claude-cli md fix docs --dry-run --rule toc --rule redirects
-claude-cli md fix docs --write --rule relative-links
+cairn md fix docs --check
+cairn md fix docs --dry-run --rule toc --rule redirects
+cairn md fix docs --write --rule relative-links
 ```
 
 Several existing commands already know how to calculate safe edits. Extract their planning,

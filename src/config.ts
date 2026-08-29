@@ -414,14 +414,35 @@ export function selectRoot(argv: readonly string[], cwd: string = process.cwd())
   return path.resolve(cwd);
 }
 
-/** The one configuration filename, shared with the `scripts` chain walk. */
-export const CONFIG_FILENAME = ".claude-cli.yml";
+/** The configuration filename this tool writes and documents. */
+export const CONFIG_FILENAME = ".cairn.yml";
+
+/** The pre-rename filename, still read so existing workspaces keep working. */
+export const LEGACY_CONFIG_FILENAME = ".claude-cli.yml";
+
+/**
+ * Discovery order within one directory, shared with the `scripts` chain walk.
+ *
+ * First match wins, so a directory holding both files contributes exactly one
+ * registry. Walking the whole array per directory before ascending is what
+ * keeps a nested `.cairn.yml` from being shadowed by a legacy file higher up.
+ */
+export const CONFIG_FILENAMES = [CONFIG_FILENAME, LEGACY_CONFIG_FILENAME] as const;
+
+/** The configuration file in `directory`, preferring the current filename. */
+export function configIn(directory: string): string | undefined {
+  for (const name of CONFIG_FILENAMES) {
+    const candidate = path.join(directory, name);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return undefined;
+}
 
 export function findConfig(start: string = process.cwd()): string | undefined {
   let current = path.resolve(start);
   while (true) {
-    const candidate = path.join(current, CONFIG_FILENAME);
-    if (fs.existsSync(candidate)) return candidate;
+    const candidate = configIn(current);
+    if (candidate) return candidate;
     const parent = path.dirname(current);
     if (parent === current) return undefined;
     current = parent;

@@ -3,7 +3,15 @@ import path from "node:path";
 import type { Issue } from "./types.js";
 
 /** The discriminator every document this module writes carries. */
-export const BASELINE_FORMAT = "claude-cli-md-audit-baseline";
+export const BASELINE_FORMAT = "cairn-md-audit-baseline";
+
+/** The pre-rename discriminator, still accepted on committed baselines. */
+export const LEGACY_BASELINE_FORMAT = "claude-cli-md-audit-baseline";
+
+/** True for a document either spelling of this tool wrote. */
+export function isBaselineFormat(value: unknown): boolean {
+  return value === BASELINE_FORMAT || value === LEGACY_BASELINE_FORMAT;
+}
 
 /** The structure version of the baseline document, not the package version. */
 export const BASELINE_VERSION = "1";
@@ -122,7 +130,7 @@ export function applyBaseline(
   document: BaselineDocument,
   root: string,
 ): BaselineApplication {
-  if (document.baselineFormat !== BASELINE_FORMAT)
+  if (!isBaselineFormat(document.baselineFormat))
     return { kept: [...findings], suppressed: 0, matched: 0, stale: [], foreign: true };
 
   const remaining = new Map<string, number>();

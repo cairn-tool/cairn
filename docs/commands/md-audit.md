@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md audit [directory] [options]
+cairn md audit [directory] [options]
 ```
 
 Runs a bounded workspace audit combining enabled lint, external URL, frontmatter, graph,
@@ -69,8 +69,8 @@ That makes it possible to adopt a check on a large existing workspace without ei
 flag-day cleanup or a permanently red build.
 
 ```bash
-claude-cli md audit docs --write-baseline .audit-baseline.json   # record, exit 0
-claude-cli md audit docs --baseline .audit-baseline.json         # exit 2 on regressions only
+cairn md audit docs --write-baseline .audit-baseline.json   # record, exit 0
+cairn md audit docs --baseline .audit-baseline.json         # exit 2 on regressions only
 ```
 
 Recording is deliberately a separate act from checking, and the two flags cannot be combined:
@@ -103,7 +103,7 @@ A `stale` entry means the finding it recorded no longer occurs, which is usually
 reported in the payload and in the text output but **never** changes the exit code; prune it
 by re-running `--write-baseline`.
 
-A document that is not a `claude-cli-md-audit-baseline` becomes a `baseline` **finding** rather
+A document that is not a `cairn-md-audit-baseline` becomes a `baseline` **finding** rather
 than a silent no-op or a crash, because trusting another tool's schema would produce
 suppression nobody can verify. A missing or unparseable file exits `1`.
 

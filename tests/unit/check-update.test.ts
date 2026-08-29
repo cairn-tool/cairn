@@ -5,7 +5,7 @@ import path from "node:path";
 import { checkUpdateAction } from "../../src/commands/update-check.js";
 import { readCache } from "../../src/update-notifier.js";
 
-const PKG = "@bstockus/claude-cli";
+const PKG = "@bstockus/cairn";
 
 let tmpDir: string;
 let cachePath: string;

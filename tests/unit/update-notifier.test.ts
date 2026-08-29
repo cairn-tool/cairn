@@ -25,7 +25,7 @@ let cachePath: string;
 
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "update-notifier-"));
-  cachePath = path.join(tmpDir, "claude-cli", "update-check.json");
+  cachePath = path.join(tmpDir, "cairn", "update-check.json");
 });
 
 afterEach(() => {
@@ -35,17 +35,17 @@ afterEach(() => {
 describe("getCachePath", () => {
   it("honours XDG_CACHE_HOME", () => {
     const p = getCachePath({ XDG_CACHE_HOME: "/xdg" }, "/home/u");
-    expect(p).toBe(path.join("/xdg", "claude-cli", "update-check.json"));
+    expect(p).toBe(path.join("/xdg", "cairn", "update-check.json"));
   });
 
   it("falls back to ~/.cache", () => {
     const p = getCachePath({}, "/home/u");
-    expect(p).toBe(path.join("/home/u", ".cache", "claude-cli", "update-check.json"));
+    expect(p).toBe(path.join("/home/u", ".cache", "cairn", "update-check.json"));
   });
 
   it("ignores an empty XDG_CACHE_HOME", () => {
     const p = getCachePath({ XDG_CACHE_HOME: "   " }, "/home/u");
-    expect(p).toBe(path.join("/home/u", ".cache", "claude-cli", "update-check.json"));
+    expect(p).toBe(path.join("/home/u", ".cache", "cairn", "update-check.json"));
   });
 });
 
@@ -173,7 +173,7 @@ describe("isNotifierAllowed", () => {
   });
 
   it("is suppressed by the opt-out variable", () => {
-    expect(isNotifierAllowed({ ...allowedCtx, env: { CLAUDE_CLI_NO_UPDATE_NOTIFIER: "1" } })).toBe(
+    expect(isNotifierAllowed({ ...allowedCtx, env: { CAIRN_NO_UPDATE_NOTIFIER: "1" } })).toBe(
       false,
     );
   });
@@ -189,7 +189,7 @@ describe("isNotifierAllowed", () => {
   it("stays quiet for the contract discovery commands", () => {
     expect(isNotifierAllowed({ ...allowedCtx, argv: ["describe"] })).toBe(false);
     expect(isNotifierAllowed({ ...allowedCtx, argv: ["schema", "md-graph"] })).toBe(false);
-    // `eval "$(claude-cli completion zsh)"` runs from an interactive rc file,
+    // `eval "$(cairn completion zsh)"` runs from an interactive rc file,
     // where stderr is a TTY — the notice would print on every shell start.
     expect(isNotifierAllowed({ ...allowedCtx, argv: ["completion", "zsh"] })).toBe(false);
   });
@@ -206,9 +206,9 @@ describe("isNotifierAllowed", () => {
     // NOTIFIER_CONTRACT is what `describe` reports to consumers, so each listed
     // condition must actually suppress the notice.
     const cases: Record<string, Parameters<typeof isNotifierAllowed>[0]> = {
-      "CLAUDE_CLI_NO_UPDATE_NOTIFIER=1": {
+      "CAIRN_NO_UPDATE_NOTIFIER=1": {
         ...allowedCtx,
-        env: { CLAUDE_CLI_NO_UPDATE_NOTIFIER: "1" },
+        env: { CAIRN_NO_UPDATE_NOTIFIER: "1" },
       },
       "CI is set": { ...allowedCtx, env: { CI: "true" } },
       "stderr is not a TTY": { ...allowedCtx, isTty: false },
@@ -302,9 +302,9 @@ describe("refresh lock", () => {
 
 describe("formatNotice", () => {
   it("names both versions and the install command", () => {
-    const notice = formatNotice("1.0.0", "1.1.0", "@bstockus/claude-cli");
+    const notice = formatNotice("1.0.0", "1.1.0", "@bstockus/cairn");
     expect(notice).toContain("1.0.0");
     expect(notice).toContain("1.1.0");
-    expect(notice).toContain("npm install -g @bstockus/claude-cli");
+    expect(notice).toContain("npm install -g @bstockus/cairn");
   });
 });

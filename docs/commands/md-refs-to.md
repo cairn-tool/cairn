@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md refs-to <file> [directory] [options]
+cairn md refs-to <file> [directory] [options]
 ```
 
 Searches selected Markdown documents for references to one target file. Relative link

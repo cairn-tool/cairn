@@ -3,10 +3,10 @@
 ## Synopsis
 
 ```text
-claude-cli scripts run <name> [-- args...] [options]
+cairn scripts run <name> [-- args...] [options]
 ```
 
-Runs a script declared under `scripts:` in a `.claude-cli.yml`, resolved by name rather than by
+Runs a script declared under `scripts:` in a `.cairn.yml`, resolved by name rather than by
 path. The name resolves the same from every directory in the repository, and the script runs
 with its working directory pinned to the registry that declared it — which is what lets a hook
 or a skill keep working after the calling process changes directory.
@@ -32,20 +32,20 @@ This is the only command in the tool that executes anything. See
 | `--no-config`     | —               | Disable discovery; every name then fails to resolve. |
 | `-h`, `--help`    | —               | Show help.                                           |
 
-`scripts` commands accept no `commands:` defaults in `.claude-cli.yml`. A checked-in
+`scripts` commands accept no `commands:` defaults in `.cairn.yml`. A checked-in
 configuration file may declare what a script _is_, but must never be able to change how it is
 invoked.
 
 ## Resolution
 
-Every `.claude-cli.yml` from the working directory up to the boundary is consulted, and the
+Every `.cairn.yml` from the working directory up to the boundary is consulted, and the
 nearest file that **defines the requested name** wins. A nested file that exists but does not
 declare the name does not shadow an ancestor that does, so per-package overrides work without
 a nested registry having to redeclare everything above it.
 
 The walk stops at the repository root, or at `--root` when it is deeper. Files under
 `node_modules` are skipped: nearest-wins is the feature, and a vendored package shipping its own
-`.claude-cli.yml` is where that would otherwise become a supply-chain hole.
+`.cairn.yml` is where that would otherwise become a supply-chain hole.
 
 Outside a Git repository there is no boundary to stop at, so `scripts run` refuses unless
 `--root` sets one explicitly. Without that rule the walk would fall back to the nearest
@@ -91,8 +91,8 @@ Arguments must follow a literal `--`, and everything after it is forwarded verba
 tokens that would otherwise be read as this command's own options:
 
 ```bash
-claude-cli scripts run lint-changed -- --since main
-claude-cli scripts run echo-args -- -fj      # the script receives -fj
+cairn scripts run lint-changed -- --since main
+cairn scripts run echo-args -- -fj      # the script receives -fj
 ```
 
 For `run`, the arguments are handed to the shell as separate `argv` entries and bound to `$1`…`$n`.
@@ -102,15 +102,15 @@ supplied is an error rather than a silent drop; add `"$@"` to forward them.
 
 ## The environment a script receives
 
-| Variable                     | Value                                       |
-| ---------------------------- | ------------------------------------------- |
-| `CLAUDE_CLI_SCRIPT_NAME`     | The resolved name.                          |
-| `CLAUDE_CLI_SCRIPT_ROOT`     | Directory of the registry that declared it. |
-| `CLAUDE_CLI_SCRIPT_REGISTRY` | The registry file itself.                   |
-| `CLAUDE_CLI_INVOKED_FROM`    | The directory the command was invoked from. |
+| Variable                | Value                                       |
+| ----------------------- | ------------------------------------------- |
+| `CAIRN_SCRIPT_NAME`     | The resolved name.                          |
+| `CAIRN_SCRIPT_ROOT`     | Directory of the registry that declared it. |
+| `CAIRN_SCRIPT_REGISTRY` | The registry file itself.                   |
+| `CAIRN_INVOKED_FROM`    | The directory the command was invoked from. |
 
-A script that genuinely needs the caller's location reads `CLAUDE_CLI_INVOKED_FROM` rather than
-`pwd`. A nested `claude-cli` also inherits `CLAUDE_CLI_NO_UPDATE_NOTIFIER=1`, so it cannot write
+A script that genuinely needs the caller's location reads `CAIRN_INVOKED_FROM` rather than
+`pwd`. A nested `cairn` also inherits `CAIRN_NO_UPDATE_NOTIFIER=1`, so it cannot write
 an update notice into output the calling hook is capturing.
 
 A script that re-enters `scripts run` on itself fails immediately, and nesting is refused past
@@ -122,7 +122,7 @@ variable.
 What makes executing acceptable here is that the command is declared by name in a tracked file
 inside the workspace, not discovered in content being analyzed. This is a resolver, not an
 evaluator. The registry is at the same trust level as a `Makefile` or a `package.json`
-`scripts` block: **anyone who can commit a `.claude-cli.yml` into your tree can already commit
+`scripts` block: **anyone who can commit a `.cairn.yml` into your tree can already commit
 a Git hook.** The boundary rule, the `node_modules` skip, and the containment checks narrow the
 blast radius; they do not make an untrusted tree safe to run in.
 
@@ -160,4 +160,4 @@ typo in `exec[0]` stays distinguishable from a legitimately failing test suite.
 - [`scripts which`](scripts-which.md) shows which registry would win, without running anything.
 - [`scripts list`](scripts-list.md) shows every name visible from the working directory.
 - [Project configuration](../configuration.md) documents the `scripts:` block alongside the
-  rest of `.claude-cli.yml`.
+  rest of `.cairn.yml`.

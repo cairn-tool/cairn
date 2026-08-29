@@ -13,9 +13,9 @@ implementation diverged, the command's own documentation is authoritative.
 **Command sketch:**
 
 ```text
-claude-cli agent import ./existing-plugin --from auto --output ./portable
-claude-cli agent import . --from cursor-project --output ./portable --dry-run
-claude-cli agent upgrade ./portable --to-schema 2 --check
+cairn agent import ./existing-plugin --from auto --output ./portable
+cairn agent import . --from cursor-project --output ./portable --dry-run
+cairn agent upgrade ./portable --to-schema 2 --check
 ```
 
 `convert` accepts a neutral bundle and a legacy Claude plugin, but there is no general path

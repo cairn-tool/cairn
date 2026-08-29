@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md fix <inputs...> [options]
+cairn md fix <inputs...> [options]
 ```
 
 Turns deterministic findings into reviewable edits. Every fixer produces a _plan_ — byte
@@ -37,7 +37,7 @@ Stdin is rejected because `md fix` writes and stdin has no path to write back to
 
 `--check`, `--dry-run`, and `--write` are mutually exclusive. **The mode cannot be set from
 project configuration**: `check`, `write`, and `dryRun` are deliberately absent from
-`commands.fix`, so a checked-in `.claude-cli.yml` can never turn `md fix` into a writer.
+`commands.fix`, so a checked-in `.cairn.yml` can never turn `md fix` into a writer.
 Setting one is a configuration error.
 
 ## Fixers
@@ -46,7 +46,7 @@ Setting one is a configuration error.
 | ---------------- | ------- | -------------------------------------------------------------------------- |
 | `markdownlint`   | Yes     | Applies markdownlint's own fix for a fixed allowlist of unambiguous rules. |
 | `relative-links` | Yes     | Normalizes a local link's path without changing what it points at.         |
-| `toc`            | Yes     | Replaces the content between an existing `claude-cli:toc` marker pair.     |
+| `toc`            | Yes     | Replaces the content between an existing `cairn:toc` marker pair.          |
 | `snippets`       | **No**  | Refreshes a fenced block from the source region its info string declares.  |
 
 A rule that is not a default runs only when named with `--rule`. `snippets` is the only one
@@ -56,7 +56,7 @@ arbitrary source files.
 
 ### `snippets`
 
-Refreshes fences carrying a `claude-cli:snippet=<path>[#<region>]` attribute, and nothing else.
+Refreshes fences carrying a `cairn:snippet=<path>[#<region>]` attribute, and nothing else.
 The syntax, the comparison rule, and the cases where a fence cannot accept its refreshed body
 are documented on the [`md check-snippets`](md-check-snippets.md) page, which shares this
 engine and reports the same conditions with its own exit rule.
@@ -130,9 +130,9 @@ special case.
 
 Conflicts are reported with **both** rule names so it is clear which `--rule` to leave out.
 
-The containment root is the configured workspace root when a `.claude-cli.yml` exists.
+The containment root is the configured workspace root when a `.cairn.yml` exists.
 Without one it is the directory containing the selected inputs, so
-`claude-cli md fix /elsewhere/docs` works from anywhere while a fixer still cannot emit an
+`cairn md fix /elsewhere/docs` works from anywhere while a fixer still cannot emit an
 edit reaching beyond what was selected.
 
 Before writing, every file is rechecked and every `expected` re-verified. A stale input

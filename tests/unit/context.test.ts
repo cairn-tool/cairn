@@ -35,7 +35,7 @@ function pack(
 }
 
 beforeEach(() => {
-  tmpDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "claude-cli-context-")));
+  tmpDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "cairn-context-")));
   workspace = new Workspace(loadConfig({ disabled: true }, tmpDir));
 });
 

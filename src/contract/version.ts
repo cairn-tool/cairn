@@ -6,16 +6,16 @@
  * Individual payload schemas are versioned separately by the major in their
  * `$id` path, so a breaking change to one command's output does not bump this.
  */
-export const CONTRACT_VERSION = "1";
+export const CONTRACT_VERSION = "2";
 
-export const SCHEMA_BASE = "https://github.com/bstockus/claude-cli/schema";
+export const SCHEMA_BASE = "https://github.com/bstockus/cairn/schema";
 
 /** Major version segment of a schema id path. */
 export type SchemaMajor = "v1";
 
 /**
  * Builds a schema `$id`. These are identifiers, not fetchable URLs — retrieve a
- * schema with `claude-cli schema <id>`. Ajv resolves by registered `$id` and
+ * schema with `cairn schema <id>`. Ajv resolves by registered `$id` and
  * never performs network access, so this is correct JSON Schema usage.
  */
 export function schemaUri(major: SchemaMajor, id: string): string {

@@ -3,13 +3,13 @@
 ## Synopsis
 
 ```text
-claude-cli md check-snippets [inputs...] [options]
+cairn md check-snippets [inputs...] [options]
 ```
 
 Compares fenced code blocks against the source files and regions they declare, and optionally
 refreshes them. A snippet is **never executed** — the source file is only read.
 
-Only fences whose info string carries a `claude-cli:snippet=` attribute are considered. Every
+Only fences whose info string carries a `cairn:snippet=` attribute are considered. Every
 other fence costs one substring test and is absent from the payload.
 
 ## Arguments
@@ -45,19 +45,19 @@ else, because `--write` copies the contents of source files into tracked documen
 Put the attribute in the fence info string, after the language:
 
 ````text
-```ts claude-cli:snippet=src/toc.ts#render
+```ts cairn:snippet=src/toc.ts#render
 export function renderToc(headings: MdHeading[], ordered = false): string {
   ...
 }
 ```
 ````
 
-| Form                                   | Selects                                                |
-| -------------------------------------- | ------------------------------------------------------ |
-| `claude-cli:snippet=src/a.ts#render`   | The region named `render` in `src/a.ts`.               |
-| `claude-cli:snippet=.markdownlintrc`   | The whole file.                                        |
-| `claude-cli:snippet=/src/a.ts#render`  | Workspace-root-relative rather than document-relative. |
-| `claude-cli:snippet="src/my dir/a.ts"` | A path containing a space.                             |
+| Form                              | Selects                                                |
+| --------------------------------- | ------------------------------------------------------ |
+| `cairn:snippet=src/a.ts#render`   | The region named `render` in `src/a.ts`.               |
+| `cairn:snippet=.markdownlintrc`   | The whole file.                                        |
+| `cairn:snippet=/src/a.ts#render`  | Workspace-root-relative rather than document-relative. |
+| `cairn:snippet="src/my dir/a.ts"` | A path containing a space.                             |
 
 An unquoted value ends at the first space, so other attributes in the same info string —
 `title=`, a Prism line range — are left alone and are never rewritten. A region name is
@@ -73,15 +73,15 @@ In the source file, mark the region with a comment. The marker is matched inside
 the comment leader does not matter and anything after the name on the line is ignored:
 
 ```ts
-// claude-cli:snippet:start render
+// cairn:snippet:start render
 export function renderToc(...) { ... }
-// claude-cli:snippet:end render
+// cairn:snippet:end render
 ```
 
 ```python
-# claude-cli:snippet:start render
+# cairn:snippet:start render
 def render(): ...
-# claude-cli:snippet:end render
+# cairn:snippet:end render
 ```
 
 The end marker names its region, which is what lets regions nest or overlap freely: pairing is
@@ -169,10 +169,10 @@ wrong documentation. Drift alone only fails the modes that are not about to corr
 
 The same engine backs two other commands:
 
-- `claude-cli md fix --rule snippets` plans the refresh as ordinary fix edits. It is **opt-in**:
+- `cairn md fix --rule snippets` plans the refresh as ordinary fix edits. It is **opt-in**:
   a bare `md fix` runs every default fixer, and that broadly-run command must not silently
   acquire the reach to read arbitrary source files.
-- `claude-cli md audit` reports drift under the `snippets/drift`, `snippets/source`,
+- `cairn md audit` reports drift under the `snippets/drift`, `snippets/source`,
   `snippets/region`, and `snippets/meta` checkers. On by default, and free for a workspace with
   no linked fence. Messages carry no line number and no absolute path, so `--baseline` entries
   stay portable.

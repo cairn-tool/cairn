@@ -89,7 +89,7 @@ describe("buildDescription", () => {
     const described = result();
     expect(described.tool).toEqual({ name: "tool", version: "9.9.9" });
     expect(described.formatShorthands["-fj"]).toBe("--format=json");
-    expect(described.machineStreams.optOutEnv).toBe("CLAUDE_CLI_NO_UPDATE_NOTIFIER");
+    expect(described.machineStreams.optOutEnv).toBe("CAIRN_NO_UPDATE_NOTIFIER");
     expect(described.machineStreams.suppressedWhen.length).toBeGreaterThan(0);
   });
 

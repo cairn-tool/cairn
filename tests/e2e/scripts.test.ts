@@ -33,7 +33,7 @@ function workspace(registry: string, nested = "pkg/deep"): { root: string; deep:
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "scripts-e2e-")));
   temporary.push(root);
   execFileSync("git", ["init", "-q", root]);
-  fs.writeFileSync(path.join(root, ".claude-cli.yml"), registry);
+  fs.writeFileSync(path.join(root, ".cairn.yml"), registry);
   const deep = path.join(root, nested);
   fs.mkdirSync(deep, { recursive: true });
   return { root, deep };
@@ -130,7 +130,7 @@ describe("scripts run", () => {
   it("refuses to run outside a Git repository unless --root is given", async () => {
     const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "scripts-norepo-")));
     temporary.push(root);
-    fs.writeFileSync(path.join(root, ".claude-cli.yml"), REGISTRY);
+    fs.writeFileSync(path.join(root, ".cairn.yml"), REGISTRY);
 
     const refused = await run(root, "scripts", "run", "where");
     expect(refused.code).toBe(1);
@@ -154,20 +154,20 @@ describe("scripts which", () => {
     const { root, deep } = workspace(REGISTRY);
     const result = await run(deep, "scripts", "which", "where");
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain(path.join(root, ".claude-cli.yml"));
+    expect(result.stdout).toContain(path.join(root, ".cairn.yml"));
   });
 
   it("reports the shadowed definition a nested registry hides", async () => {
     const { root, deep } = workspace(REGISTRY);
     fs.writeFileSync(
-      path.join(root, "pkg", ".claude-cli.yml"),
+      path.join(root, "pkg", ".cairn.yml"),
       "version: 1\nscripts:\n  where:\n    run: echo nested\n",
     );
     const result = await run(deep, "scripts", "which", "where", "-fj");
     const payload = JSON.parse(result.stdout);
-    expect(payload.registry).toBe(path.join(root, "pkg", ".claude-cli.yml"));
+    expect(payload.registry).toBe(path.join(root, "pkg", ".cairn.yml"));
     expect(payload.shadowed.map((entry: { file: string }) => entry.file)).toEqual([
-      path.join(root, ".claude-cli.yml"),
+      path.join(root, ".cairn.yml"),
     ]);
     validate("script-which", payload);
   });
@@ -187,7 +187,7 @@ describe("scripts list", () => {
   it("lists every visible name with nearest-wins applied", async () => {
     const { root, deep } = workspace(REGISTRY);
     fs.writeFileSync(
-      path.join(root, "pkg", ".claude-cli.yml"),
+      path.join(root, "pkg", ".cairn.yml"),
       "version: 1\nscripts:\n  where:\n    run: echo nested\n",
     );
     const result = await run(deep, "scripts", "list", "-fj");
@@ -200,14 +200,14 @@ describe("scripts list", () => {
       "where",
     ]);
     const where = payload.scripts.find((entry: { name: string }) => entry.name === "where");
-    expect(where.file).toBe(path.join(root, "pkg", ".claude-cli.yml"));
-    expect(where.shadows).toEqual([path.join(root, ".claude-cli.yml")]);
+    expect(where.file).toBe(path.join(root, "pkg", ".cairn.yml"));
+    expect(where.shadows).toEqual([path.join(root, ".cairn.yml")]);
     validate("script-list", payload);
   });
 
   it("reports an unreadable configuration file and exits 2", async () => {
     const { root, deep } = workspace(REGISTRY);
-    fs.writeFileSync(path.join(root, "pkg", ".claude-cli.yml"), "scripts:\n  a:\n    run: [oops\n");
+    fs.writeFileSync(path.join(root, "pkg", ".cairn.yml"), "scripts:\n  a:\n    run: [oops\n");
     const result = await run(deep, "scripts", "list", "-fj");
     expect(result.code).toBe(2);
     const payload = JSON.parse(result.stderr);

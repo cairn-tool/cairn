@@ -3,7 +3,7 @@
 ## Synopsis
 
 ```text
-claude-cli md rename-heading <file> <old-heading> <new-heading> [options]
+cairn md rename-heading <file> <old-heading> <new-heading> [options]
 ```
 
 Renames one heading and updates internal anchor references that resolve to it. References in

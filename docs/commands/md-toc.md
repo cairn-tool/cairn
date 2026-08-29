@@ -3,15 +3,15 @@
 ## Synopsis
 
 ```text
-claude-cli md toc <file> [options]
+cairn md toc <file> [options]
 ```
 
 Generates a Markdown list from headings using GitHub-compatible anchors. It can also check,
 preview, or update a generated block delimited by exactly one ordered marker pair:
 
 ```markdown
-<!-- claude-cli:toc:start -->
-<!-- claude-cli:toc:end -->
+<!-- cairn:toc:start -->
+<!-- cairn:toc:end -->
 ```
 
 ## Arguments
