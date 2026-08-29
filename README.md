@@ -1192,10 +1192,12 @@ being analyzed — the registry sits at the same trust level as a `Makefile`. Se
 
 ### Usage reporting
 
-Claude Code leaves a structured record of every session on disk. The `usage` toolset reads those
-transcripts and reports on them — tokens, tools, skills, subagents, hooks, slash commands — so
-"where is my context actually going" is a question with an answer. Nothing is sent anywhere, and
-nothing outside the scan cache is written.
+Coding assistants leave a structured record of every session on disk. The `usage` toolset reads
+those transcripts and reports on them — tokens, tools, skills, subagents, hooks, slash commands —
+so "where is my context actually going" is a question with an answer. Nothing is sent anywhere,
+and nothing outside the scan cache is written.
+
+Three log sources are registered: **Claude Code**, **Codex CLI**, and **Antigravity CLI**.
 
 ```bash
 claude-cli usage summary                        # headline totals across every project
@@ -1205,6 +1207,11 @@ claude-cli usage tools --by server --kind mcp   # which MCP servers get used
 claude-cli usage sessions --sort tokens --top 10
 claude-cli usage agents                         # what delegation really costs
 claude-cli usage hooks                          # hook latency and failures
+
+claude-cli usage providers                      # what is registered, and what each records
+claude-cli usage summary --provider codex
+claude-cli usage summary --provider all         # every assistant, merged
+claude-cli usage tokens --by provider --provider all
 ```
 
 Two things make the numbers trustworthy, and both are easy to get wrong. One API response is
@@ -1220,9 +1227,9 @@ modification time. Transcripts are append-only, so only files that grew are ever
 first scan of a multi-gigabyte corpus takes tens of seconds and every later one is immediate.
 `usage index` inspects, rebuilds, or clears that cache.
 
-`--provider` selects the log source and `usage providers` lists what is registered. What a
-provider can answer is data it declares rather than a branch in the reports, so a second
-assistant's logs are one new module away from joining the same subcommands.
+`--provider` selects the log source and `--provider all` merges every one present on the machine.
+What a provider can answer is data it declares rather than a branch in the reports, so a further
+assistant's logs are one new module and one registry line away from joining the same subcommands.
 
 See [shared usage command behavior](docs/commands/usage-common.md) for the full option set, the
 time-window and project-selection rules, and what the totals do and do not cover.

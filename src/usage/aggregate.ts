@@ -7,6 +7,7 @@ import {
   classifyTool,
   emptyBucket,
   emptyTokens,
+  sessionKey,
   totalTokens,
 } from "./events.js";
 
@@ -18,13 +19,30 @@ import {
  * nothing formats anything — that is `src/commands/usage.ts`.
  */
 
-export const TOKEN_DIMENSIONS = ["model", "day", "week", "month", "project", "session"] as const;
+export const TOKEN_DIMENSIONS = [
+  "model",
+  "day",
+  "week",
+  "month",
+  "project",
+  "session",
+  "provider",
+] as const;
 export type TokenDimension = (typeof TOKEN_DIMENSIONS)[number];
 
-export const TOOL_DIMENSIONS = ["name", "kind", "server", "day", "session"] as const;
+export const TOOL_DIMENSIONS = ["name", "kind", "server", "day", "session", "provider"] as const;
 export type ToolDimension = (typeof TOOL_DIMENSIONS)[number];
 
 export const SESSION_SORTS = ["recent", "tokens", "tools", "duration"] as const;
+
+/**
+ * How `usage agents` groups.
+ *
+ * `role` is the reusable agent type, which is what `agentType` means for every
+ * provider. `path` is the task-specific identifier, which only some record.
+ */
+export const AGENT_DIMENSIONS = ["role", "path"] as const;
+export type AgentDimension = (typeof AGENT_DIMENSIONS)[number];
 export type SessionSort = (typeof SESSION_SORTS)[number];
 
 /**
@@ -37,6 +55,8 @@ export type SessionSort = (typeof SESSION_SORTS)[number];
  */
 export interface RollupRow {
   key: string;
+  /** Which provider a row came from, where a row belongs to exactly one. */
+  provider?: string;
   count: number;
   tokens?: TokenTotals;
   sessions?: number;
@@ -162,7 +182,7 @@ export function summarize(files: readonly FileAggregate[]): UsageSummary {
   let subagentTranscripts = 0;
 
   for (const file of files) {
-    sessions.add(file.sessionId);
+    sessions.add(sessionKey(file));
     if (file.project) projects.add(file.project);
     if (file.kind === "subagent") subagentTranscripts += 1;
     for (const [day, bucket] of Object.entries(file.days)) {
@@ -246,7 +266,9 @@ export function rollupTokens(
       case "project":
         return file.project || "(unknown)";
       case "session":
-        return file.sessionId;
+        return sessionKey(file);
+      case "provider":
+        return file.provider;
     }
   };
 
@@ -258,7 +280,7 @@ export function rollupTokens(
         row.count += totals.requests;
         addTokens(rows.tokensOf(key), totals);
         const sessions = seen.get(key) ?? new Set<string>();
-        sessions.add(file.sessionId);
+        sessions.add(sessionKey(file));
         seen.set(key, sessions);
       }
     }
@@ -300,7 +322,10 @@ export function rollupTools(
             key = day;
             break;
           case "session":
-            key = file.sessionId;
+            key = sessionKey(file);
+            break;
+          case "provider":
+            key = file.provider;
             break;
         }
         const row = rows.get(key);
@@ -325,10 +350,20 @@ export function rollupSessions(
   const models = new Map<string, Set<string>>();
 
   for (const file of files) {
-    let row = rows.get(file.sessionId);
+    // Grouped by the provider-qualified id, but shown by the bare one: the
+    // qualifier exists to stop two providers' sessions merging, not to be read.
+    const key = sessionKey(file);
+    let row = rows.get(key);
     if (!row) {
-      row = { key: file.sessionId, count: 0, tokens: emptyTokens(), toolCalls: 0, subagents: 0 };
-      rows.set(file.sessionId, row);
+      row = {
+        key: file.sessionId,
+        provider: file.provider,
+        count: 0,
+        tokens: emptyTokens(),
+        toolCalls: 0,
+        subagents: 0,
+      };
+      rows.set(key, row);
     }
     // Identity comes from the main transcript; a subagent file inherits the
     // parent's cwd but carries no title of its own.
@@ -343,7 +378,7 @@ export function rollupSessions(
     if (file.firstTs && (!row.firstTs || file.firstTs < row.firstTs)) row.firstTs = file.firstTs;
     if (file.lastTs && (!row.lastTs || file.lastTs > row.lastTs)) row.lastTs = file.lastTs;
 
-    const names = models.get(file.sessionId) ?? new Set<string>();
+    const names = models.get(key) ?? new Set<string>();
     for (const bucket of Object.values(file.days)) {
       const tokens = bucketTokens(bucket);
       addTokens(row.tokens!, tokens);
@@ -352,12 +387,14 @@ export function rollupSessions(
       row.prompts = (row.prompts ?? 0) + bucket.prompts;
       for (const model of Object.keys(bucket.models)) names.add(model);
     }
-    models.set(file.sessionId, names);
+    models.set(key, names);
   }
 
   const values = [...rows.values()];
   for (const row of values) {
-    row.models = [...(models.get(row.key) ?? [])].sort(byKey);
+    row.models = [
+      ...(models.get(sessionKey({ provider: row.provider!, sessionId: row.key })) ?? []),
+    ].sort(byKey);
     if (row.firstTs && row.lastTs) {
       row.durationMs = Math.max(0, Date.parse(row.lastTs) - Date.parse(row.firstTs));
     }
@@ -415,7 +452,7 @@ export function rollupSkills(files: readonly FileAggregate[]): RollupRow[] {
       for (const [name, calls] of Object.entries(bucket.skills)) {
         rows.get(name).count += calls;
         const seen = sessions.get(name) ?? new Set<string>();
-        seen.add(file.sessionId);
+        seen.add(sessionKey(file));
         sessions.set(name, seen);
       }
     }
@@ -431,21 +468,31 @@ export function rollupSkills(files: readonly FileAggregate[]): RollupRow[] {
  * subagent transcripts themselves, because the parent's `toolUseResult` records
  * only the subagent's final message and understates real spend several-fold.
  */
-export function rollupAgents(files: readonly FileAggregate[]): RollupRow[] {
+export function rollupAgents(
+  files: readonly FileAggregate[],
+  dimension: AgentDimension = "role",
+): RollupRow[] {
   const rows = new Rows();
   const transcripts = new Map<string, number>();
 
   for (const file of files) {
-    for (const bucket of Object.values(file.days)) {
-      for (const [type, totals] of Object.entries(bucket.agents)) {
-        const row = rows.get(type);
-        row.count += totals.count;
+    // Spawn counts come from the parent's tool calls, which name the agent by
+    // its type. There is no per-path spawn record, so under `--by path` the
+    // transcript count is the spawn count.
+    if (dimension === "role") {
+      for (const bucket of Object.values(file.days)) {
+        for (const [type, totals] of Object.entries(bucket.agents)) {
+          rows.get(type).count += totals.count;
+        }
       }
     }
     if (file.kind !== "subagent") continue;
-    const key = file.agentType ?? "(unrecorded)";
+
+    const named = dimension === "path" ? (file.agentPath ?? file.agentType) : file.agentType;
+    const key = named ?? "(unrecorded)";
     const row = rows.get(key);
     transcripts.set(key, (transcripts.get(key) ?? 0) + 1);
+    if (dimension === "path") row.count += 1;
     if (typeof file.spawnDepth === "number") {
       row.maxDepth = Math.max(row.maxDepth ?? 0, file.spawnDepth);
     }
@@ -491,7 +538,7 @@ export function rollupCommands(files: readonly FileAggregate[]): RollupRow[] {
       for (const [name, calls] of Object.entries(bucket.commands)) {
         rows.get(name).count += calls;
         const seen = sessions.get(name) ?? new Set<string>();
-        seen.add(file.sessionId);
+        seen.add(sessionKey(file));
         sessions.set(name, seen);
       }
     }

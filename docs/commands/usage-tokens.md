@@ -12,13 +12,16 @@ Token usage rolled up along one dimension.
 
 | Option                                           | Default | Description                                                                                                                                               |
 | ------------------------------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--by <dimension>`                               | `model` | `model`, `day`, `week`, `month`, `project`, or `session`.                                                                                                 |
+| `--by <dimension>`                               | `model` | `model`, `day`, `week`, `month`, `project`, `session`, or `provider`.                                                                                     |
 | [Shared options](usage-common.md#common-options) | —       | `--format`, `--envelope`, `--provider`, `--project`, `--since`, `--until`, `--last`, `--top`, `--logs`, `--no-subagents`, `--no-index`, `--strict`, `-h`. |
 
 ## Dimensions
 
 `day`, `week`, and `month` are ordered chronologically; every other dimension is ranked by
 token total, largest first. A week is keyed by the Monday it starts on.
+
+`--by provider` is what makes `--provider all` legible: it splits a merged report back into one
+row per assistant.
 
 Each row carries the full token breakdown plus `requests` and the number of distinct sessions
 that contributed to it.

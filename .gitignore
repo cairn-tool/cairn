@@ -17,3 +17,5 @@ coverage/
 # OS / editor
 .DS_Store
 *.swp
+
+_PLAN.md

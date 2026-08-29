@@ -259,6 +259,31 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   repeats the whole subcommand guard. That is fine for a shell redirect but exceeds Node's
   default `maxBuffer`, so `tests/e2e/completion.test.ts` raises it. Adding another toolset makes
   this worse; shrinking the generator would change byte-stable output a test asserts.
+- **Each `usage` provider distorts its token log differently, and each is undone separately.**
+  Claude Code fans one response across lines carrying identical usage (dedupe on `message.id`);
+  Codex reports a **running total** per thread (difference consecutive readings — its
+  `last_token_usage` is re-emitted on duplicates and summing it inflates ~4%); Antigravity
+  reports a **per-request context size that is not cumulative** (sum it — it falls whenever
+  context is trimmed, so differencing produces nonsense). Codex also counts cache reads _inside_
+  `input_tokens`, so the cached part is subtracted out or its input reads several times high.
+  `tests/unit/usage-{codex,antigravity}.test.ts` pin each.
+- **Antigravity's tokens come from schema-less protobuf, and are guarded.**
+  `src/usage/providers/protobuf.ts` is a hand-rolled wire reader because Google ships no
+  `.proto`; the field numbers are reverse-engineered. `antigravity.ts` asserts
+  `completion === thinking + output` and a prompt bound before trusting any of it, and on failure
+  keeps every JSONL-derived figure while emitting no tokens. Read the JSONL (named fields) for
+  everything it can answer and the database only for what exists nowhere else.
+- **`node:sqlite` prints an experimental warning to stderr on import.** stderr carries the JSON
+  payload whenever a command reports findings, so `loadSqlite()` suppresses it around the
+  `createRequire` call — the same rule as the update notifier. A `tests/e2e/usage.test.ts` case
+  asserts stderr stays empty.
+- **A session id is unique only within its provider.** `sessionKey()` in `src/usage/events.ts`
+  qualifies it; counting or grouping sessions on the bare id merges two providers' sessions when
+  they mint the same UUID, which they do.
+- **Only `claude-code` can prune subagents at discovery.** The others record the thread source
+  inside the file, so `scan.ts` filters on the parsed `kind` as well. Both filters must stay.
+- **Cursor is deliberately unregistered.** There is no local corpus to write or verify a parser
+  against; `~/.cursor` on a machine without Cursor holds only third-party hook config.
 - **No published schema may set `additionalProperties: false` or `$ref` another document.**
   The first would make every additive change break validating consumers; the second would make
   `claude-cli schema <id>` return something that cannot be compiled on its own.

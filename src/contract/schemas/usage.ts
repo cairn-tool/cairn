@@ -50,8 +50,22 @@ const SCOPE: JsonSchema = {
   description: "What the report covered.",
   required: ["provider", "root", "window", "projects", "subagents", "last", "index"],
   properties: {
-    provider: { type: "string" },
-    root: { type: "string", description: "Log root the transcripts were read from." },
+    provider: { type: "string", description: "`--provider` as given, which may be `all`." },
+    providers: {
+      ...stringArray,
+      description:
+        "The providers actually scanned: those the selector named that also have logs on this machine.",
+    },
+    root: {
+      type: "string",
+      description:
+        "Log root the transcripts were read from. With several providers this is the first; `roots` names them all.",
+    },
+    roots: {
+      type: "object",
+      description: "Log root per scanned provider.",
+      additionalProperties: { type: "string" },
+    },
     window: {
       type: "object",
       description: "Inclusive day bounds. Null means unbounded on that side.",
@@ -130,6 +144,7 @@ const ROW: JsonSchema = {
   required: ["key", "count"],
   properties: {
     key: { type: "string" },
+    provider: { type: "string", description: "Set where a row belongs to exactly one provider." },
     count: {
       type: "integer",
       minimum: 0,
@@ -186,7 +201,12 @@ export const usageRollupSchema: SchemaEntry = {
       dimension: {
         type: "string",
         description:
-          "What each row's `key` names: model, day, week, month, project, session, name, kind, server, skill, agent, hook, or command.",
+          "What each row's `key` names: model, day, week, month, project, session, provider, name, kind, server, skill, role, path, hook, or command.",
+      },
+      supported: {
+        type: "boolean",
+        description:
+          "False when no scanned provider records this kind of activity, in which case `rows` is empty and the absence is not a finding.",
       },
       rows: { type: "array", items: ROW },
       truncated: {
@@ -335,8 +355,28 @@ export const usageIndexSchema: SchemaEntry = {
     properties: {
       provider: { type: "string" },
       action: { enum: ["status", "rebuild", "clear"] },
+      caches: {
+        type: "array",
+        description:
+          "One entry per selected provider. Each caches separately, so every action is per provider.",
+        items: {
+          type: "object",
+          required: ["provider", "root", "present", "shards", "entries", "bytes", "updatedAt"],
+          properties: {
+            provider: { type: "string" },
+            root: { type: "string" },
+            present: { type: "boolean" },
+            shards: { type: "integer", minimum: 0 },
+            entries: { type: "integer", minimum: 0 },
+            bytes: { type: "integer", minimum: 0 },
+            updatedAt: { type: ["string", "null"] },
+            removed: { type: "integer", minimum: 0 },
+          },
+        },
+      },
       cache: {
         type: "object",
+        description: "One provider's cache, or the total across them when several were selected.",
         required: ["root", "present", "shards", "entries", "bytes", "updatedAt"],
         properties: {
           root: { type: "string" },

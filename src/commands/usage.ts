@@ -1,4 +1,5 @@
 import os from "node:os";
+import path from "node:path";
 import { terminate } from "../command-result.js";
 import { BASE_FORMATS } from "../formats.js";
 import { boundedInteger } from "../option-utils.js";
@@ -9,12 +10,24 @@ import { TOOL_KINDS, totalTokens } from "../usage/events.js";
 import type { ProjectSelector, Window } from "../usage/filter.js";
 import { parseProject, resolveWindow } from "../usage/filter.js";
 import { cacheStatus, clearCache, getUsageCacheRoot } from "../usage/index-cache.js";
-import { DEFAULT_PROVIDER, PROVIDERS, resolveProvider } from "../usage/providers/index.js";
-import type { UsageProvider } from "../usage/providers/types.js";
-import type { ScanCounters, ScanFailure, ScanResult } from "../usage/scan.js";
-import { scan } from "../usage/scan.js";
-import type { RollupRow, SessionSort, TokenDimension, ToolDimension } from "../usage/aggregate.js";
 import {
+  ALL_PROVIDERS,
+  DEFAULT_PROVIDER,
+  PROVIDERS,
+  resolveProviders,
+} from "../usage/providers/index.js";
+import type { ProviderCapabilities, UsageProvider } from "../usage/providers/types.js";
+import type { ScanCounters, ScanFailure, ScanResult } from "../usage/scan.js";
+import { keepRecentSessions, scan } from "../usage/scan.js";
+import type {
+  AgentDimension,
+  RollupRow,
+  SessionSort,
+  TokenDimension,
+  ToolDimension,
+} from "../usage/aggregate.js";
+import {
+  AGENT_DIMENSIONS,
   SESSION_SORTS,
   TOKEN_DIMENSIONS,
   TOOL_DIMENSIONS,
@@ -90,9 +103,19 @@ function choice<T extends string>(
 // Scope
 // ---------------------------------------------------------------------------
 
-interface Scope {
+/** One provider that has logs on this machine, paired with where they are. */
+interface Source {
   provider: UsageProvider;
   root: string;
+}
+
+interface Scope {
+  /** `--provider` as typed, which may be `all`. */
+  selector: string;
+  /** Every selected provider, whether or not it has anything here. */
+  selected: UsageProvider[];
+  /** The subset that does. */
+  sources: Source[];
   window: Window;
   selectors: ProjectSelector[];
   subagents: boolean;
@@ -102,7 +125,13 @@ interface Scope {
 
 interface ScopePayload {
   provider: string;
+  /**
+   * The providers actually scanned. Additive alongside `provider`, which keeps
+   * its original meaning of the selector as typed.
+   */
+  providers: string[];
   root: string;
+  roots: Record<string, string>;
   window: { since: string | null; until: string | null };
   projects: string[];
   subagents: boolean;
@@ -110,26 +139,44 @@ interface ScopePayload {
   index: boolean;
 }
 
-function requireRoot(provider: UsageProvider, opts: UsageOptions): string {
-  const root = provider.root({
+function rootOf(provider: UsageProvider, override?: string): string | null {
+  return provider.root({
     env: process.env,
     home: os.homedir(),
-    ...(opts.logs ? { override: opts.logs } : {}),
+    ...(override ? { override } : {}),
   });
-  if (!root) {
+}
+
+function resolveScope(opts: UsageOptions): Scope {
+  const selector = opts.provider ?? DEFAULT_PROVIDER;
+  const selected = resolveProviders(opts.provider);
+  const last = opts.last === undefined ? null : boundedInteger(opts.last, "last");
+
+  // `--logs` names one directory, which cannot be the log root of several
+  // providers at once.
+  if (opts.logs && selected.length > 1) {
+    throw new Error(`--logs cannot be combined with --provider ${ALL_PROVIDERS}`);
+  }
+
+  const sources: Source[] = [];
+  for (const provider of selected) {
+    const root = rootOf(provider, opts.logs);
+    if (root) sources.push({ provider, root });
+  }
+
+  // Naming one provider that is not here is an error; `all` finding nothing is
+  // an empty report, because asking for everything cannot be a mistake.
+  if (sources.length === 0 && selected.length === 1) {
+    const provider = selected[0];
     throw new Error(
       `No ${provider.title} logs found. ${provider.source}. Pass --logs <dir> to point at them explicitly.`,
     );
   }
-  return root;
-}
 
-function resolveScope(opts: UsageOptions): Scope {
-  const provider = resolveProvider(opts.provider);
-  const last = opts.last === undefined ? null : boundedInteger(opts.last, "last");
   return {
-    provider,
-    root: requireRoot(provider, opts),
+    selector,
+    selected,
+    sources,
     window: resolveWindow(opts.since, opts.until),
     selectors: (opts.project ?? []).map((value) => parseProject(value)),
     subagents: opts.subagents !== false,
@@ -140,8 +187,10 @@ function resolveScope(opts: UsageOptions): Scope {
 
 function scopePayload(scope: Scope): ScopePayload {
   return {
-    provider: scope.provider.name,
-    root: scope.root,
+    provider: scope.selector,
+    providers: scope.sources.map((source) => source.provider.name),
+    root: scope.sources[0]?.root ?? "",
+    roots: Object.fromEntries(scope.sources.map((source) => [source.provider.name, source.root])),
     window: { since: scope.window.since, until: scope.window.until },
     projects: scope.selectors.map((selector) => selector.raw),
     subagents: scope.subagents,
@@ -150,17 +199,93 @@ function scopePayload(scope: Scope): ScopePayload {
   };
 }
 
+/**
+ * Scans every selected provider and merges the results.
+ *
+ * Each keeps its own cache, and every aggregate already carries the provider
+ * that produced it, so the rollups need no further help to separate them.
+ */
 async function collect(scope: Scope): Promise<ScanResult> {
-  return scan({
-    provider: scope.provider,
-    root: scope.root,
-    subagents: scope.subagents,
-    window: scope.window,
-    projects: scope.selectors,
-    ...(scope.last !== null ? { last: scope.last } : {}),
-    useIndex: scope.useIndex,
-  });
+  const merged: ScanResult = {
+    files: [],
+    counters: { discovered: 0, cached: 0, parsed: 0, skipped: 0, malformed: 0, selected: 0 },
+    failures: [],
+    cacheRoot: null,
+  };
+
+  for (const source of scope.sources) {
+    const result = await scan({
+      provider: source.provider,
+      root: source.root,
+      subagents: scope.subagents,
+      window: scope.window,
+      projects: scope.selectors,
+      ...(scope.last !== null ? { last: scope.last } : {}),
+      useIndex: scope.useIndex,
+    });
+    merged.files.push(...result.files);
+    merged.failures.push(...result.failures);
+    merged.cacheRoot ??= result.cacheRoot;
+    for (const key of Object.keys(merged.counters) as Array<keyof ScanCounters>) {
+      merged.counters[key] += result.counters[key];
+    }
+  }
+
+  // `--last` means the n most recent sessions overall, not n per provider.
+  if (scope.last !== null && scope.last > 0) {
+    merged.files = keepRecentSessions(merged.files, scope.last);
+    merged.counters.selected = merged.files.length;
+  }
+  return merged;
 }
+
+/**
+ * Whether any scanned provider records the thing a report is about.
+ *
+ * This is the whole point of `capabilities` being data: a command that a
+ * provider cannot answer says so, rather than printing an empty table that
+ * reads as "you never did this".
+ */
+function supportedBy(scope: Scope, capability: keyof ProviderCapabilities): boolean {
+  const sources = scope.sources.length > 0 ? scope.sources.map((s) => s.provider) : scope.selected;
+  return sources.some((provider) => provider.capabilities[capability]);
+}
+
+function unsupportedMessage(scope: Scope, capability: keyof ProviderCapabilities): string[] {
+  const providers =
+    scope.sources.length > 0 ? scope.sources.map((s) => s.provider) : scope.selected;
+  const names = providers.map((provider) => provider.title).join(", ");
+  const available = CAPABILITY_REPORTS.filter(([, key]) =>
+    providers.some((provider) => provider.capabilities[key]),
+  ).map(([report]) => report);
+  return [
+    `${names} does not record ${CAPABILITY_LABELS[capability]}.`,
+    available.length > 0 ? `Available: ${available.join(", ")}` : "",
+  ].filter(Boolean);
+}
+
+const CAPABILITY_LABELS: Record<keyof ProviderCapabilities, string> = {
+  tokens: "token usage",
+  cacheTokens: "cache token detail",
+  tools: "tool calls",
+  skills: "skill invocations",
+  subagents: "subagent activity",
+  hooks: "hook executions",
+  mcp: "MCP tool calls",
+  slashCommands: "slash commands",
+  projects: "working directories",
+};
+
+/** Subcommands whose availability is worth listing when another is refused. */
+const CAPABILITY_REPORTS: ReadonlyArray<[string, keyof ProviderCapabilities]> = [
+  ["tokens", "tokens"],
+  ["tools", "tools"],
+  ["skills", "skills"],
+  ["agents", "subagents"],
+  ["hooks", "hooks"],
+  ["commands", "slashCommands"],
+  ["projects", "projects"],
+];
 
 /**
  * A report over thousands of transcripts is expected to meet a few it cannot
@@ -172,6 +297,16 @@ async function collect(scope: Scope): Promise<ScanResult> {
 function decideExit(counters: ScanCounters, failures: ScanFailure[], strict: boolean): 0 | 2 {
   if (!strict) return 0;
   return counters.skipped > 0 || counters.malformed > 0 || failures.length > 0 ? 2 : 0;
+}
+
+/** The counters a report that never scanned should still publish. */
+function emptyScan(): ScanResult {
+  return {
+    files: [],
+    counters: { discovered: 0, cached: 0, parsed: 0, skipped: 0, malformed: 0, selected: 0 },
+    failures: [],
+    cacheRoot: null,
+  };
 }
 
 function scanPayload(result: ScanResult) {
@@ -276,6 +411,8 @@ interface RollupPayload {
   provider: string;
   scope: ScopePayload;
   dimension: string;
+  /** False when no scanned provider records this; `rows` is then empty. */
+  supported: boolean;
   rows: RollupRow[];
   /** True when `--top` clipped the listing; `totals` still covers everything. */
   truncated: boolean;
@@ -324,21 +461,24 @@ function clip(rows: RollupRow[], opts: UsageOptions): { rows: RollupRow[]; trunc
 async function emitRollup(
   command: string,
   dimension: string,
+  capability: keyof ProviderCapabilities | null,
   build: (files: readonly FileAggregate[]) => RollupRow[],
   render: (rows: readonly RollupRow[], human: boolean) => string[],
   opts: UsageOptions,
 ): Promise<void> {
   const format = resolveFormat(opts);
   const scope = resolveScope(opts);
-  const result = await collect(scope);
-  const all = build(result.files);
+  const supported = capability === null || supportedBy(scope, capability);
+  const result = supported ? await collect(scope) : emptyScan();
+  const all = supported ? build(result.files) : [];
   const { rows, truncated } = clip(all, opts);
   const exitCode = decideExit(result.counters, result.failures, Boolean(opts.strict));
 
   const payload: RollupPayload = {
-    provider: scope.provider.name,
+    provider: scope.selector,
     scope: scopePayload(scope),
     dimension,
+    supported,
     rows,
     truncated,
     totals: totalsOfRows(all),
@@ -357,6 +497,11 @@ async function emitRollup(
 
   const human = format === "human";
   const lines = [windowLine(scope, human)];
+  if (!supported) {
+    lines.push(...unsupportedMessage(scope, capability!));
+    process.stdout.write(lines.join("\n") + "\n");
+    return;
+  }
   if (rows.length === 0) lines.push("No matching activity.");
   else lines.push(...render(rows, human));
   if (truncated) {
@@ -403,7 +548,7 @@ export async function usageSummaryAction(opts: UsageOptions): Promise<void> {
   const exitCode = decideExit(result.counters, result.failures, Boolean(opts.strict));
 
   const payload = {
-    provider: scope.provider.name,
+    provider: scope.selector,
     scope: scopePayload(scope),
     summary: {
       ...summary,
@@ -522,6 +667,7 @@ export async function usageTokensAction(opts: UsageOptions): Promise<void> {
   await emitRollup(
     "usage tokens",
     dimension,
+    "tokens",
     (files) => rollupTokens(files, dimension),
     (rows, human) => table(TOKEN_COLUMNS, tokenRows(rows, human), human),
     opts,
@@ -537,6 +683,7 @@ export async function usageToolsAction(opts: UsageOptions): Promise<void> {
   await emitRollup(
     "usage tools",
     dimension,
+    "tools",
     (files) => rollupTools(files, dimension, kind),
     (rows, human) =>
       table(
@@ -564,6 +711,7 @@ export async function usageSessionsAction(opts: UsageOptions): Promise<void> {
   await emitRollup(
     "usage sessions",
     "session",
+    null,
     (files) => rollupSessions(files, sort),
     (rows, human) =>
       table(
@@ -597,6 +745,7 @@ export async function usageProjectsAction(opts: UsageOptions): Promise<void> {
   await emitRollup(
     "usage projects",
     "project",
+    "projects",
     (files) => rollupProjects(files),
     (rows, human) =>
       table(
@@ -624,6 +773,7 @@ export async function usageSkillsAction(opts: UsageOptions): Promise<void> {
   await emitRollup(
     "usage skills",
     "skill",
+    "skills",
     (files) => rollupSkills(files),
     (rows, human) =>
       table(
@@ -640,14 +790,16 @@ export async function usageSkillsAction(opts: UsageOptions): Promise<void> {
 }
 
 export async function usageAgentsAction(opts: UsageOptions): Promise<void> {
+  const dimension = choice<AgentDimension>(opts.by, AGENT_DIMENSIONS, "--by", "role");
   await emitRollup(
     "usage agents",
-    "agent",
-    (files) => rollupAgents(files),
+    dimension,
+    "subagents",
+    (files) => rollupAgents(files, dimension),
     (rows, human) =>
       table(
         [
-          { header: "agent" },
+          { header: dimension },
           { header: "spawns", right: true },
           { header: "transcripts", right: true },
           { header: "depth", right: true },
@@ -672,6 +824,7 @@ export async function usageHooksAction(opts: UsageOptions): Promise<void> {
   await emitRollup(
     "usage hooks",
     "hook",
+    "hooks",
     (files) => rollupHooks(files),
     (rows, human) =>
       table(
@@ -701,6 +854,7 @@ export async function usageCommandsAction(opts: UsageOptions): Promise<void> {
   await emitRollup(
     "usage commands",
     "command",
+    "slashCommands",
     (files) => rollupCommands(files),
     (rows, human) =>
       table(
@@ -723,11 +877,7 @@ export async function usageCommandsAction(opts: UsageOptions): Promise<void> {
 export async function usageProvidersAction(opts: UsageOptions): Promise<void> {
   const format = resolveFormat(opts);
   const providers = PROVIDERS.map((provider) => {
-    const root = provider.root({
-      env: process.env,
-      home: os.homedir(),
-      ...(opts.logs ? { override: opts.logs } : {}),
-    });
+    const root = rootOf(provider, opts.logs);
     return {
       name: provider.name,
       title: provider.title,
@@ -778,39 +928,88 @@ export async function usageProvidersAction(opts: UsageOptions): Promise<void> {
 
 export async function usageIndexAction(opts: UsageOptions): Promise<void> {
   const format = resolveFormat(opts);
-  const provider = resolveProvider(opts.provider);
-  const root = getUsageCacheRoot(provider.name);
+  const providers = resolveProviders(opts.provider);
 
   if (opts.clear && opts.rebuild) {
     throw new Error("--clear and --rebuild are mutually exclusive");
   }
 
-  let action: "status" | "rebuild" | "clear" = "status";
-  let removed = 0;
-  let scanned: ScanResult | null = null;
+  const action: "status" | "rebuild" | "clear" = opts.clear
+    ? "clear"
+    : opts.rebuild
+      ? "rebuild"
+      : "status";
 
-  if (opts.clear) {
-    action = "clear";
-    removed = clearCache(root);
-  } else if (opts.rebuild) {
-    action = "rebuild";
+  // Each provider caches separately, so every action is per provider and the
+  // payload reports both the breakdown and the total.
+  const caches = providers.map((provider) => ({
+    provider: provider.name,
+    root: getUsageCacheRoot(provider.name),
+    removed: 0,
+  }));
+
+  let scanned: ScanResult | null = null;
+  if (action === "clear") {
+    for (const entry of caches) entry.removed = clearCache(entry.root);
+  } else if (action === "rebuild") {
     const scope = resolveScope({ ...opts, index: true });
-    scanned = await scan({
-      provider: scope.provider,
-      root: scope.root,
-      subagents: scope.subagents,
-      window: scope.window,
-      projects: scope.selectors,
-      useIndex: true,
-      rebuild: true,
-    });
+    scanned = emptyScan();
+    for (const source of scope.sources) {
+      const result = await scan({
+        provider: source.provider,
+        root: source.root,
+        subagents: scope.subagents,
+        window: scope.window,
+        projects: scope.selectors,
+        useIndex: true,
+        rebuild: true,
+      });
+      scanned.failures.push(...result.failures);
+      for (const key of Object.keys(scanned.counters) as Array<keyof ScanCounters>) {
+        scanned.counters[key] += result.counters[key];
+      }
+    }
   }
 
-  const cache = cacheStatus(root);
+  const statuses = caches.map((entry) => ({
+    provider: entry.provider,
+    ...cacheStatus(entry.root),
+    ...(action === "clear" ? { removed: entry.removed } : {}),
+  }));
+
+  // `cache` keeps describing one cache when one provider was selected, and
+  // becomes the total across them otherwise; `caches` is the breakdown.
+  const total = statuses.reduce(
+    (into, entry) => ({
+      root: into.root,
+      present: into.present || entry.present,
+      shards: into.shards + entry.shards,
+      entries: into.entries + entry.entries,
+      bytes: into.bytes + entry.bytes,
+      updatedAt:
+        entry.updatedAt && (!into.updatedAt || entry.updatedAt > into.updatedAt)
+          ? entry.updatedAt
+          : into.updatedAt,
+    }),
+    {
+      root:
+        statuses.length === 1
+          ? statuses[0].root
+          : path.dirname(getUsageCacheRoot(providers[0].name)),
+      present: false,
+      shards: 0,
+      entries: 0,
+      bytes: 0,
+      updatedAt: null as string | null,
+    },
+  );
+  const removed = caches.reduce((sum, entry) => sum + entry.removed, 0);
+
   const payload = {
-    provider: provider.name,
+    provider: opts.provider ?? DEFAULT_PROVIDER,
     action,
-    cache,
+    cache: total,
+    caches: statuses,
     ...(action === "clear" ? { removed } : {}),
     ...(scanned ? { scan: scanPayload(scanned) } : {}),
   };
@@ -818,22 +1017,25 @@ export async function usageIndexAction(opts: UsageOptions): Promise<void> {
   if (format === "json") {
     process.stdout.write(
       jsonPayload("usage index", payload, opts, {
-        summary: { entries: cache.entries, shards: cache.shards },
+        summary: { entries: total.entries, shards: total.shards },
       }),
     );
     return;
   }
 
   const human = format === "human";
-  const lines = [
-    `${style("cache", BOLD, human)}  ${style(root, CYAN, human)}`,
-    `  present:    ${cache.present ? "yes" : "no"}`,
-    `  shards:     ${cache.shards}`,
-    `  transcripts:${String(cache.entries).padStart(2)}`,
-    `  size:       ${num(cache.bytes, human)} bytes`,
-    `  updated:    ${cache.updatedAt ?? "never"}`,
-  ];
-  if (action === "clear") lines.push(`  removed:    ${removed} shard${removed === 1 ? "" : "s"}`);
-  if (scanned) lines.push(`  rebuilt:    ${scanLine(scanned, human)}`);
+  const lines: string[] = [];
+  for (const entry of statuses) {
+    lines.push(`${style(entry.provider, BOLD, human)}  ${style(entry.root, CYAN, human)}`);
+    lines.push(`  present:     ${entry.present ? "yes" : "no"}`);
+    lines.push(`  shards:      ${entry.shards}`);
+    lines.push(`  transcripts: ${entry.entries}`);
+    lines.push(`  size:        ${num(entry.bytes, human)} bytes`);
+    lines.push(`  updated:     ${entry.updatedAt ?? "never"}`);
+    if (action === "clear") {
+      lines.push(`  removed:     ${entry.removed} shard${entry.removed === 1 ? "" : "s"}`);
+    }
+  }
+  if (scanned) lines.push(`rebuilt: ${scanLine(scanned, human)}`);
   process.stdout.write(lines.join("\n") + "\n");
 }

@@ -1,5 +1,6 @@
 import os from "node:os";
 import type { FileAggregate } from "./events.js";
+import { sessionKey } from "./events.js";
 import type { ProjectSelector, Window } from "./filter.js";
 import { clipToWindow, matchesProject, modifiedSinceFor } from "./filter.js";
 import { getUsageCacheRoot, readShard, writeShard } from "./index-cache.js";
@@ -184,6 +185,10 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
 
   let selected: FileAggregate[] = [];
   for (const aggregate of aggregates) {
+    // Only some providers can tell a subagent transcript from its path; the
+    // rest record it inside the file, so the filter is applied again here on
+    // the parsed value. Discovery has already pruned whatever it could.
+    if (!options.subagents && aggregate.kind === "subagent") continue;
     if (!matchesProject(aggregate.project, options.projects)) continue;
     const clipped = clipToWindow(aggregate, options.window);
     if (clipped) selected.push(clipped);
@@ -207,13 +212,14 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
 export function keepRecentSessions(files: FileAggregate[], last: number): FileAggregate[] {
   const latest = new Map<string, string>();
   for (const file of files) {
-    const current = latest.get(file.sessionId);
-    if (current === undefined || file.lastTs > current) latest.set(file.sessionId, file.lastTs);
+    const key = sessionKey(file);
+    const current = latest.get(key);
+    if (current === undefined || file.lastTs > current) latest.set(key, file.lastTs);
   }
   const ranked = [...latest.entries()]
     .sort((a, b) => (a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0))
     .slice(0, last)
-    .map(([sessionId]) => sessionId);
+    .map(([key]) => key);
   const keep = new Set(ranked);
-  return files.filter((file) => keep.has(file.sessionId));
+  return files.filter((file) => keep.has(sessionKey(file)));
 }

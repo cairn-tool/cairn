@@ -237,7 +237,7 @@ const CONTRACTS: CommandContract[] = [
     ...usageCommand("summary"),
     outputSchema: "usage-summary",
     notes:
-      "Headline totals over the selection. Token counts deduplicate the per-content-block fan-out in the source transcripts: one API response is written as several lines, each carrying an identical copy of its usage, so summing lines over-counts output tokens roughly two and a half fold. " +
+      "Headline totals over the selection. Each provider is normalized onto one token model, which means undoing a different distortion in each: Claude Code writes one API response as several lines each carrying an identical copy of its usage; Codex reports a running total per thread rather than a per-request figure; Antigravity reports a per-request context size that is not a running total at all. `--provider all` merges every source that has logs on this machine. " +
       STRICT_NOTE,
   },
   usageCommand("tokens", {
@@ -267,7 +267,7 @@ const CONTRACTS: CommandContract[] = [
   }),
   usageCommand("agents", {
     notes:
-      "Spawn counts come from the parent's subagent tool calls; token counts come from the subagent transcripts themselves. The parent's own tool result records only the subagent's final message and understates its real spend several-fold, so it is deliberately not used. " +
+      "Spawn counts come from the parent's subagent tool calls; token counts come from the subagent transcripts themselves. The parent's own tool result records only the subagent's final message and understates its real spend several-fold, so it is deliberately not used. `--by role` groups by the reusable agent type and `--by path` by the task-specific identifier, which only some providers record; under `--by path` the transcript count is the spawn count, because no per-path spawn record exists. " +
       STRICT_NOTE,
   }),
   usageCommand("hooks", {
@@ -285,7 +285,7 @@ const CONTRACTS: CommandContract[] = [
     exitCodes: [OK("Listing written"), USAGE],
     stream: { success: "stdout" },
     notes:
-      "Lists every registered log source and what it can answer. A report a provider cannot serve is decided by reading these capabilities, never by branching on the provider name, which is what keeps adding a second LLM to one new module plus one registry line.",
+      "Lists every registered log source and what it can answer. A report a provider cannot serve is decided by reading these capabilities, never by branching on the provider name, which is what keeps adding a second LLM to one new module plus one registry line. A command whose capability no scanned provider has reports that and exits 0, because a provider that does not record something has not told you the count is zero.",
   }),
   usageCommand("index", {
     outputSchema: "usage-index",

@@ -619,7 +619,7 @@ const usageCommon = (command: Command): Command =>
   command
     .option("--format <fmt>", "Output format: llm, human, json", "llm")
     .option("--envelope", "Wrap --format json output in the versioned result envelope")
-    .option("--provider <name>", "Log source to report on", "claude-code")
+    .option("--provider <name>", "Log source to report on, or all", "claude-code")
     .option("--project <path>", "Limit to a project path, slug, or name (repeatable)", collect)
     .option("--since <spec>", "Earliest day: a span such as 7d, 2w, 3m, 1y, or an ISO date")
     .option("--until <spec>", "Latest day, same forms as --since")
@@ -644,7 +644,7 @@ usageCommon(usage.command("summary"))
 
 usageCommon(usage.command("tokens"))
   .description("Token usage rolled up by model, time, project, or session")
-  .option("--by <dimension>", "model, day, week, month, project, session", "model")
+  .option("--by <dimension>", "model, day, week, month, project, session, provider", "model")
   .addHelpText(
     "after",
     "\nCache writes report an authoritative total alongside a best-effort split by TTL,\nwhich the oldest records do not carry." +
@@ -654,7 +654,7 @@ usageCommon(usage.command("tokens"))
 
 usageCommon(usage.command("tools"))
   .description("Tool calls rolled up by name, kind, server, day, or session")
-  .option("--by <dimension>", "name, kind, server, day, session", "name")
+  .option("--by <dimension>", "name, kind, server, day, session, provider", "name")
   .option("--kind <kind>", "Limit to builtin, mcp, agent, or skill calls")
   .addHelpText(
     "after",
@@ -693,9 +693,10 @@ usageCommon(usage.command("skills"))
 
 usageCommon(usage.command("agents"))
   .description("Subagent activity by agent type, with real token cost")
+  .option("--by <dimension>", "role, path", "role")
   .addHelpText(
     "after",
-    "\nSpawn counts come from the parent's tool calls; tokens come from the subagent\ntranscripts themselves. The parent's own tool result records only the subagent's\nfinal message and understates its spend several-fold, so it is not used." +
+    "\nSpawn counts come from the parent's tool calls; tokens come from the subagent\ntranscripts themselves. The parent's own tool result records only the subagent's\nfinal message and understates its spend several-fold, so it is not used.\n\n--by role groups by the reusable agent type; --by path groups by the task-specific\nidentifier, which only some providers record." +
       usageExitCodes,
   )
   .action((opts: Record<string, unknown>) => usageAgentsAction(opts as UsageOptions));

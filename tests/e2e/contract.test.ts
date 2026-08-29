@@ -116,6 +116,15 @@ function publishedBundle(): string {
  */
 const USAGE_FIXTURE = ["--logs", path.join(fixtures, "usage-logs"), "-fj"];
 const USAGE_LOGS = [...USAGE_FIXTURE, "--no-index"];
+/** A second provider, to prove the payload shape is not Claude Code's alone. */
+const CODEX_LOGS = [
+  "--provider",
+  "codex",
+  "--logs",
+  path.join(fixtures, "usage-logs-codex"),
+  "-fj",
+  "--no-index",
+];
 
 function validate(schemaId: string, payload: unknown, label: string): void {
   const entry = SCHEMA_BY_ID.get(schemaId);
@@ -686,6 +695,27 @@ describe("declared output schemas match real output", () => {
       label: "usage index",
       schema: "usage-index",
       args: () => ["usage", "index", ...USAGE_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage summary (codex)",
+      schema: "usage-summary",
+      args: () => ["usage", "summary", ...CODEX_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage agents (codex, by path)",
+      schema: "usage-rollup",
+      args: () => ["usage", "agents", "--by", "path", ...CODEX_LOGS],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "usage hooks (codex, unsupported)",
+      schema: "usage-rollup",
+      args: () => ["usage", "hooks", ...CODEX_LOGS],
       outcome: "success",
       exitCode: 0,
     },

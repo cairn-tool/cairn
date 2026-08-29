@@ -18,6 +18,17 @@ machine, and what its logs can answer.
 | `--logs <dir>`   | Discovered | Test discovery against this directory.              |
 | `-h`, `--help`   | —          | Show help.                                          |
 
+## Registered providers
+
+| Provider      | Source                              | Notes                                                                  |
+| ------------- | ----------------------------------- | ---------------------------------------------------------------------- |
+| `claude-code` | `$CLAUDE_CONFIG_DIR` or `~/.claude` | The default. Records every surface.                                    |
+| `codex`       | `$CODEX_HOME` or `~/.codex`         | No hook executions are written to the transcripts.                     |
+| `antigravity` | `~/.gemini/antigravity-cli`         | CLI only; the IDE store is encrypted. No cache detail, skills, or MCP. |
+
+Cursor is not registered. It keeps its chat history in a SQLite store whose shape is undocumented,
+and adding it needs a machine with real data to write and verify a parser against.
+
 ## Capabilities are data
 
 Each provider declares what its logs can answer — tokens, cache tokens, tools, skills,

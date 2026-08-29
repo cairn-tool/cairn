@@ -12,7 +12,7 @@ Tool calls rolled up by name, kind, MCP server, day, or session.
 
 | Option                                           | Default   | Description                                                                                                                                               |
 | ------------------------------------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--by <dimension>`                               | `name`    | `name`, `kind`, `server`, `day`, or `session`.                                                                                                            |
+| `--by <dimension>`                               | `name`    | `name`, `kind`, `server`, `day`, `session`, or `provider`.                                                                                                |
 | `--kind <kind>`                                  | All kinds | Limit to `builtin`, `mcp`, `agent`, or `skill` calls.                                                                                                     |
 | [Shared options](usage-common.md#common-options) | —         | `--format`, `--envelope`, `--provider`, `--project`, `--since`, `--until`, `--last`, `--top`, `--logs`, `--no-subagents`, `--no-index`, `--strict`, `-h`. |
 

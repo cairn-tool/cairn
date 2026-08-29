@@ -80,6 +80,12 @@ export interface FileAggregate {
   parentSessionId?: string;
   agentId?: string;
   agentType?: string;
+  /**
+   * The task-specific identifier for a subagent run, where the provider records
+   * one separately from its reusable type. Codex names both; Claude Code names
+   * only the type, so this is absent there.
+   */
+  agentPath?: string;
   spawnDepth?: number;
   /** Absolute working directory, read from the records rather than the directory name. */
   project: string;
@@ -223,6 +229,18 @@ export function classifyTool(name: string): { kind: ToolKind; server?: string; t
   if (name === "Agent" || name === "Task") return { kind: "agent", tool: name };
   if (name === "Skill") return { kind: "skill", tool: name };
   return { kind: "builtin", tool: name };
+}
+
+/**
+ * A session's identity across providers.
+ *
+ * A session id is unique only within the provider that issued it — two
+ * assistants can and do mint the same UUID — so anything counting or grouping
+ * sessions while several providers are in scope must qualify it. The separator
+ * is a NUL, which cannot occur in either half.
+ */
+export function sessionKey(file: { provider: string; sessionId: string }): string {
+  return `${file.provider}\u0000${file.sessionId}`;
 }
 
 /** The UTC calendar day an ISO timestamp falls on, or null when unparseable. */
