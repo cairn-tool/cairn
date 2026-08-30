@@ -22,6 +22,7 @@ guarantees each carries. Formats owned by somebody else are documented per host 
 | [Markdown conventions](formats/markdown-conventions.md) | TOC markers, snippet links                                                 | none — both spellings read                   | `md`                            |
 | [Audit baselines](formats/audit-baseline.md)            | baseline JSON, `sbom.json` as baseline                                     | `version` / `bomFormat`                      | `md audit`, `agent audit`       |
 | [Diagnostics](formats/diagnostics.md)                   | `AB###` codes, `Issue`, SARIF                                              | SARIF 2.1.0                                  | every checker                   |
+| [Diagnostic codes](formats/diagnostic-codes.md)         | Every `AB###` with its severity and meaning                                | —                                            | every `agent` command           |
 
 Two more formats are documented elsewhere because they have their own pages:
 

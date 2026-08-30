@@ -61,6 +61,39 @@ commands:
     ).toThrow("Unknown configuration key");
   });
 
+  it("accepts an agent block, validates it, and keeps it off the resolved config", () => {
+    // Same rule as `scripts:`. Without the validating call in the loader a typo
+    // here would pass every `md` command silently and only surface in CI.
+    const configPath = writeConfig(
+      [
+        "version: 1",
+        "agent:",
+        "  verify:",
+        "    entries:",
+        "      - { bundle: bundle, target: claude-code, profile: project }",
+        "",
+      ].join("\n"),
+    );
+    const config = loadConfig({ explicitPath: configPath, disabled: false });
+    expect(config).not.toHaveProperty("agent");
+    expect(config).not.toHaveProperty("verify");
+  });
+
+  it("rejects a malformed agent block at load time", () => {
+    expect(() =>
+      loadConfig({
+        explicitPath: writeConfig("version: 1\nagent:\n  verfy: {}\n"),
+        disabled: false,
+      }),
+    ).toThrow("Unknown agent key");
+    expect(() =>
+      loadConfig({
+        explicitPath: writeConfig("version: 1\nagent:\n  verify:\n    entries: []\n"),
+        disabled: false,
+      }),
+    ).toThrow("at least one entry");
+  });
+
   it("lets explicit CLI values override command and global defaults", () => {
     const config = loadConfig({ disabled: true }, tmpDir);
     config.output.format = "human";

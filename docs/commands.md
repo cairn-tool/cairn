@@ -108,6 +108,7 @@ written twice. See [shared archive command behavior](commands/archive/common.md)
 | [`agent audit <source>`](commands/agent/audit.md)           | Review a bundle's executable surface, permissions, and supply chain.            |
 | [`agent test <source>`](commands/agent/test.md)             | Run the model-free contract tests stored with a bundle.                         |
 | [`agent doctor [source]`](commands/agent/doctor.md)         | Check a bundle and generated output against the target conformance profiles.    |
+| [`agent verify`](commands/agent/verify.md)                  | Check committed agent trees against the bundles they were generated from.       |
 | [`agent specs`](commands/agent/specs.md)                    | Print the versioned target conformance profiles.                                |
 
 Agent targets are `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, and `all`.

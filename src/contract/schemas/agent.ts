@@ -27,6 +27,7 @@ export const agentResultSchema: SchemaEntry = {
     "agent uninstall",
     "agent installed",
     "agent marketplace",
+    "agent verify",
   ],
   schema: {
     $schema: DRAFT,
@@ -56,6 +57,7 @@ export const agentResultSchema: SchemaEntry = {
           "uninstall",
           "installed",
           "marketplace",
+          "verify",
         ],
       },
       ok: { type: "boolean" },
@@ -466,6 +468,148 @@ export const agentResultSchema: SchemaEntry = {
                 registered: { type: "boolean" },
                 files: { type: "integer", minimum: 0 },
               },
+            },
+          },
+        },
+      },
+      verify: {
+        description: "Drift and pin result, emitted by `agent verify`.",
+        type: "object",
+        required: ["config", "generator", "profileSchemaVersion", "pins", "entries", "counts"],
+        properties: {
+          config: {
+            type: "object",
+            required: ["path", "entries"],
+            properties: {
+              path: { type: "string", description: "The document the block was read from." },
+              entries: { type: "integer", minimum: 0 },
+            },
+          },
+          generator: {
+            type: "object",
+            required: ["name", "version"],
+            description: "The build performing the verification, which is what the pins bound.",
+            properties: { name: { type: "string" }, version: { type: "string" } },
+          },
+          profileSchemaVersion: { type: "string" },
+          pins: {
+            type: "object",
+            description:
+              "Every pin reports `actual` even when unpinned, so a consumer can write the pin from the output.",
+            required: ["cli", "profileSchemaVersion", "targets"],
+            properties: {
+              cli: {
+                type: "object",
+                required: ["declared", "actual", "status"],
+                properties: {
+                  declared: { type: ["object", "null"] },
+                  actual: { type: "string" },
+                  status: { enum: ["satisfied", "violated", "unpinned"] },
+                },
+              },
+              profileSchemaVersion: {
+                type: "object",
+                required: ["declared", "actual", "status"],
+                properties: {
+                  declared: { type: ["string", "null"] },
+                  actual: { type: "string" },
+                  status: { enum: ["satisfied", "violated", "unpinned"] },
+                },
+              },
+              targets: {
+                type: "array",
+                items: {
+                  type: "object",
+                  required: ["target", "declared", "actual", "status"],
+                  properties: {
+                    target: { enum: TARGETS },
+                    declared: { type: ["object", "null"] },
+                    actual: {
+                      type: "string",
+                      description: "The target profile's documentation revision, an ISO date.",
+                    },
+                    status: { enum: ["satisfied", "violated", "unpinned"] },
+                  },
+                },
+              },
+            },
+          },
+          entries: {
+            type: "array",
+            items: {
+              type: "object",
+              required: [
+                "name",
+                "bundle",
+                "target",
+                "profile",
+                "scope",
+                "layout",
+                "destination",
+                "mode",
+                "expected",
+                "missing",
+                "changed",
+                "orphaned",
+                "unmanaged",
+                "ok",
+              ],
+              properties: {
+                name: { type: "string" },
+                bundle: { type: "string" },
+                target: { enum: TARGETS },
+                profile: { enum: PROFILES },
+                scope: { enum: ["user", "project"] },
+                layout: { enum: ["merge", "plugin-dir", "conversion"] },
+                destination: { type: "string" },
+                mode: {
+                  enum: ["off", "orphaned", "strict"],
+                  description: "How far the entry looks for files the render does not account for.",
+                },
+                expected: { type: "integer", minimum: 0 },
+                missing: { ...stringArray, description: "Expected paths absent from the tree." },
+                changed: {
+                  ...stringArray,
+                  description: "Expected paths whose bytes or mode differ.",
+                },
+                orphaned: {
+                  ...stringArray,
+                  description: "Paths a prior install recorded that the bundle no longer renders.",
+                },
+                unmanaged: {
+                  ...stringArray,
+                  description:
+                    "Paths inside managed territory that neither the render nor the inventory accounts for.",
+                },
+                provenance: {
+                  type: "object",
+                  description:
+                    "Corroboration read from the destination, when it carries a document. Absent otherwise; it never decides the verdict.",
+                  required: ["source", "generator", "profileSchemaVersion", "status"],
+                  properties: {
+                    source: { type: "string" },
+                    generator: { type: ["object", "null"] },
+                    profileSchemaVersion: {
+                      type: ["string", "null"],
+                      description: "Null for an install manifest, which records none.",
+                    },
+                    status: { enum: ["matching", "older", "newer", "malformed"] },
+                  },
+                },
+                ok: { type: "boolean" },
+              },
+            },
+          },
+          counts: {
+            type: "object",
+            required: ["entries", "ok", "missing", "changed", "orphaned", "unmanaged"],
+            properties: {
+              entries: { type: "integer", minimum: 0 },
+              ok: { type: "integer", minimum: 0 },
+              missing: { type: "integer", minimum: 0 },
+              changed: { type: "integer", minimum: 0 },
+              orphaned: { type: "integer", minimum: 0 },
+              unmanaged: { type: "integer", minimum: 0 },
             },
           },
         },

@@ -32,6 +32,7 @@ change without breaking a consumer.
 - [Markdown conventions](formats/markdown-conventions.md)
 - [Audit baselines](formats/audit-baseline.md)
 - [Diagnostics](formats/diagnostics.md)
+- [Diagnostic codes](formats/diagnostic-codes.md)
 
 ## Providers
 
@@ -102,6 +103,7 @@ What is known about each assistant Cairn renders for, reads logs from, or archiv
 - [`agent audit`](commands/agent/audit.md)
 - [`agent test`](commands/agent/test.md)
 - [`agent doctor`](commands/agent/doctor.md)
+- [`agent verify`](commands/agent/verify.md)
 - [`agent specs`](commands/agent/specs.md)
 
 ## Script commands
