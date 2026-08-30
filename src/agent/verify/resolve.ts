@@ -29,20 +29,29 @@ export interface VerifySelection {
   cwd?: string;
 }
 
+/**
+ * Opens for reading without ever blocking.
+ *
+ * Opening a FIFO `O_RDONLY` blocks until a writer appears, which would wedge
+ * the process with no output — so a plain `open` cannot be the first thing
+ * that touches the path. `O_NONBLOCK` makes the open return immediately for
+ * every file type, leaving `fstat` to reject what is not a regular file.
+ * Checking the type by path first would be a check-then-use race; this way
+ * every guard is made against the descriptor that is actually read.
+ *
+ * `O_NONBLOCK` is undefined on Windows, which has no FIFOs in this sense.
+ */
+function openForRead(file: string): number {
+  const { O_RDONLY, O_NONBLOCK } = fs.constants;
+  return fs.openSync(file, O_RDONLY | (O_NONBLOCK ?? 0));
+}
+
 function readDocument(file: string): Record<string, unknown> {
   // The guards mirror `readRegistry` in `src/scripts/resolve.ts`: a
   // regular-file check so a FIFO cannot wedge the process, a size cap, and a
-  // NUL probe.
-  //
-  // The lstat comes first and is a pre-flight only: opening a FIFO for reading
-  // blocks until a writer appears, so the type has to be known before the
-  // descriptor exists. Everything the read then depends on is re-checked with
-  // `fstat` against that descriptor, so a path swapped between the two calls
-  // cannot change the size or the type actually read.
-  const pre = fs.lstatSync(file);
-  if (!pre.isFile() && !pre.isSymbolicLink()) throw new Error(`Not a regular file: ${file}`);
-
-  const handle = fs.openSync(file, "r");
+  // NUL probe. Unlike that one, all three are made against an open descriptor,
+  // so the file they describe is the file that is read.
+  const handle = openForRead(file);
   try {
     const stat = fs.fstatSync(handle);
     if (!stat.isFile()) throw new Error(`Not a regular file: ${file}`);
