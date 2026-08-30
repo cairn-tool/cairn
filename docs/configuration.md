@@ -87,6 +87,8 @@ urls:
 
 scripts: {} # named scripts for the scripts toolset; schema documented below
 
+agent: {} # what `agent verify` checks; schema documented below
+
 commands: {} # command-specific defaults; schema documented below
 ```
 
@@ -128,6 +130,76 @@ Note the asymmetry with the rest of this file: the chain walk validates only the
 block of each file it consults. An ancestor's malformed `urls:` block belongs to a different
 project and does not break `scripts run` for a sibling package, even though `loadConfig` would
 reject the same file.
+
+## Agent verification
+
+`agent` is a top-level key, not a `commands.` entry. Its one member, `verify`, declares what
+[`agent verify`](commands/agent/verify.md) checks: which bundles a repository generated its
+committed agent trees from, and which toolchain is allowed to have generated them.
+
+Markdown commands never read this block, but they do validate it — the same rule as
+`scripts`, and for the same reason. A typo here is an error for every command that loads
+configuration rather than a surprise in CI.
+
+```yaml
+agent:
+  verify:
+    pins:
+      cli: { min: "2.0.0" }
+      profileSchemaVersion: "2"
+      targets:
+        claude-code: { min: "2026-08-02" }
+    defaults:
+      unmanaged: orphaned
+      scope: project
+    entries:
+      - name: markdown
+        bundle: plugins/cairn-markdown
+        target: claude-code
+        profile: project
+        destination: .
+        layout: merge
+        unmanaged: strict
+```
+
+### `pins`
+
+| Key                    | Type   | Description                                                              |
+| ---------------------- | ------ | ------------------------------------------------------------------------ |
+| `cli`                  | Bound  | Versions of `cairn` allowed to verify, and so to have generated, a tree. |
+| `profileSchemaVersion` | String | Exact match against the running `PROFILE_SCHEMA_VERSION`.                |
+| `targets`              | Map    | Per-target bound on the profile's `documentationRevision`, an ISO date.  |
+
+A **bound** is `{ exact: … }`, or `{ min: … }` and `{ max: … }`, both inclusive. `exact` may
+not be combined with either. It is not a range expression: `compareSemver` is deliberately an
+ordering rather than a range grammar, and the target profiles record single bounds the same
+way. Every pin is optional, and an omitted one is reported as `unpinned` with the running
+value alongside, so a first run can be turned into a pin by copying what it printed.
+
+### `defaults`
+
+Applied to every entry that omits the key. `scope` defaults to `project`, `unmanaged` to
+`orphaned`; `profile` and `layout` have no default here and fall through to the entry.
+
+### `entries`
+
+At least one is required, so an empty block cannot read as a pass.
+
+| Key           | Required | Description                                                                    |
+| ------------- | -------- | ------------------------------------------------------------------------------ |
+| `bundle`      | Yes      | Directory holding `agent-bundle.yaml`, relative to this file.                  |
+| `target`      | Yes      | Exactly one target; destinations differ per host.                              |
+| `profile`     | Yes      | `plugin` or `project`. May come from `defaults`.                               |
+| `destination` | No       | Root the rendered tree was placed at, relative to this file. Defaults to `.`.  |
+| `name`        | No       | Identifier in findings and payload. Defaults to `<bundle>/<target>/<profile>`. |
+| `scope`       | No       | `user` or `project`; selects the install location the target profile declares. |
+| `layout`      | No       | `merge` (default), `plugin-dir`, or `conversion` for an `agent convert` root.  |
+| `unmanaged`   | No       | `off`, `orphaned` (default), or `strict`. See the command page.                |
+
+`bundle` and `destination` are both resolved against the directory holding the configuration
+file and must stay inside it. A checked-in document describes its own repository; letting one
+name an arbitrary path would make cloning a repository a way to have arbitrary directories
+read.
 
 ## Frontmatter rule value types
 

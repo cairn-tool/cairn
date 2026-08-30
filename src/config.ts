@@ -4,6 +4,7 @@ import os from "node:os";
 import { parse as parseYaml } from "yaml";
 import { isInside, knownKeys, object, optionalString, strings } from "./config-schema.js";
 import { parseScriptsBlock } from "./scripts/registry.js";
+import { parseVerifyBlock } from "./agent/verify/config.js";
 import type { OutputFormat } from "./types.js";
 
 export type PathStyle = "absolute" | "relative";
@@ -213,6 +214,7 @@ const ROOT_KEYS = new Set([
   "toc",
   "assets",
   "scripts",
+  "agent",
 ]);
 
 const AUTOMATION_FORMAT_COMMANDS = new Set([
@@ -473,6 +475,11 @@ export function loadConfig(
   // exposing an executable surface.
   if (configPath) {
     parseScriptsBlock(rootObject.scripts, { file: configPath, directory: base });
+    // Same rule, for the same reason: `agent:` belongs to `agent verify`, which
+    // resolves it through its own walk because agent commands run with
+    // configuration discovery disabled. Validating here is what makes a typo an
+    // error at `md lint` rather than a surprise in CI.
+    parseVerifyBlock(rootObject.agent, { file: configPath, directory: base });
   }
 
   const files = object(rootObject.files, "files");

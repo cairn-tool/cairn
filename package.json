@@ -1,6 +1,6 @@
 {
   "name": "@cairn-tool/cairn",
-  "version": "1.11.0",
+  "version": "2.0.1",
   "type": "module",
   "description": "An agent-agnostic CLI toolkit for working with markdown files and related assets",
   "license": "MIT",

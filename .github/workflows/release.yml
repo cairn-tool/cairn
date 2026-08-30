@@ -27,10 +27,12 @@ jobs:
   release:
     name: Publish to npm
     runs-on: ubuntu-latest
+    # Deliberately thin. Everything semantic-release *writes* goes through the
+    # app installation token minted below, not through GITHUB_TOKEN, because the
+    # main ruleset can only grant a bypass to an org-installed App -- and
+    # github-actions[bot] is not one.
     permissions:
-      contents: write # git tags, CHANGELOG commit, GitHub Release
-      issues: write # semantic-release success comments
-      pull-requests: write
+      contents: read # checkout only
       id-token: write # OIDC trusted publishing, and the provenance attestation
     # Only for a green CI run on a push to main — not for PR CI runs.
     if: >-
@@ -39,6 +41,17 @@ jobs:
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main')
     steps:
+      # Mints a short-lived installation token for the release App. It expires in
+      # an hour, so nothing long-lived is handed to the job beyond the App's own
+      # private key. The App is the ruleset's bypass actor; semantic-release
+      # pushing as github-actions[bot] is rejected by the required status checks.
+      - name: Mint a release token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Explicit ref: a workflow_run checkout otherwise defaults to the default
@@ -83,9 +96,11 @@ jobs:
       # sets it explicitly so the bootstrap publish is attested too.
       - name: semantic-release
         env:
-          # For the tag, the GitHub Release, and the CHANGELOG commit only. The
-          # npm registry is a separate identity.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The App installation token, not GITHUB_TOKEN: it authenticates the
+          # tag, the CHANGELOG commit, and the GitHub Release, and it is the
+          # identity the main ruleset grants a bypass to. The npm registry is a
+          # separate identity again.
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
