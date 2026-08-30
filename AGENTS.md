@@ -31,8 +31,9 @@ There are five toolsets, `md`, `agent`, `scripts`, `usage`, and `archive`, plus 
 `describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
 `command(...)` registration in `src/cli.ts`, a `src/contract/registry.ts` entry, a
 `docs/commands/<toolset>/<name>.md` page (top-level commands stay directly under
-`docs/commands/`) with entries in `docs/commands.md` and `docs/_contents.md`, a
-README entry, and e2e coverage. For an `agent` subcommand, also widen
+`docs/commands/`) with entries in `docs/commands.md` and `docs/_contents.md`, a row in
+`docs/formats/diagnostic-codes.md` for any new `AB###`, and e2e coverage. The README is a
+README: it links into `docs/` and does not list commands. For an `agent` subcommand, also widen
 `AgentResult["command"]` in `src/agent/types.ts` and the `command` enum plus `commands` list
 in `src/contract/schemas/agent.ts`. A new toolset group also needs adding to the `groups` set
 in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `undeclared`.
@@ -90,6 +91,32 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   **throws the returned token away**, leaving `npm publish` to exchange again on its own. An
   npm that predates the feature therefore passes verification and then fails at the publish,
   after the tag exists. Removing that upgrade step looks like tidying and is not.
+- **`plugins.yml`'s trigger guard must not test `workflow_run.event`.** It is the third link in
+  a `workflow_run` chain (CI -> Release -> Plugins), so the run that triggers it is Release,
+  whose own event is `workflow_run` and never `push`. `release.yml`'s guard _does_ test for
+  `push`, correctly, because the run triggering it is CI-on-push. Copying that clause into
+  `plugins.yml` made the job skip on every release while reporting success.
+- **A failed `npm publish` strands the release, and re-running the job does nothing.**
+  semantic-release runs every plugin's `prepare` before any plugin's `publish`, and
+  `@semantic-release/git`'s prepare is what pushes the version commit _and the tag_. So a
+  publish failure leaves `main` advanced, the tag created, and npm empty — and the next run
+  reads that tag as the last release, finds zero commits since, and reports "no new release".
+  Recovery is to undo the git side, not to retry: delete the remote tag, force-push `main`
+  back to the commit before the release commit, fix the cause, then re-run. Reordering
+  `.releaserc.json` cannot avoid this; the phase boundary is semantic-release's, not ours.
+- **The npm credential must bypass 2FA, which means granular or classic-Automation.** A
+  classic _Publish_ token fails with `EOTP - This operation requires a one-time password`
+  after the tarball has already been packed — i.e. late, in the publish step, with the git
+  side already committed. This is the most likely way to hit the stranded-release case above.
+- **The release job pushes as a GitHub App, not as `github-actions[bot]`.** The `main` ruleset
+  requires four CI checks, and semantic-release's own CHANGELOG-and-version commit cannot
+  satisfy them — it is created after CI ran. A ruleset bypass can only name an org-installed
+  App, and GitHub Actions is not one, so `release.yml` mints an installation token with
+  `actions/create-github-app-token` and hands _that_ to semantic-release as `GITHUB_TOKEN`.
+  The job's own `permissions` are therefore `contents: read` plus `id-token: write` — widening
+  them back to `contents: write` would not help, because the identity is what the ruleset
+  checks, not the scope. `RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY` are the only two
+  long-lived secrets, and the token they mint expires in an hour.
 - **`NPM_TOKEN` is a bootstrap, not the auth path.** npm configures a trusted publisher on an
   existing package's settings page, so the first ever publish of a name has nowhere to
   configure it and needs a token. `verify-auth.js` tries OIDC first and only falls back to a

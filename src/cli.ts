@@ -60,6 +60,7 @@ import { agentDoctorAction } from "./commands/agent-doctor.js";
 import { agentInstallAction } from "./commands/agent-install.js";
 import { agentUninstallAction } from "./commands/agent-uninstall.js";
 import { agentInstalledAction } from "./commands/agent-installed.js";
+import { agentVerifyAction } from "./commands/agent-verify.js";
 import { describeAction } from "./commands/describe.js";
 import { schemaAction } from "./commands/schema.js";
 import { completionAction } from "./commands/completion.js";
@@ -504,6 +505,22 @@ agent
   )
   .action((opts: Parameters<typeof agentInstalledAction>[0]) =>
     agentActionBoundary("installed", opts, () => agentInstalledAction(opts)),
+  );
+
+agent
+  .command("verify")
+  .description("Check committed agent trees against the bundles they were generated from")
+  .option("--config <file>", "Configuration document declaring the agent.verify block")
+  .option("--name <name>", "Verify only this entry (repeatable)", collect)
+  .option("--strict", "Treat warnings as blocking findings")
+  .option("--format <fmt>", "Output format: llm, human, json", "llm")
+  .option("--envelope", "Wrap --format json output in the versioned result envelope")
+  .addHelpText(
+    "after",
+    "\nReads what to verify from the agent.verify block of a cairn configuration\ndocument, so a CI pipeline can run it with no arguments. Each declared bundle\nis rendered in memory and compared against the committed tree, and the pinned\nCLI and target profile versions are asserted against the running build.\n\nExit codes:\n  0  Every entry matches and every pin is satisfied\n  1  Invocation, configuration, or I/O error\n  2  Drift, an orphaned file, or a violated pin",
+  )
+  .action((opts: Parameters<typeof agentVerifyAction>[0]) =>
+    agentActionBoundary("verify", opts, () => agentVerifyAction(opts)),
   );
 
 agent

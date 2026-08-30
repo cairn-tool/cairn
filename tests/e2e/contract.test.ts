@@ -100,6 +100,44 @@ function bundle(manifest?: string): string {
 }
 
 /**
+ * A repository holding a bundle and a destination that has not been generated
+ * yet, so `agent verify` reports drift and emits a fully populated payload.
+ * Building an installed tree would mean running the CLI from a fixture helper,
+ * and the missing-file path exercises the same schema.
+ */
+function verifyConfig(): string {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "contract-verify-")));
+  temporary.push(root);
+  fs.mkdirSync(path.join(root, "bundle", "skills", "hello"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "bundle", "agent-bundle.yaml"),
+    "schemaVersion: '2'\nname: hello\nversion: 1.0.0\ndescription: Hello bundle\n",
+  );
+  fs.writeFileSync(
+    path.join(root, "bundle", "skills", "hello", "SKILL.md"),
+    "---\nname: hello\ndescription: Say hello\n---\nSay hello.\n",
+  );
+  fs.mkdirSync(path.join(root, "tree"), { recursive: true });
+  const file = path.join(root, "cairn-verify.yml");
+  fs.writeFileSync(
+    file,
+    [
+      "version: 1",
+      "agent:",
+      "  verify:",
+      "    pins:",
+      '      cli: { min: "0.0.1" }',
+      '      profileSchemaVersion: "2"',
+      "    entries:",
+      "      - { name: hello, bundle: bundle, target: claude-code, profile: project,",
+      "          destination: tree }",
+      "",
+    ].join("\n"),
+  );
+  return file;
+}
+
+/**
  * The v1 bundle above cannot carry a `marketplace` block (AB127), and
  * claude-code's catalog requires an owner, so the packaging cases get a v2
  * sibling. `agent upgrade --to-schema 2` still needs the v1 one.
@@ -266,6 +304,7 @@ describe("declared output schemas match real output", () => {
       publishedBundle: string;
       staleToc: string;
       auditBaseline: string;
+      verifyConfig: string;
     }) => string[];
     outcome: "success" | "findings";
     exitCode: number;
@@ -635,6 +674,13 @@ describe("declared output schemas match real output", () => {
       exitCode: 0,
     },
     {
+      label: "agent verify",
+      schema: "agent-result",
+      args: (c) => ["agent", "verify", "--config", c.verifyConfig, "-fj"],
+      outcome: "findings",
+      exitCode: 2,
+    },
+    {
       label: "scripts list",
       schema: "script-list",
       args: () => ["scripts", "list", "-fj"],
@@ -816,6 +862,7 @@ describe("declared output schemas match real output", () => {
     const context = {
       workspace: workspace(),
       bundle: bundle(),
+      verifyConfig: verifyConfig(),
       publishedBundle: publishedBundle(),
       staleToc: staleToc(),
       auditBaseline: auditBaseline(),

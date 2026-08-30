@@ -10,15 +10,17 @@ description: Verify an agent bundle with the cairn agent toolset — conformance
 
 Longer conventions: [`${BUNDLE_ROOT}/assets/cli-basics.md`](../../assets/cli-basics.md).
 
-## Three different questions
+## Four different questions
 
-| Command        | Asks                                                              |
-| -------------- | ----------------------------------------------------------------- |
-| `agent doctor` | Does this conform to the target profiles, and has output drifted? |
-| `agent test`   | Does it render what its own tests say it should?                  |
-| `agent audit`  | What should a reviewer inspect before trusting it?                |
+| Command        | Asks                                                               |
+| -------------- | ------------------------------------------------------------------ |
+| `agent doctor` | Does this conform to the target profiles, and has output drifted?  |
+| `agent test`   | Does it render what its own tests say it should?                   |
+| `agent audit`  | What should a reviewer inspect before trusting it?                 |
+| `agent verify` | Does the tree committed in this repository still match the bundle? |
 
-Run them in that order. Each answers something the others do not.
+Run the first three in that order; `agent verify` belongs in CI rather than in the loop.
+Each answers something the others do not.
 
 ## `agent doctor`
 
@@ -116,9 +118,26 @@ cairn agent convert  ./my-bundle --target claude-code --profile plugin --output 
 cairn agent doctor   ./my-bundle --target claude-code --profile plugin --output "$TMP/conv"
 cairn agent test     ./my-bundle --target claude-code
 cairn agent audit    ./my-bundle --target claude-code --profile plugin
+cairn agent verify
 ```
 
 `agent validate` takes no `--profile`.
+
+## `agent verify`
+
+The other four check a bundle. `agent verify` checks the _repository_: that the agent files
+committed alongside the bundle are still what it renders, and that the CLI and target-profile
+versions are the ones the repository pinned.
+
+```bash
+cairn agent verify                      # reads the agent.verify block; the CI shape
+cairn agent verify --name my-bundle     # one entry, while iterating
+```
+
+It reads what to check from configuration rather than flags, so the pins travel with the
+repository. Leave `--strict` off in CI: forwarded approximate render warnings would fail the
+job, and everything that must block is already an error. Full options and the
+`agent.verify` block are on the command page.
 
 ## More
 

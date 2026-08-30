@@ -126,6 +126,10 @@ in `import-report.json`.
 A tree holding only `.agents/skills/<name>/` is genuinely ambiguous between Antigravity and Codex,
 and `import` throws naming the candidates rather than guessing. Pass `--from` to settle it.
 
+For a whole **repository** rather than one plugin — surveying what is there, triaging the
+overlays, regenerating, and wiring drift detection — run `/agent-migrate`, which walks that
+sequence with confirmation gates.
+
 ## More
 
 Full flags, the frontmatter tables, and the diagnostic codes are in

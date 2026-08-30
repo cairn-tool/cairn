@@ -37,10 +37,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # force-push the marketplace branch
+    # No `workflow_run.event == 'push'` clause here, unlike release.yml. The
+    # triggering run is Release, which is itself workflow_run-triggered by CI, so
+    # its event is `workflow_run` and never `push` -- copying release.yml's guard
+    # verbatim made this job skip silently on every release.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main')
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

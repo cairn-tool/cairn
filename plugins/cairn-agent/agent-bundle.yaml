@@ -5,8 +5,8 @@
 # spec at the repository root.
 schemaVersion: "2"
 name: cairn-agent
-version: 1.0.0
-description: Author, convert, test, and publish portable agent bundles.
+version: 1.1.0
+description: Author, convert, migrate, test, and publish portable agent bundles.
 
 marketplace:
   displayName: Cairn Agent
@@ -14,10 +14,12 @@ marketplace:
   description: >-
     Write skills, subagents, rules, hooks, policies, and MCP config once, then
     render them for every host — with conformance checks, model-free contract
-    tests, a supply-chain audit, and marketplace packaging. Wraps the `cairn`
-    CLI, which must be installed separately.
+    tests, a supply-chain audit, and marketplace packaging — including turning a
+    repository's existing host-specific content into a portable bundle, and
+    detecting drift once it is generated. Wraps the `cairn` CLI, which must be
+    installed separately.
   categories: [developer-tools, productivity]
-  keywords: [plugins, skills, subagents, marketplace, portability]
+  keywords: [plugins, skills, subagents, marketplace, portability, migration]
   publisher:
     name: Bryan Stockus
     url: https://github.com/cairn-tool

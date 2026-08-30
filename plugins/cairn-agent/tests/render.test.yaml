@@ -25,7 +25,7 @@ cases:
         - path: .claude-plugin/plugin.json
           contains:
             name: cairn-agent
-            version: 1.0.0
+            version: 1.1.0
 
   # `agents` and `hooks` are implied manifest fields. Declaring `agents` fails
   # the whole manifest; declaring `hooks` drops the plugin's hooks. Neither is
@@ -51,6 +51,8 @@ cases:
           includes: ["disable-model-invocation: true", "argument-hint:"]
         - path: skills/agent-check/SKILL.md
           includes: ["disable-model-invocation: true"]
+        - path: skills/agent-migrate/SKILL.md
+          includes: ["disable-model-invocation: true", "argument-hint:"]
 
   # The exclusion is newline-anchored to the frontmatter line: a bare substring
   # would also match a skill whose prose documents the flag, which the
@@ -66,6 +68,10 @@ cases:
           excludes: ["\ndisable-model-invocation: true\n"]
         - path: skills/bundle-publishing/SKILL.md
           excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/target-portability/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/portability-triage/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
 
   - name: the-shared-reference-asset-ships
     targets: [claude-code]
@@ -74,3 +80,33 @@ cases:
       files:
         - path: assets/cli-basics.md
           includes: ["## Exit codes", "@cairn-tool/cairn"]
+
+  # Sidecars are reached by relative link from a skill body, so a rename that
+  # misses one leaves a dead link the renderer will happily emit.
+  - name: skill-reference-sidecars-ship
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - skills/agent-migrate/reference/discovery.md
+          - skills/agent-migrate/reference/cutover.md
+          - skills/target-portability/reference/support-matrix.md
+          - skills/portability-triage/reference/diagnostics.md
+          - skills/bundle-authoring/reference/bundle-format.md
+          - skills/bundle-publishing/reference/marketplace.md
+          - skills/bundle-testing/reference/tests.md
+
+  # The migration skill exists to drive these three commands in order. Losing
+  # one to a rewrite would leave a walkthrough that no longer walks anywhere.
+  - name: the-migration-skill-drives-import-convert-and-verify
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/agent-migrate/SKILL.md
+          includes:
+            - "cairn agent import"
+            - "cairn agent convert"
+            - "cairn agent verify"
+            - "--from"
