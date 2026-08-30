@@ -1,11 +1,13 @@
 # Cairn
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cairn-tool/cairn/badge)](https://scorecard.dev/viewer/?uri=github.com/cairn-tool/cairn)
+
 An agent-agnostic CLI toolkit for working with Markdown files and related assets. Cairn
 supports all LLM coding agents, as well as humans and CI systems; its commands do not
 depend on Claude or any model-provider API.
 
-Published as `@bstockus/cairn` on the GitHub Packages npm registry; the installed binary
-is named `cairn`.
+Published as [`@cairn-tool/cairn`](https://www.npmjs.com/package/@cairn-tool/cairn) on the
+public npm registry; the installed binary is named `cairn`.
 
 > **Renamed from `claude-cli`.** The old name implied a coupling that never existed. Every
 > identifier Cairn writes into your files or environment is still _read_ under its
@@ -13,21 +15,16 @@ is named `cairn`.
 
 ## Install
 
-The package is private, so npm needs to know where the `@bstockus` scope lives and how to
-authenticate. Add this to your **`~/.npmrc`** once, using a GitHub personal access token
-with the `read:packages` scope:
-
-```ini
-@bstockus:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=<YOUR_PAT>
-```
-
-Then:
+No registry configuration and no token — the package is public.
 
 ```bash
-npm install -g @bstockus/cairn   # global `cairn` binary
-npx @bstockus/cairn md lint FILE # one-off, no install
+npm install -g @cairn-tool/cairn   # global `cairn` binary
+npx @cairn-tool/cairn md lint FILE # one-off, no install
 ```
+
+Every published tarball carries an [npm provenance
+attestation](https://docs.npmjs.com/generating-provenance-statements) linking it to the
+workflow run that built it, so you can verify what you installed came from this repository.
 
 ### Keeping a stable path across Node upgrades
 
@@ -37,18 +34,18 @@ holding an absolute path to the CLI (Claude Code hooks, for example). Pin a stab
 
 ```bash
 mkdir -p ~/.local/bin
-ln -sf "$(npm root -g)/@bstockus/cairn/dist/cli.js" ~/.local/bin/cairn
+ln -sf "$(npm root -g)/@cairn-tool/cairn/dist/cli.js" ~/.local/bin/cairn
 ```
 
 Make sure `~/.local/bin` is on your `PATH`.
 
 ### Installing from source with `npm link`
 
-Skip the registry entirely and link a local clone if you don't have a GitHub Packages
-token, or want to run a specific commit instead of the latest published release:
+Skip the registry entirely and link a local clone to run a specific commit instead of the
+latest published release:
 
 ```bash
-git clone git@github.com:bstockus/cairn.git
+git clone git@github.com:cairn-tool/cairn.git
 cd cairn
 npm ci
 npm run build   # tsc -> dist/cli.js
@@ -60,7 +57,7 @@ instead of copying files, so pulling new commits only requires `npm run build` a
 need to re-run `npm link`. Remove the link with:
 
 ```bash
-npm unlink -g @bstockus/cairn
+npm unlink -g @cairn-tool/cairn
 ```
 
 ## Migrating from claude-cli
@@ -98,11 +95,16 @@ CAIRN_SCRIPT_STACK      CLAUDE_CLI_SCRIPT_STACK
 CAIRN_INVOKED_FROM      CLAUDE_CLI_INVOKED_FROM
 ```
 
-What **does** change for consumers: the package is now `@bstockus/cairn`, the binary is
-`cairn`, the envelope's `tool.name` reports the new package name, schema `$id`s are rooted
-at `https://github.com/bstockus/cairn/schema`, and the contract `schemaVersion` is `2`.
-Regenerate your shell completion script after upgrading, and re-point anything holding an
-absolute path to the old binary.
+What **does** change for consumers: the binary is `cairn`, the package is
+`@cairn-tool/cairn` on the public npm registry, the envelope's `tool.name` reports it,
+schema `$id`s are rooted at `https://github.com/cairn-tool/cairn/schema`, and the contract
+`schemaVersion` is `3`. Regenerate your shell completion script after upgrading, and
+re-point anything holding an absolute path to the old binary.
+
+> **Also moved registries.** v1.11.0 shipped as `@bstockus/cairn` on GitHub Packages, which
+> required a token even though the repository was public. That name is not updated any
+> further — uninstall it (`npm uninstall -g @bstockus/cairn`) and install
+> `@cairn-tool/cairn`, which needs no credentials at all.
 
 ## Claude Code plugins
 
@@ -110,7 +112,7 @@ Cairn ships its own toolsets as installable plugins, so an assistant has the com
 available without rediscovering it from `--help`:
 
 ```text
-/plugin marketplace add bstockus/claude-cli@claude-plugins
+/plugin marketplace add cairn-tool/cairn@claude-plugins
 /plugin install cairn-markdown@cairn
 ```
 
@@ -131,7 +133,7 @@ See [Cairn's own plugins](docs/plugins.md).
 ## Development
 
 ```bash
-git clone git@github.com:bstockus/cairn.git
+git clone git@github.com:cairn-tool/cairn.git
 cd cairn
 npm ci
 
@@ -143,7 +145,7 @@ npm run format     # Prettier (write); `npm run format:check` in CI
 npm run typecheck  # tsc --noEmit
 
 npm link           # expose the working tree as the global `cairn`, see Install above
-npm unlink -g @bstockus/cairn
+npm unlink -g @cairn-tool/cairn
 ```
 
 The e2e suite spawns the **compiled** `dist/cli.js`, so a build must precede it — `pretest`
@@ -154,8 +156,8 @@ handles that automatically.
 Releases are fully automated. Every push to `main` runs
 [semantic-release](https://github.com/semantic-release/semantic-release), which derives the
 next version from the commit messages, tags it, writes `CHANGELOG.md`, creates a GitHub
-Release, and publishes to GitHub Packages. Nothing is versioned by hand — `version` in
-`package.json` is managed by the release job.
+Release, and publishes to npm with a provenance attestation. Nothing is versioned by hand —
+`version` in `package.json` is managed by the release job.
 
 Commits **must** follow [Conventional Commits](https://www.conventionalcommits.org/); a
 `commit-msg` hook and a CI job both enforce it.
@@ -173,7 +175,7 @@ The CLI checks whether a newer version has been published and prints a notice:
 
 ```text
 Update available 1.0.3 → 1.1.0
-Run npm install -g @bstockus/cairn to update.
+Run npm install -g @cairn-tool/cairn to update.
 ```
 
 The check runs **at most once every 24 hours**, in a detached background process, so it
@@ -1404,6 +1406,18 @@ are all resolved.
 
 The `--style` rule configuration lives in `.markdownlintrc` at the package root and ships
 with the published package.
+
+## Contributing
+
+Pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the setup, the
+pre-push checks, the Conventional Commits requirement, and the handful of conventions that
+are load-bearing rather than stylistic.
+
+## Security
+
+Report a vulnerability privately through GitHub Security Advisories rather than in a public
+issue. [SECURITY.md](SECURITY.md) lists what is in scope — chiefly `scripts run`, the only
+command that executes anything.
 
 ## License
 

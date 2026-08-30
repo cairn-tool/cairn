@@ -16,7 +16,7 @@ cairn schema md-graph                 # one schema document
 
 ## Contract version
 
-`schemaVersion` (currently `2`) versions the **contract surface**: the envelope shape, the
+`schemaVersion` (currently `3`) versions the **contract surface**: the envelope shape, the
 `describe` payload, the schema id scheme, and the machine-stream guarantees below. It is
 hand-owned and unrelated to the package version, which semantic-release manages.
 
@@ -67,7 +67,7 @@ of `usage index` needs to know which of the two kinds of version it is looking a
 Schema ids look like URLs:
 
 ```text
-https://github.com/bstockus/cairn/schema/v1/md-graph.json
+https://github.com/cairn-tool/cairn/schema/v1/md-graph.json
 ```
 
 They are **identifiers, not fetchable URLs**. Retrieve a schema with `cairn schema <id>`.
@@ -154,11 +154,11 @@ cairn md graph docs --format json --envelope
 ```json
 {
   "schemaVersion": "2",
-  "tool": { "name": "@bstockus/cairn", "version": "1.6.0" },
+  "tool": { "name": "@cairn-tool/cairn", "version": "1.6.0" },
   "command": "md graph",
   "ok": false,
   "exitCode": 2,
-  "schema": "https://github.com/bstockus/cairn/schema/v1/md-graph.json",
+  "schema": "https://github.com/cairn-tool/cairn/schema/v1/md-graph.json",
   "data": {},
   "summary": { "broken": 2, "unreachable": 1 }
 }
@@ -234,17 +234,27 @@ cairn md audit docs --format json > audit.json || true
 applied, so `defaultFormat` is the built-in default rather than the resolved one and the answer
 does not depend on the working directory.
 
-## Compatibility with claude-cli
+## Contract history
 
-`schemaVersion` went to `2` when the tool was renamed from `claude-cli` to Cairn. No payload
-_shape_ changed; two published values did, which is what the bump signals:
+`schemaVersion` has moved twice, both times because a _published value_ changed rather than a
+payload _shape_. In both bumps the `v1` segment of every schema id is unchanged — the payloads
+are identical — and the short ids `cairn schema <id>` takes are unchanged.
+
+### 2 → 3: the move to the `cairn-tool` organisation
+
+- Schema `$id`s moved from `https://github.com/bstockus/cairn/schema/v1/<id>.json` to
+  `https://github.com/cairn-tool/cairn/schema/v1/<id>.json`.
+- `tool.name` in the envelope and in `describe`, and `generator.name` in every report Cairn
+  writes, is now `@cairn-tool/cairn`. The package is published to the public npm registry;
+  `@bstockus/cairn` on GitHub Packages is not updated past v1.11.0.
+
+### 1 → 2: the rename from claude-cli
 
 - Schema `$id`s moved from `https://github.com/bstockus/claude-cli/schema/v1/<id>.json` to
-  `https://github.com/bstockus/cairn/schema/v1/<id>.json`. The `v1` segment is unchanged —
-  the payloads are identical — and the short ids `cairn schema <id>` takes are unchanged.
+  `https://github.com/bstockus/cairn/schema/v1/<id>.json`.
 - `machineStreams.optOutEnv` is now `CAIRN_NO_UPDATE_NOTIFIER`. The pre-rename variable is
   still honored, but only the current one is published here.
-- `tool.name` in the envelope and in `describe` is now `@bstockus/cairn`.
+- `tool.name` became `@bstockus/cairn`.
 
 Identifiers Cairn writes into a workspace — `.cairn.yml`, the TOC markers, the
 `cairn:snippet=` attribute, `.cairn-install.json`, and the two baseline discriminators —

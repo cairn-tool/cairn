@@ -158,7 +158,7 @@ SARIF 2.1.0, referencing the
       "tool": {
         "driver": {
           "name": "cairn",
-          "informationUri": "https://github.com/bstockus/cairn",
+          "informationUri": "https://github.com/cairn-tool/cairn",
           "rules": [{ "id": "…", "name": "…" }],
         },
       },

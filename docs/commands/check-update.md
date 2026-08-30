@@ -6,10 +6,10 @@
 cairn check-update [options]
 ```
 
-Queries npm directly for the latest published `@bstockus/cairn` version. It deliberately
-bypasses the passive notifier's 24-hour cache, then refreshes that cache with the result. npm
-performs registry and authentication resolution, including scoped-registry settings in
-`.npmrc`.
+Queries npm directly for the latest published `@cairn-tool/cairn` version. It deliberately
+bypasses the passive notifier's 24-hour cache, then refreshes that cache with the result. The
+lookup shells out to `npm view`, so npm's own registry resolution applies — including any
+scoped-registry or proxy settings in `.npmrc`, which matter behind a corporate mirror.
 
 ## Arguments
 

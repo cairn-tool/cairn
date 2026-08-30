@@ -24,7 +24,7 @@ one. Widening those would be noise, not safety.
 
 ```jsonc
 {
-  "generator": { "name": "@bstockus/cairn", "version": "1.12.0" },
+  "generator": { "name": "@cairn-tool/cairn", "version": "1.12.0" },
   "bundle": { "name": "release-helper", "version": "1.0.0" },
   "target": "cursor",
   "profile": "plugin",

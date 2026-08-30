@@ -69,7 +69,7 @@ changing what this one means.
 {
   "bomFormat": "cairn-inventory",
   "specVersion": "1",
-  "generator": { "name": "@bstockus/cairn", "version": "1.12.0" },
+  "generator": { "name": "@cairn-tool/cairn", "version": "1.12.0" },
   "subject": { "name": "release-helper", "version": "1.0.0" },
   "components": [
     {

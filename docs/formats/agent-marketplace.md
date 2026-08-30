@@ -28,7 +28,7 @@ version: 1.0.0
 description: Cairn's own toolsets, as plugins.
 owner:
   name: Bryan Stockus
-  url: https://github.com/bstockus
+  url: https://github.com/cairn-tool
 
 targets: [claude-code]
 

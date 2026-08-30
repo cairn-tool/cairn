@@ -33,7 +33,7 @@ already JSON.
 Schema `$id` values look like URLs:
 
 ```text
-https://github.com/bstockus/cairn/schema/v1/md-graph.json
+https://github.com/cairn-tool/cairn/schema/v1/md-graph.json
 ```
 
 They are identifiers, not fetchable URLs. `cairn schema <id>` is how you retrieve one.

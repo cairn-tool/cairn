@@ -61,7 +61,7 @@ The full `agent convert` result, plus provenance, written at the output root.
   ],
   "dryRun": false,
   "check": false,
-  "generator": { "name": "@bstockus/cairn", "version": "1.12.0" },
+  "generator": { "name": "@cairn-tool/cairn", "version": "1.12.0" },
   "profileSchemaVersion": "2",
   "targetProfiles": {
     "claude-code": { "documentationRevision": "2026-08-02" },

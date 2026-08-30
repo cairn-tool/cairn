@@ -10,7 +10,7 @@ They are authored as [agent bundles](formats/agent-bundle.md) under `plugins/`, 
 ## Installing
 
 ```text
-/plugin marketplace add bstockus/claude-cli@claude-plugins
+/plugin marketplace add cairn-tool/cairn@claude-plugins
 /plugin install cairn-markdown@cairn
 ```
 
@@ -18,7 +18,7 @@ The branch is force-pushed on every release. Nothing on it names an owner or a b
 entry sources are relative, so the tree works however it was fetched.
 
 **The `cairn` binary is a separate install.** These plugins document and invoke it; they do not
-carry it. See [the README](https://github.com/bstockus/claude-cli#install). A plugin whose hook
+carry it. See [the README](https://github.com/cairn-tool/cairn#install). A plugin whose hook
 cannot find `cairn` on `PATH` exits quietly rather than failing an edit.
 
 ## The plugins

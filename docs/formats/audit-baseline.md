@@ -21,7 +21,7 @@ requiring the backlog to be fixed first.
 {
   "baselineFormat": "cairn-md-audit-baseline",
   "version": "1",
-  "generator": { "name": "@bstockus/cairn", "version": "1.12.0" },
+  "generator": { "name": "@cairn-tool/cairn", "version": "1.12.0" },
   "entries": [
     { "checker": "toc", "file": "docs/a.md", "message": "Table of contents is stale", "count": 1 },
   ],
@@ -80,7 +80,7 @@ against it answers "what can run, and did it change since we last shipped?"
 ```jsonc
 {
   "bomFormat": "cairn-inventory",
-  "generator": { "name": "@bstockus/cairn", "version": "1.11.0" },
+  "generator": { "name": "@cairn-tool/cairn", "version": "1.11.0" },
   "subject": { "name": "release-helper", "version": "0.9.0" },
   "components": [
     {
@@ -116,7 +116,7 @@ counts as a script.
 {
   "path": "…/sbom.json",
   "subject": { "name": "release-helper", "version": "0.9.0" },
-  "generator": { "name": "@bstockus/cairn", "version": "1.11.0" },
+  "generator": { "name": "@cairn-tool/cairn", "version": "1.11.0" },
   "compared": 4,
   "added": ["…"],
   "removed": ["…"],

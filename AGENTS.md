@@ -1,6 +1,6 @@
 # Cairn
 
-A TypeScript/Node ESM CLI published as `@bstockus/cairn`. The binary is `cairn`.
+A TypeScript/Node ESM CLI published as `@cairn-tool/cairn`. The binary is `cairn`.
 Renamed from `claude-cli`; see the compatibility gotcha below.
 
 ## Layout
@@ -77,16 +77,20 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
 - **Release is gated on the CI workflow, not on push.** `release.yml` triggers via
   `workflow_run` after CI succeeds, so a red matrix cannot publish. It deliberately
   does not re-run the tests.
-- **The package-retention job exists but is currently DISABLED.**
-  `.github/workflows/prune-packages.yml` would keep only the newest 3 versions on GitHub
-  Packages, but the workflow is in `disabled_manually` state, so nothing is pruned today.
-  Re-enable with `gh workflow enable "Prune package versions"`.
-  Two things to know before doing so: it deletes irreversibly, and it needs a
-  `PACKAGES_TOKEN` secret (a classic PAT with `read:packages` + `delete:packages`) because
-  the package is owned by a _user_ — deletion goes through `/user/packages/...`, which acts
-  on the authenticated user, while `GITHUB_TOKEN` authenticates as `github-actions[bot]`.
-  Manual runs default to a dry run; scheduled runs delete. Selection sorts by semver and
-  never removes a version whose name is not valid semver.
+- **`publishConfig` is load-bearing, and both keys are.** The package publishes to the public
+  registry.npmjs.org as `@cairn-tool/cairn`. `access: "public"` is required because npm
+  defaults a _scoped_ package to restricted, and a restricted publish from a free account
+  fails outright. `provenance: true` is what signs the tarball, and it needs `id-token: write`
+  in `release.yml` plus a public repository — drop either and the publish silently ships
+  unattested. `NPM_TOKEN` is a granular npmjs token, unrelated to `GITHUB_TOKEN`, which now
+  only covers the tag, the Release, and the CHANGELOG commit.
+- **`ci.yml` must stay on `pull_request`, never `pull_request_target`.** It checks out and
+  executes the PR's own code; the current trigger gives a fork a read-only token and no
+  secrets. The other trigger would hand a fork's code a writable token and this repository's
+  secrets. There is a comment on the trigger saying so.
+- **Actions are pinned to commit SHAs with a trailing version comment.** Dependabot tracks
+  `github-actions` weekly and preserves the comment when it bumps a pin. Replacing a SHA with
+  a floating tag is a supply-chain regression, not a simplification.
 - **ESLint uses the non-type-checked preset on purpose.** `tsc --strict` (`npm run typecheck`)
   is the type authority. typescript-eslint's `recommendedTypeChecked` flags ~26 long-standing
   intentional patterns here — uniformly-`async` commander handlers, `as unknown as` casts
