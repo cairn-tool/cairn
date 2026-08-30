@@ -90,6 +90,11 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   **throws the returned token away**, leaving `npm publish` to exchange again on its own. An
   npm that predates the feature therefore passes verification and then fails at the publish,
   after the tag exists. Removing that upgrade step looks like tidying and is not.
+- **`plugins.yml`'s trigger guard must not test `workflow_run.event`.** It is the third link in
+  a `workflow_run` chain (CI -> Release -> Plugins), so the run that triggers it is Release,
+  whose own event is `workflow_run` and never `push`. `release.yml`'s guard _does_ test for
+  `push`, correctly, because the run triggering it is CI-on-push. Copying that clause into
+  `plugins.yml` made the job skip on every release while reporting success.
 - **A failed `npm publish` strands the release, and re-running the job does nothing.**
   semantic-release runs every plugin's `prepare` before any plugin's `publish`, and
   `@semantic-release/git`'s prepare is what pushes the version commit _and the tag_. So a
