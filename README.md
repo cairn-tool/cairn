@@ -22,9 +22,12 @@ npm install -g @cairn-tool/cairn   # global `cairn` binary
 npx @cairn-tool/cairn md lint FILE # one-off, no install
 ```
 
-Every published tarball carries an [npm provenance
+Every published tarball is built by GitHub Actions and carries an [npm provenance
 attestation](https://docs.npmjs.com/generating-provenance-statements) linking it to the
-workflow run that built it, so you can verify what you installed came from this repository.
+workflow run that produced it, so you can verify that what you installed came from this
+repository. Releases publish through [trusted
+publishing](https://docs.npmjs.com/trusted-publishers) — no long-lived registry credential
+exists to be stolen.
 
 ### Keeping a stable path across Node upgrades
 
@@ -156,8 +159,12 @@ handles that automatically.
 Releases are fully automated. Every push to `main` runs
 [semantic-release](https://github.com/semantic-release/semantic-release), which derives the
 next version from the commit messages, tags it, writes `CHANGELOG.md`, creates a GitHub
-Release, and publishes to npm with a provenance attestation. Nothing is versioned by hand —
-`version` in `package.json` is managed by the release job.
+Release, and publishes to npm. Nothing is versioned by hand — `version` in `package.json` is
+managed by the release job.
+
+Publishing uses OIDC trusted publishing rather than a stored npm token, which is also what
+generates the provenance attestation. The trusted publisher is registered against the
+`release.yml` workflow filename, so renaming that file breaks publishing.
 
 Commits **must** follow [Conventional Commits](https://www.conventionalcommits.org/); a
 `commit-msg` hook and a CI job both enforce it.

@@ -31,7 +31,7 @@ jobs:
       contents: write # git tags, CHANGELOG commit, GitHub Release
       issues: write # semantic-release success comments
       pull-requests: write
-      id-token: write # provenance attestation for the published tarball
+      id-token: write # OIDC trusted publishing, and the provenance attestation
     # Only for a green CI run on a push to main — not for PR CI runs.
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -56,19 +56,35 @@ jobs:
           registry-url: https://registry.npmjs.org
           scope: "@cairn-tool"
 
+      # Trusted publishing needs npm >= 11.5.1, and Node 22 bundles 10.9.7.
+      # @semantic-release/npm only *verifies* the OIDC exchange — it discards the
+      # token it gets back and lets `npm publish` perform the real exchange — so
+      # an npm that predates the feature loses its credentials at the last step,
+      # after the tag has already been written. Floating within a major so a
+      # security fix lands without a breaking CLI change arriving unannounced.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@12
+
       - run: npm ci
 
       # No test step: this job only runs after the CI workflow went green across
       # the full Node matrix, so re-running them here would duplicate that work.
 
-      # `publishConfig` in package.json carries `access: public` (scoped packages
-      # default to restricted) and `provenance: true`, which needs the id-token
-      # permission above plus a public repository. Both are load-bearing.
+      # Auth precedence is the plugin's, not ours: verify-auth.js attempts the
+      # OIDC exchange first and only falls back to a token when that fails. So
+      # NPM_TOKEN is a bootstrap, not the intended path — npm configures a
+      # trusted publisher on an existing package's settings page, which a package
+      # that has never been published does not have. Publish once with the token,
+      # configure the trusted publisher against this workflow filename, then
+      # delete the secret; the fallback then has nothing to fall back to and
+      # every later release goes through OIDC.
+      #
+      # Provenance is automatic under trusted publishing. `publishConfig` still
+      # sets it explicitly so the bootstrap publish is attested too.
       - name: semantic-release
         env:
-          # GITHUB_TOKEN is for the tag, the GitHub Release, and the CHANGELOG
-          # commit. The npm registry is a separate identity now, so it needs its
-          # own credential rather than reusing this one.
+          # For the tag, the GitHub Release, and the CHANGELOG commit only. The
+          # npm registry is a separate identity.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

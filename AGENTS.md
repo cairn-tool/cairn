@@ -79,11 +79,23 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   does not re-run the tests.
 - **`publishConfig` is load-bearing, and both keys are.** The package publishes to the public
   registry.npmjs.org as `@cairn-tool/cairn`. `access: "public"` is required because npm
-  defaults a _scoped_ package to restricted, and a restricted publish from a free account
-  fails outright. `provenance: true` is what signs the tarball, and it needs `id-token: write`
-  in `release.yml` plus a public repository — drop either and the publish silently ships
-  unattested. `NPM_TOKEN` is a granular npmjs token, unrelated to `GITHUB_TOKEN`, which now
-  only covers the tag, the Release, and the CHANGELOG commit.
+  defaults a _scoped_ package to restricted, and a restricted publish fails outright.
+  `provenance: true` is redundant under trusted publishing, which attests automatically, but
+  it keeps a token-authenticated publish attested too — so it stays. `GITHUB_TOKEN` covers
+  only the tag, the Release, and the CHANGELOG commit; the registry is a separate identity.
+- **Publishing is OIDC trusted publishing, and `npm install -g npm@12` in `release.yml` is
+  what makes it work.** Trusted publishing needs npm >= 11.5.1 and Node >= 22.14.0. `.nvmrc`
+  satisfies the Node floor, but Node 22 _bundles npm 10.9.7_, and the failure mode is nasty:
+  `@semantic-release/npm`'s `verify-auth.js` performs the OIDC exchange purely as a check and
+  **throws the returned token away**, leaving `npm publish` to exchange again on its own. An
+  npm that predates the feature therefore passes verification and then fails at the publish,
+  after the tag exists. Removing that upgrade step looks like tidying and is not.
+- **`NPM_TOKEN` is a bootstrap, not the auth path.** npm configures a trusted publisher on an
+  existing package's settings page, so the first ever publish of a name has nowhere to
+  configure it and needs a token. `verify-auth.js` tries OIDC first and only falls back to a
+  token, so both can coexist: publish once with the secret, register the trusted publisher
+  against the `release.yml` filename, then delete the secret. The workflow filename is part
+  of that registration — renaming `release.yml` breaks publishing.
 - **`ci.yml` must stay on `pull_request`, never `pull_request_target`.** It checks out and
   executes the PR's own code; the current trigger gives a fork a read-only token and no
   secrets. The other trigger would hand a fork's code a writable token and this repository's
