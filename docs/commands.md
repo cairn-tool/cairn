@@ -6,7 +6,8 @@ signatures are required arguments; square brackets are optional arguments.
 Each command page lives under `commands/<toolset>/`; the top-level commands are directly under
 `commands/`. For the files these commands read and write, see
 [File formats and schemas](formats.md); for what is known about each assistant, see
-[Providers](providers.md).
+[Providers](providers.md). For why a toolset exists rather than what its flags are, see the
+[guides](guide.md).
 
 ## Global interface
 
@@ -30,6 +31,7 @@ Each command page lives under `commands/<toolset>/`; the top-level commands are 
 Resolution walks every `.cairn.yml` from the working directory to the repository root, and
 the nearest file that defines the name wins. The script runs with its working directory pinned
 to the registry that declared it, so a hook keeps working after the caller changes directory.
+The narrative version is in [the scripts guide](guide/scripts.md).
 
 | Command                                             | Description                                               |
 | --------------------------------------------------- | --------------------------------------------------------- |
@@ -51,6 +53,7 @@ what the totals do and do not cover.
 Transcripts are imported once into a SQLite store under `$XDG_DATA_HOME`, which holds both the
 day rollup the reports read and a per-occurrence event table for questions a day bucket cannot
 express.
+The narrative version is in [the usage guide](guide/usage.md).
 
 | Command                                          | Description                                                    |
 | ------------------------------------------------ | -------------------------------------------------------------- |
@@ -78,6 +81,7 @@ archives whose members are named by their own hash, so `tar` recovers them with 
 What gets archived is declared per provider rather than swept from a home directory, and a run is
 incremental twice over: unchanged files are never opened, and content already stored is never
 written twice. See [shared archive command behavior](commands/archive/common.md).
+The narrative version is in [the archiving guide](guide/archiving.md).
 
 | Command                                          | Description                             |
 | ------------------------------------------------ | --------------------------------------- |
@@ -89,6 +93,10 @@ written twice. See [shared archive command behavior](commands/archive/common.md)
 | [`archive migrate`](commands/archive/migrate.md) | Apply pending archive index migrations. |
 
 ## Agent commands
+
+The `agent` toolset compiles one host-neutral bundle into the artifacts each assistant reads.
+The narrative version is in [the agent bundles guide](guide/agent-bundles.md), and
+[Cairn's own plugins](plugins.md) are five worked examples.
 
 | Command                                                     | Description                                                                     |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -117,6 +125,7 @@ Agent targets are `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, a
 
 The `md` parent accepts `--config <file>` to select a `.cairn.yml` file and
 `--no-config` to disable discovery. These two options are mutually exclusive.
+The narrative version is in [the Markdown guide](guide/markdown.md).
 
 | Command                                                                                 | Description                                                                       |
 | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |

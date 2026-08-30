@@ -31,8 +31,9 @@ There are five toolsets, `md`, `agent`, `scripts`, `usage`, and `archive`, plus 
 `describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
 `command(...)` registration in `src/cli.ts`, a `src/contract/registry.ts` entry, a
 `docs/commands/<toolset>/<name>.md` page (top-level commands stay directly under
-`docs/commands/`) with entries in `docs/commands.md` and `docs/_contents.md`, a
-README entry, and e2e coverage. For an `agent` subcommand, also widen
+`docs/commands/`) with entries in `docs/commands.md` and `docs/_contents.md`, a row in
+`docs/formats/diagnostic-codes.md` for any new `AB###`, and e2e coverage. The README is a
+README: it links into `docs/` and does not list commands. For an `agent` subcommand, also widen
 `AgentResult["command"]` in `src/agent/types.ts` and the `command` enum plus `commands` list
 in `src/contract/schemas/agent.ts`. A new toolset group also needs adding to the `groups` set
 in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `undeclared`.
