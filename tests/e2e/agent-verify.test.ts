@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -254,6 +254,35 @@ agent:
     const result = await run("agent", "verify", "--config", file, "-fj");
     expect(result.exitCode).toBe(1);
     expect(JSON.parse(result.stdout).diagnostics[0].message).toContain("agent.verify");
+  });
+
+  it("refuses a FIFO promptly rather than blocking on the open", async () => {
+    // Opening a FIFO for reading blocks until a writer appears, which would
+    // wedge the process with no output. The type is checked before the
+    // descriptor exists for exactly this reason.
+    const root = await repository();
+    const fifo = path.join(root, "fifo.yml");
+    execFileSync("mkfifo", [fifo]);
+    const result = await run("agent", "verify", "--config", fifo);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Not a regular file");
+  }, 10_000);
+
+  it("refuses a binary file named like a configuration document", async () => {
+    const root = await repository();
+    const file = path.join(root, "binary.yml");
+    fs.writeFileSync(file, Buffer.from([0x59, 0x00, 0x4d, 0x4c]));
+    const result = await run("agent", "verify", "--config", file);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Not a text file");
+  });
+
+  it("follows a symlinked configuration document", async () => {
+    const root = await repository();
+    const link = path.join(root, "linked.yml");
+    fs.symlinkSync(defaultConfig(root), link);
+    const result = await run("agent", "verify", "--config", link);
+    expect(result.exitCode).toBe(0);
   });
 
   it("emits a payload carrying the pins, the entries, and the counts", async () => {

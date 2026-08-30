@@ -30,17 +30,39 @@ export interface VerifySelection {
 }
 
 function readDocument(file: string): Record<string, unknown> {
-  // The guards mirror `readRegistry` in `src/scripts/resolve.ts`: realpath, a
+  // The guards mirror `readRegistry` in `src/scripts/resolve.ts`: a
   // regular-file check so a FIFO cannot wedge the process, a size cap, and a
   // NUL probe.
-  const real = fs.realpathSync(file);
-  const stat = fs.lstatSync(real);
-  if (!stat.isFile()) throw new Error(`Not a regular file: ${file}`);
-  if (stat.size > MAX_CONFIG_BYTES)
-    throw new Error(`Configuration file is larger than ${MAX_CONFIG_BYTES} bytes: ${file}`);
-  const buffer = fs.readFileSync(real);
-  if (buffer.subarray(0, NUL_PROBE_BYTES).includes(0)) throw new Error(`Not a text file: ${file}`);
-  return object(parseYaml(buffer.toString("utf-8")), "configuration");
+  //
+  // The lstat comes first and is a pre-flight only: opening a FIFO for reading
+  // blocks until a writer appears, so the type has to be known before the
+  // descriptor exists. Everything the read then depends on is re-checked with
+  // `fstat` against that descriptor, so a path swapped between the two calls
+  // cannot change the size or the type actually read.
+  const pre = fs.lstatSync(file);
+  if (!pre.isFile() && !pre.isSymbolicLink()) throw new Error(`Not a regular file: ${file}`);
+
+  const handle = fs.openSync(file, "r");
+  try {
+    const stat = fs.fstatSync(handle);
+    if (!stat.isFile()) throw new Error(`Not a regular file: ${file}`);
+    if (stat.size > MAX_CONFIG_BYTES)
+      throw new Error(`Configuration file is larger than ${MAX_CONFIG_BYTES} bytes: ${file}`);
+
+    const buffer = Buffer.alloc(stat.size);
+    let read = 0;
+    while (read < stat.size) {
+      const chunk = fs.readSync(handle, buffer, read, stat.size - read, read);
+      if (chunk === 0) break;
+      read += chunk;
+    }
+    const contents = buffer.subarray(0, read);
+    if (contents.subarray(0, NUL_PROBE_BYTES).includes(0))
+      throw new Error(`Not a text file: ${file}`);
+    return object(parseYaml(contents.toString("utf-8")), "configuration");
+  } finally {
+    fs.closeSync(handle);
+  }
 }
 
 function parseAt(file: string): VerifyConfig | undefined {
