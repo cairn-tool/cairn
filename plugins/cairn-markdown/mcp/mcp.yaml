@@ -1,9 +1,9 @@
 # The read-only workspace engine, over MCP. Eleven tools mirroring the `md`
 # query and structure commands, confined to --root.
 #
-# `command: cairn` resolves from PATH. Not `npx @bstockus/cairn`: the package is
-# on a private registry, so npx would need a token, and an unpinned npx
-# specifier resolves to whatever is newest at launch.
+# `command: cairn` resolves from PATH. Not `npx @cairn-tool/cairn`: an unpinned
+# npx specifier resolves to whatever is newest at launch, which trips AB506 and
+# makes the server's behavior depend on the day it started.
 mcpServers:
   cairn:
     command: cairn

@@ -25,9 +25,8 @@ esac
 # The file may have been deleted between the tool call and this hook.
 [ -f "$FILE_PATH" ] || exit 0
 
-# cairn is published to a private registry and installed separately. Its absence
-# is expected, not an error: resolve it from PATH and leave quietly if it is not
-# there. Never hardcode an install path -- it breaks on every Node upgrade under
+# cairn is a separate install, so its absence is expected rather than an error:
+# resolve it from PATH and leave quietly if it is not there. Never hardcode an install path -- it breaks on every Node upgrade under
 # a version manager.
 command -v cairn >/dev/null 2>&1 || exit 0
 

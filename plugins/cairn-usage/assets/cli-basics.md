@@ -5,18 +5,15 @@ when you need output another tool will parse.
 
 ## The binary must already be installed
 
-`cairn` is published as `@bstockus/cairn` on the GitHub Packages registry, which is **private**.
-Nothing here installs it. If `command -v cairn` finds nothing, say so and stop — do not try to
-install it, and do not fall back to `npx`, which needs a token this environment may not have.
+`cairn` is published as `@cairn-tool/cairn` on the public npm registry. Nothing here installs
+it. If `command -v cairn` finds nothing, say so and stop — do not install it yourself, and do
+not fall back to `npx`, which resolves an unpinned version on every run.
 
-Installing it requires a `~/.npmrc` naming the registry and a GitHub token with `read:packages`:
+Installing it is one command, and needs no registry configuration and no token:
 
-```ini
-@bstockus:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=<TOKEN>
+```bash
+npm install -g @cairn-tool/cairn
 ```
-
-Then `npm install -g @bstockus/cairn`.
 
 ## Output formats
 

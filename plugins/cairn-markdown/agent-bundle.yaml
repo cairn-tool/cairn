@@ -16,5 +16,5 @@ marketplace:
   keywords: [markdown, lint, docs, mermaid, katex, markdownlint]
   publisher:
     name: Bryan Stockus
-    url: https://github.com/bstockus
+    url: https://github.com/cairn-tool
   license: MIT

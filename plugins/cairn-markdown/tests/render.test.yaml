@@ -92,8 +92,8 @@ cases:
               PostToolUse:
                 - matcher: Write|Edit
 
-  # `npx @bstockus/cairn` would need a token this environment may not have, and
-  # an unpinned specifier resolves to whatever is newest at launch.
+  # Not `npx @cairn-tool/cairn`: an unpinned specifier resolves to whatever is
+  # newest at launch, and trips AB506.
   - name: mcp-invokes-cairn-from-path
     targets: [claude-code]
     profiles: [plugin]
@@ -111,7 +111,7 @@ cases:
     expect:
       files:
         - path: assets/cli-basics.md
-          includes: ["## Exit codes", "@bstockus/cairn"]
+          includes: ["## Exit codes", "@cairn-tool/cairn"]
 
   # Model class and tool capabilities map exactly on this target; the auditor
   # deliberately has no write access.

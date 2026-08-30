@@ -8,7 +8,7 @@ version: 1.0.0
 description: Cairn's own toolsets, as plugins.
 owner:
   name: Bryan Stockus
-  url: https://github.com/bstockus
+  url: https://github.com/cairn-tool
 
 # Claude Code only for now. The bundles stay portable, but this is the only
 # host we publish a marketplace to.
