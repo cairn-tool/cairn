@@ -64,18 +64,33 @@ export interface MdCodeBlock {
   end: number;
 }
 
-const parser = unified().use(remarkParse).use(remarkGfm);
-const parserWithFrontmatter = unified()
-  .use(remarkParse)
-  .use(remarkGfm)
-  .use(remarkFrontmatter, ["yaml"]);
+/**
+ * One parser, and it is frontmatter-aware.
+ *
+ * Without `remark-frontmatter`, a leading `---\nkey: value\n---` is not a
+ * frontmatter block at all: the closing `---` reads as a setext underline, so
+ * the YAML body becomes an `<h2>` whose text is the raw keys. Every consumer of
+ * this module then inherited that phantom heading — `md headers`, `md outline`,
+ * `md stats`, and `md structure` reported it, and `md toc` emitted a link label
+ * containing a literal newline, which is not valid Markdown.
+ *
+ * The plugin only treats `---` at the very start of a document as frontmatter,
+ * so a mid-document thematic break or a real setext heading is unaffected, and
+ * the `yaml` node holds the block's position so every later node keeps its
+ * original line numbers.
+ */
+const parser = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ["yaml"]);
 
 export function parseMarkdown(content: string): Root {
   return parser.parse(content);
 }
 
+/**
+ * @deprecated Retained so an existing import keeps resolving. {@link parseMarkdown}
+ * has handled frontmatter since the phantom-heading fix; this is now an alias.
+ */
 export function parseMarkdownWithFrontmatter(content: string): Root {
-  return parserWithFrontmatter.parse(content);
+  return parser.parse(content);
 }
 
 export function slugify(text: string): string {

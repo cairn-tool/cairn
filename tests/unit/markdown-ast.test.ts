@@ -316,6 +316,44 @@ describe("extractTables", () => {
   });
 });
 
+// Without remark-frontmatter, a leading `---\nkey: value\n---` is not frontmatter
+// at all: the closing `---` reads as a setext underline and the YAML body becomes
+// an h2 whose text is the raw keys. Every consumer of this module inherited that
+// phantom heading, and `md toc` emitted a link label containing a literal newline.
+describe("frontmatter is not a heading", () => {
+  it("omits a frontmatter block from the heading list", () => {
+    const tree = parseMarkdown("---\ntitle: Test\ntags: [a]\n---\n\n# Real Heading\n");
+    expect(extractHeadings(tree).map((heading) => heading.text)).toEqual(["Real Heading"]);
+  });
+
+  it("keeps the line numbers of everything after it", () => {
+    const tree = parseMarkdown("---\ntitle: Test\n---\n\n# Real Heading\n");
+    expect(extractHeadings(tree)[0].line).toBe(5);
+  });
+
+  it("exposes the block as a yaml node", () => {
+    const tree = parseMarkdown("---\ntitle: Test\n---\n\n# H\n");
+    const yaml = tree.children.find((node) => node.type === "yaml");
+    expect((yaml as unknown as { value: string } | undefined)?.value).toBe("title: Test");
+  });
+
+  // Only a block at the very start is frontmatter. A setext heading elsewhere is
+  // still a heading, and a mid-document `---` is still a thematic break.
+  it("leaves a mid-document setext heading alone", () => {
+    const tree = parseMarkdown("# First\n\nSetext Heading\n---\n\nBody.\n");
+    expect(extractHeadings(tree).map((heading) => heading.text)).toEqual([
+      "First",
+      "Setext Heading",
+    ]);
+  });
+
+  it("leaves a document with no frontmatter unchanged", () => {
+    const tree = parseMarkdown("# Only Heading\n\nBody.\n");
+    expect(extractHeadings(tree).map((heading) => heading.text)).toEqual(["Only Heading"]);
+    expect(tree.children.some((node) => node.type === "yaml")).toBe(false);
+  });
+});
+
 describe("parseMarkdownWithFrontmatter", () => {
   it("parses yaml frontmatter node", () => {
     const content = "---\ntitle: Test\n---\n\n# Heading";

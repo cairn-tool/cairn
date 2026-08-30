@@ -141,6 +141,17 @@ broadly-run `md fix --write` must not silently acquire that reach.
 `---`. The rules a workspace enforces are configuration rather than a file format; see
 [Frontmatter rule value types](../configuration.md#frontmatter-rule-value-types).
 
+**A frontmatter block is not a heading.** Only a block at the very start of a document counts;
+everywhere else `---` remains a thematic break or a setext underline, and a real setext heading is
+unaffected. The block keeps its own position in the tree, so every later node reports its original
+line number.
+
+That is worth stating because the alternative is silent and wrong. Without frontmatter awareness a
+leading `---` block is not recognized at all: the closing `---` reads as a setext underline, and
+the YAML body becomes an `<h2>` whose text is the raw keys — including the newlines between them.
+Every heading consumer inherited it, and `md toc` emitted a link label containing a literal
+newline, which is not valid Markdown.
+
 ## Target-conditional blocks
 
 Markdown inside an agent bundle may also carry target-conditional regions:

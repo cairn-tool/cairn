@@ -4,7 +4,16 @@ import os from "node:os";
 import path from "node:path";
 import type { MarkdownDocument } from "./workspace.js";
 
-const INDEX_VERSION = 1;
+/**
+ * Private cache version. A mismatch discards the index and costs a re-parse, so
+ * it is safe to bump at will and must be bumped whenever a parse result changes.
+ *
+ * 2: the parser became frontmatter-aware. Every document indexed under 1 carries
+ *    a phantom heading whose text is the raw YAML body, and those entries are
+ *    keyed on size and mtime — so an unchanged file would keep serving the wrong
+ *    headings indefinitely without this bump.
+ */
+const INDEX_VERSION = 2;
 const STALE_LOCK_MS = 30_000;
 
 export interface FileFingerprint {

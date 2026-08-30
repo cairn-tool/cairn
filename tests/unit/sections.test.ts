@@ -71,13 +71,14 @@ describe("documentSections", () => {
     expect(sections[0].heading?.text).toBe("One");
   });
 
-  it("skips the phantom setext heading short frontmatter produces", () => {
+  it("does not treat frontmatter as a heading or a preamble", () => {
     const content = "---\ntitle: X\n---\n# Real\nbody\n";
-    // The underlying parser has no frontmatter extension, so it sees a setext H2.
-    expect(document(content).headings.map((h) => h.text)).toContain("title: X");
+    // The parser is frontmatter-aware, so the block is a yaml node rather than
+    // the setext h2 a bare `---` underline would otherwise make of it.
+    expect(document(content).headings.map((h) => h.text)).toEqual(["Real"]);
     const sections = documentSections(document(content));
-    // The phantom is gone, and so is the preamble: nothing sits between the
-    // closing fence and the first real heading.
+    // No preamble either: nothing sits between the closing fence and the first
+    // real heading.
     expect(sections.map((s) => s.heading?.text ?? null)).toEqual(["Real"]);
     expect(sections[0].startLine).toBe(4);
   });

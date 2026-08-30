@@ -365,16 +365,16 @@ describe("tools", () => {
     expect(shallow.outline[0].children).toHaveLength(0);
   });
 
-  it("reproduces md outline's treatment of frontmatter, quirk included", async () => {
-    // `buildDocument` parses without frontmatter support, so `title: Index`
-    // followed by `---` is a setext h2. That is what `md outline` reports, and a
-    // tool that quietly disagreed with its command would be the worse bug.
+  it("reproduces md outline's treatment of frontmatter", async () => {
+    // The tool and the command share one parser, so they cannot disagree — which
+    // is the property worth pinning. Both now skip the frontmatter block; before
+    // the parser became frontmatter-aware both reported it as a setext h2 whose
+    // text was the raw YAML.
     const result = (await call("get_outline", { file: "index.md" })) as {
       outline: { text: string; depth: number }[];
     };
-    expect(result.outline.map((node) => node.depth)).toEqual([2, 1]);
-    expect(result.outline[0].text).toContain("title: Index");
-    expect(result.outline[1].text).toBe("Index");
+    expect(result.outline.map((node) => node.depth)).toEqual([1]);
+    expect(result.outline[0].text).toBe("Index");
   });
 
   it("reads frontmatter whole and by key", async () => {
