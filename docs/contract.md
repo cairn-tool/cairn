@@ -259,4 +259,4 @@ are identical — and the short ids `cairn schema <id>` takes are unchanged.
 Identifiers Cairn writes into a workspace — `.cairn.yml`, the TOC markers, the
 `cairn:snippet=` attribute, `.cairn-install.json`, and the two baseline discriminators —
 are all still _read_ under their pre-rename spellings, so no committed file needs editing.
-The README's migration table lists each pair.
+[The migration guide](migration.md) lists each pair.

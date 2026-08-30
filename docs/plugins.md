@@ -23,30 +23,31 @@ cannot find `cairn` on `PATH` exits quietly rather than failing an edit.
 
 ## The plugins
 
-| Plugin           | Covers                                                                  | Extras              |
-| ---------------- | ----------------------------------------------------------------------- | ------------------- |
-| `cairn-markdown` | The `md` toolset: linting, structure, workspace queries, safe refactors | subagent, hook, MCP |
-| `cairn-scripts`  | `scripts run\|which\|list`, and authoring a `.cairn.yml` registry       | —                   |
-| `cairn-usage`    | The 13 `usage` reports, the store, and each provider's log quirks       | subagent            |
-| `cairn-archive`  | `archive run\|status\|list\|extract\|verify\|migrate`                   | —                   |
-| `cairn-agent`    | The 17 `agent` commands: authoring, testing, and publishing bundles     | subagent            |
+| Plugin                                        | Covers                                                                  | Page                                        |
+| --------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------- |
+| [`cairn-markdown`](plugins/cairn-markdown.md) | The `md` toolset: linting, structure, workspace queries, safe refactors | [cairn-markdown](plugins/cairn-markdown.md) |
+| [`cairn-scripts`](plugins/cairn-scripts.md)   | `scripts run\|which\|list`, and authoring a `.cairn.yml` registry       | [cairn-scripts](plugins/cairn-scripts.md)   |
+| [`cairn-usage`](plugins/cairn-usage.md)       | The 13 `usage` reports, the store, and each provider's log quirks       | [cairn-usage](plugins/cairn-usage.md)       |
+| [`cairn-archive`](plugins/cairn-archive.md)   | `archive run\|status\|list\|extract\|verify\|migrate`                   | [cairn-archive](plugins/cairn-archive.md)   |
+| [`cairn-agent`](plugins/cairn-agent.md)       | The 18 `agent` commands: authoring, migrating, testing, publishing      | [cairn-agent](plugins/cairn-agent.md)       |
 
 Each carries model-invoked skills for the workflows and explicit skills that appear as slash
 commands. Skill bodies stay short; full flag tables live in `reference/` sidecars that load only
 when a skill points at one.
 
-The extras are added where they earn their place, not uniformly:
+The extras — a subagent, a hook, an MCP server — are added where they earn their place, not
+uniformly. Each plugin's page says what it has and, where it has none, why.
 
-- **`cairn-markdown` ships a `PostToolUse` hook** that lints a `.md` file right after it is
-  written. It resolves `cairn` from `PATH` and exits 0 if it is absent, so it can never block an
-  edit.
-- **`cairn-markdown` registers `cairn serve mcp`**, exposing the read-only workspace engine's
-  eleven tools as `mcp__plugin_cairn-markdown_cairn__*`. It ships there and nowhere else: those
-  tools are all Markdown tools, so registering the same server in five plugins would register the
-  same eleven tools five times.
-- **`cairn-scripts` and `cairn-archive` deliberately carry neither.** Three commands do not
-  justify a subagent, and `archive run` can run for minutes and write gigabytes — it must never
-  fire implicitly.
+## Pages
+
+One page per plugin, each carrying the same sections in the same order — including the empty
+ones, so "this plugin has no hook" and "nobody has written one yet" stay different answers.
+
+- [cairn-markdown](plugins/cairn-markdown.md)
+- [cairn-scripts](plugins/cairn-scripts.md)
+- [cairn-usage](plugins/cairn-usage.md)
+- [cairn-archive](plugins/cairn-archive.md)
+- [cairn-agent](plugins/cairn-agent.md)
 
 `cairn-agent` is a worked example of what it documents: its own source is a bundle, and
 `agent-marketplace.yaml` at the repository root is a collection spec.
@@ -103,3 +104,4 @@ published branch free of source history.
 - [Marketplace spec](formats/agent-marketplace.md) — `agent-marketplace.yaml`
 - [Agent bundle format](formats/agent-bundle.md) — how each plugin is authored
 - [Install manifest](formats/install-manifest.md) — what an install records
+- [`agent verify`](commands/agent/verify.md) — checking a committed tree against the bundle it came from

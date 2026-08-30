@@ -6,6 +6,7 @@ import type { AuditReport } from "./audit/index.js";
 import type { TestReport } from "./test/index.js";
 import type { InstallReport } from "./install/index.js";
 import type { MarketplaceReport } from "./marketplace/index.js";
+import type { VerifyReport } from "./verify/index.js";
 
 export const TARGETS = ["claude-code", "codex", "cursor", "antigravity", "opencode"] as const;
 export type AgentTarget = (typeof TARGETS)[number];
@@ -175,7 +176,8 @@ export interface AgentResult {
     | "install"
     | "uninstall"
     | "installed"
-    | "marketplace";
+    | "marketplace"
+    | "verify";
   ok: boolean;
   source?: string;
   targets: AgentTarget[];
@@ -204,6 +206,8 @@ export interface AgentResult {
   install?: InstallReport;
   /** Collection build result, emitted by `agent marketplace`. */
   marketplace?: MarketplaceReport;
+  /** Drift and pin result, emitted by `agent verify`. */
+  verify?: VerifyReport;
   dryRun?: boolean;
   check?: boolean;
   stale?: boolean;

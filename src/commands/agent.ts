@@ -16,6 +16,7 @@ import type { AuditReport } from "../agent/audit/index.js";
 import type { TestReport } from "../agent/test/index.js";
 import type { InstallReport } from "../agent/install/index.js";
 import type { MarketplaceReport } from "../agent/marketplace/index.js";
+import type { VerifyReport } from "../agent/verify/index.js";
 import { formatAgentSarif } from "../agent/sarif.js";
 import { agentFormatsFor } from "../formats.js";
 import type { OutputFormat } from "../types.js";
@@ -218,6 +219,37 @@ function formatInstall(report: InstallReport): string[] {
   ];
 }
 
+/**
+ * Renders the pins and one line per entry. The drift itself is the diagnostics,
+ * so this reports what was compared \u2014 which is what makes "ok" mean something
+ * rather than "nothing was checked".
+ */
+function formatVerify(report: VerifyReport): string[] {
+  const { pins, counts } = report;
+  const lines = [
+    `config: ${report.config.path}`,
+    `generator: ${report.generator.name} ${report.generator.version}  profile schema: ${report.profileSchemaVersion}`,
+    "pins:",
+    `  cli                  ${pins.cli.status.padEnd(9)} actual: ${pins.cli.actual}`,
+    `  profileSchemaVersion ${pins.profileSchemaVersion.status.padEnd(9)} actual: ${pins.profileSchemaVersion.actual}`,
+  ];
+  for (const target of pins.targets)
+    lines.push(`  ${target.target.padEnd(20)} ${target.status.padEnd(9)} actual: ${target.actual}`);
+  lines.push(
+    "",
+    "entries:",
+    ...report.entries.map(
+      (entry) =>
+        `  ${entry.ok ? "ok      " : "findings"} ${entry.name}  ${entry.target}/${entry.profile}  ${entry.layout}  ${entry.destination}` +
+        `  expected: ${entry.expected}  missing: ${entry.missing.length}  changed: ${entry.changed.length}` +
+        `  orphaned: ${entry.orphaned.length}  unmanaged: ${entry.unmanaged.length}`,
+    ),
+    "",
+    `entries: ${counts.entries}  ok: ${counts.ok}  missing: ${counts.missing}  changed: ${counts.changed}  orphaned: ${counts.orphaned}  unmanaged: ${counts.unmanaged}`,
+  );
+  return lines;
+}
+
 function formatMarketplace(report: MarketplaceReport): string[] {
   const lines = [`marketplace: ${report.name}@${report.version}`];
   for (const entry of report.targets) {
@@ -257,6 +289,7 @@ function formatResult(result: AgentResult, opts: AgentOptions): string {
   if (result.test) lines.push("", ...formatTest(result.test));
   if (result.install) lines.push("", ...formatInstall(result.install));
   if (result.marketplace) lines.push("", ...formatMarketplace(result.marketplace));
+  if (result.verify) lines.push("", ...formatVerify(result.verify));
   if (result.diagnostics.length) {
     lines.push("", "diagnostics:");
     for (const item of result.diagnostics) {

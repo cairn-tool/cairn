@@ -5,6 +5,7 @@ This directory is the reference documentation for `cairn`.
 ## Reference
 
 - [Complete command listing](commands.md)
+- [Guides](guide.md)
 - [Machine-readable result contract](contract.md)
 - [Project configuration schema](configuration.md)
 - [File formats and schemas](formats.md)
@@ -13,6 +14,24 @@ This directory is the reference documentation for `cairn`.
 - [Shared Markdown command behavior](commands/md/common.md)
 - [Shared usage command behavior](commands/usage/common.md)
 - [Shared archive command behavior](commands/archive/common.md)
+
+## Project
+
+- [Installing Cairn](install.md)
+- [Migrating from claude-cli](migration.md)
+- [Update checks](update-checks.md)
+- [Development](development.md)
+- [Releasing](releasing.md)
+
+## Guides
+
+Why each toolset exists, and the facts that make its answers trustworthy.
+
+- [Agent bundles](guide/agent-bundles.md)
+- [Markdown](guide/markdown.md)
+- [Named scripts](guide/scripts.md)
+- [Usage reporting](guide/usage.md)
+- [Long-term archiving](guide/archiving.md)
 
 ## File formats
 
@@ -32,6 +51,7 @@ change without breaking a consumer.
 - [Markdown conventions](formats/markdown-conventions.md)
 - [Audit baselines](formats/audit-baseline.md)
 - [Diagnostics](formats/diagnostics.md)
+- [Diagnostic codes](formats/diagnostic-codes.md)
 
 ## Providers
 
@@ -79,6 +99,18 @@ What is known about each assistant Cairn renders for, reads logs from, or archiv
 - [Usage logs](providers/opencode/usage-logs.md)
 - [Archiving](providers/opencode/archiving.md)
 
+## Plugins
+
+Cairn's own toolsets, shipped as installable agent bundles. Each page lists every skill,
+subagent, hook, MCP server, asset, and contract test.
+
+- [Overview](plugins.md)
+- [cairn-markdown](plugins/cairn-markdown.md)
+- [cairn-scripts](plugins/cairn-scripts.md)
+- [cairn-usage](plugins/cairn-usage.md)
+- [cairn-archive](plugins/cairn-archive.md)
+- [cairn-agent](plugins/cairn-agent.md)
+
 ## Contract commands
 
 - [`describe`](commands/describe.md)
@@ -102,6 +134,7 @@ What is known about each assistant Cairn renders for, reads logs from, or archiv
 - [`agent audit`](commands/agent/audit.md)
 - [`agent test`](commands/agent/test.md)
 - [`agent doctor`](commands/agent/doctor.md)
+- [`agent verify`](commands/agent/verify.md)
 - [`agent specs`](commands/agent/specs.md)
 
 ## Script commands
