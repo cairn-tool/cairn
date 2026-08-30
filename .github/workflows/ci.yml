@@ -87,6 +87,55 @@ jobs:
           --to ${{ github.event.pull_request.head.sha }}
           --verbose
 
+  plugins:
+    name: Plugin bundles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # Each bundle on its own, so a failure names the bundle rather than the
+      # collection. `agent validate` takes no --profile; `agent doctor --output`
+      # takes a *conversion* root, never a package or collection root, or it
+      # reports the catalog and integrity files as unmanaged. `agent audit` runs
+      # without --strict: forwarded render warnings are expected, while audit's
+      # own AUDIT_CODES warnings block regardless.
+      - name: Validate, convert, doctor, test, and audit each bundle
+        run: |
+          set -euo pipefail
+          for bundle in plugins/*/; do
+            [ -f "$bundle/agent-bundle.yaml" ] || continue
+            name=$(basename "$bundle")
+            echo "::group::$name"
+            node dist/cli.js agent validate "$bundle" --target claude-code
+            node dist/cli.js agent convert  "$bundle" --target claude-code \
+              --profile plugin --output "$RUNNER_TEMP/conv/$name"
+            node dist/cli.js agent doctor   "$bundle" --target claude-code \
+              --profile plugin --output "$RUNNER_TEMP/conv/$name"
+            node dist/cli.js agent test     "$bundle" --target claude-code
+            node dist/cli.js agent audit    "$bundle" --target claude-code --profile plugin
+            echo "::endgroup::"
+          done
+
+      - name: Build the collection
+        run: >-
+          node dist/cli.js agent marketplace agent-marketplace.yaml
+          --output "$RUNNER_TEMP/marketplace" --strict
+
+      # So a reviewer can `/plugin marketplace add` the built tree from a PR.
+      - uses: actions/upload-artifact@v5
+        with:
+          name: cairn-plugins
+          path: ${{ runner.temp }}/marketplace
+
   dogfood:
     name: Self-lint markdown
     runs-on: ubuntu-latest

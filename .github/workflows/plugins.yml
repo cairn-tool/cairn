@@ -1,0 +1,113 @@
+name: Plugins
+
+# Gated on Release rather than on CI, because semantic-release has committed the
+# version bump by then — so the provenance this job records names a version that
+# was actually cut. CI is the gate that guards Release, so a red matrix still
+# cannot reach here.
+#
+# This is the third link in a workflow_run chain (CI -> Release -> Plugins).
+# Chained workflow_run is not documented as prohibited, but if it turns out not
+# to fire, add a `gh workflow run Plugins --ref main` step to release.yml with
+# `actions: write` on that job. workflow_dispatch stays either way.
+on:
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to publish to
+        default: claude-plugins
+        required: false
+
+concurrency:
+  group: plugins
+  cancel-in-progress: false
+
+permissions:
+  contents: write # force-push the marketplace branch
+
+env:
+  # `npm ci` runs `prepare: husky`, which has no purpose in CI.
+  HUSKY: 0
+  MARKETPLACE_BRANCH: ${{ inputs.branch || 'claude-plugins' }}
+
+jobs:
+  publish:
+    name: Publish the plugin marketplace
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # No validate/test/audit here: the `plugins` job in CI already ran them
+      # across the matrix, and Release only fires on a green CI. Same reasoning
+      # as release.yml's missing test step.
+      - name: Build the collection
+        run: >-
+          node dist/cli.js agent marketplace agent-marketplace.yaml
+          --output "$RUNNER_TEMP/marketplace" --strict
+
+      # The catalog's entry sources are relative, so nothing in the published
+      # tree names an owner, a repo, or a branch. Repo identity reaches only
+      # this generated README and the job summary.
+      - name: Generate the branch README
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/marketplace/claude-code/README.md" <<EOF
+          # Cairn plugins
+
+          Generated from [\`${GITHUB_REPOSITORY}\`](https://github.com/${GITHUB_REPOSITORY}) at
+          \`${GITHUB_SHA}\`. Do not edit this branch: it is force-pushed on every release.
+
+          \`\`\`text
+          /plugin marketplace add ${GITHUB_REPOSITORY}@${MARKETPLACE_BRANCH}
+          \`\`\`
+
+          Every plugin wraps the \`cairn\` CLI, which is installed separately.
+          EOF
+
+      # A fresh repo in a temp directory rather than `git checkout --orphan` in
+      # the working tree: it cannot carry a source file by accident, and a
+      # force-pushed single commit is the smallest thing `/plugin marketplace
+      # add` has to clone. No tags — semantic-release owns those. CI listens
+      # only on pushes to main, so this cannot loop.
+      - name: Publish to the marketplace branch
+        working-directory: ${{ runner.temp }}/marketplace/claude-code
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git init -q -b "$MARKETPLACE_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "chore(plugins): publish from ${GITHUB_SHA::7}"
+          git push -f \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "$MARKETPLACE_BRANCH"
+
+      - name: Summary
+        run: |
+          {
+            echo "Published to \`${MARKETPLACE_BRANCH}\` from \`${GITHUB_SHA::7}\`."
+            echo
+            echo '```text'
+            echo "/plugin marketplace add ${GITHUB_REPOSITORY}@${MARKETPLACE_BRANCH}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
