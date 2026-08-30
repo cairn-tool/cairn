@@ -90,6 +90,18 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   **throws the returned token away**, leaving `npm publish` to exchange again on its own. An
   npm that predates the feature therefore passes verification and then fails at the publish,
   after the tag exists. Removing that upgrade step looks like tidying and is not.
+- **A failed `npm publish` strands the release, and re-running the job does nothing.**
+  semantic-release runs every plugin's `prepare` before any plugin's `publish`, and
+  `@semantic-release/git`'s prepare is what pushes the version commit _and the tag_. So a
+  publish failure leaves `main` advanced, the tag created, and npm empty — and the next run
+  reads that tag as the last release, finds zero commits since, and reports "no new release".
+  Recovery is to undo the git side, not to retry: delete the remote tag, force-push `main`
+  back to the commit before the release commit, fix the cause, then re-run. Reordering
+  `.releaserc.json` cannot avoid this; the phase boundary is semantic-release's, not ours.
+- **The npm credential must bypass 2FA, which means granular or classic-Automation.** A
+  classic _Publish_ token fails with `EOTP - This operation requires a one-time password`
+  after the tarball has already been packed — i.e. late, in the publish step, with the git
+  side already committed. This is the most likely way to hit the stranded-release case above.
 - **The release job pushes as a GitHub App, not as `github-actions[bot]`.** The `main` ruleset
   requires four CI checks, and semantic-release's own CHANGELOG-and-version commit cannot
   satisfy them — it is created after CI ran. A ruleset bypass can only name an org-installed
