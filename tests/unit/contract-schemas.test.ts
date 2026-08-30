@@ -174,6 +174,6 @@ describe("schema id resolution", () => {
   });
 
   it("pins the contract version", () => {
-    expect(CONTRACT_VERSION).toBe("2");
+    expect(CONTRACT_VERSION).toBe("3");
   });
 });

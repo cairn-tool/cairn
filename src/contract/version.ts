@@ -6,9 +6,9 @@
  * Individual payload schemas are versioned separately by the major in their
  * `$id` path, so a breaking change to one command's output does not bump this.
  */
-export const CONTRACT_VERSION = "2";
+export const CONTRACT_VERSION = "3";
 
-export const SCHEMA_BASE = "https://github.com/bstockus/cairn/schema";
+export const SCHEMA_BASE = "https://github.com/cairn-tool/cairn/schema";
 
 /** Major version segment of a schema id path. */
 export type SchemaMajor = "v1";

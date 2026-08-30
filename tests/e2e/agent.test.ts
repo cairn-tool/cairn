@@ -199,7 +199,7 @@ describe("agent CLI", () => {
     // Truthful about the run, unlike the in-tree artifact which describes a tree.
     expect(dryReport.dryRun).toBe(true);
     expect(dryReport.command).toBe("convert");
-    expect(dryReport.generator.name).toBe("@bstockus/cairn");
+    expect(dryReport.generator.name).toBe("@cairn-tool/cairn");
     expect(dryReport.targetProfiles["claude-code"]).toBeDefined();
     // Never listed among the artifacts, whose paths are output-root relative.
     expect(dryReport.artifacts.some((a: { path: string }) => a.path.includes("reports"))).toBe(

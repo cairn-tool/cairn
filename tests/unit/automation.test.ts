@@ -44,7 +44,7 @@ describe("automation formats", () => {
         '      "tool": {',
         '        "driver": {',
         '          "name": "cairn",',
-        '          "informationUri": "https://github.com/bstockus/cairn",',
+        '          "informationUri": "https://github.com/cairn-tool/cairn",',
         '          "rules": [',
         "            {",
         '              "id": "ref/link",',

@@ -8,6 +8,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormatsImport from "ajv-formats";
 import { COMMAND_CONTRACTS } from "../../src/contract/registry.js";
 import { SCHEMA_BY_ID } from "../../src/contract/schemas/index.js";
+import { CONTRACT_VERSION } from "../../src/contract/version.js";
 
 const exec = promisify(execFile);
 const cli = path.resolve("dist/cli.js");
@@ -76,7 +77,7 @@ function auditBaseline(): string {
     JSON.stringify({
       baselineFormat: "cairn-md-audit-baseline",
       version: "1",
-      generator: { name: "@bstockus/cairn", version: "0.0.0" },
+      generator: { name: "@cairn-tool/cairn", version: "0.0.0" },
       entries: [{ checker: "toc", file: "gone.md", message: "stale", count: 1 }],
     }),
   );
@@ -168,7 +169,7 @@ describe("describe", () => {
     const result = await run("describe", "--format", "json");
     expect(result.exitCode).toBe(0);
     const described = JSON.parse(result.stdout);
-    expect(described.schemaVersion).toBe("2");
+    expect(described.schemaVersion).toBe(CONTRACT_VERSION);
     const ids = described.commands.map((command: { id: string }) => command.id);
     for (const id of ["md graph", "agent convert", "agent doctor", "describe", "schema"])
       expect(ids).toContain(id);

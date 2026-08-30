@@ -19,7 +19,7 @@ afterEach(() => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-const generator = { name: "@bstockus/cairn", version: "9.9.9" };
+const generator = { name: "@cairn-tool/cairn", version: "9.9.9" };
 const issue = (file: string, line: number, checker: string, message: string): Issue => ({
   file: path.join(root, file),
   line,

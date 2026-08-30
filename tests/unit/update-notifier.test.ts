@@ -302,9 +302,9 @@ describe("refresh lock", () => {
 
 describe("formatNotice", () => {
   it("names both versions and the install command", () => {
-    const notice = formatNotice("1.0.0", "1.1.0", "@bstockus/cairn");
+    const notice = formatNotice("1.0.0", "1.1.0", "@cairn-tool/cairn");
     expect(notice).toContain("1.0.0");
     expect(notice).toContain("1.1.0");
-    expect(notice).toContain("npm install -g @bstockus/cairn");
+    expect(notice).toContain("npm install -g @cairn-tool/cairn");
   });
 });

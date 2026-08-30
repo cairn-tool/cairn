@@ -18,10 +18,11 @@ const FETCH_TIMEOUT_MS = 20_000;
 /**
  * Resolves the latest published version via `npm view`.
  *
- * Shelling out to npm rather than querying the registry directly is deliberate:
- * the package lives on a private, scoped registry, so the request needs npm's
- * own resolution of `@scope:registry` and `_authToken` across the project and
- * user .npmrc files plus environment overrides. Reimplementing that is a large
+ * Shelling out to npm rather than querying the registry directly is deliberate.
+ * The package is public on registry.npmjs.org, but plenty of installs sit behind
+ * a mirror or a proxy, so the request needs npm's own resolution of
+ * `@scope:registry`, `registry`, and `_authToken` across the project and user
+ * .npmrc files plus environment overrides. Reimplementing that is a large
  * surface to get wrong for no gain.
  */
 export async function fetchLatestVersion(packageName: string): Promise<string | null> {

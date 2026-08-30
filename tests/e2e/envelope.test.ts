@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 import { SCHEMA_BY_ID } from "../../src/contract/schemas/index.js";
+import { CONTRACT_VERSION } from "../../src/contract/version.js";
 
 const exec = promisify(execFile);
 const cli = path.resolve("dist/cli.js");
@@ -149,7 +150,7 @@ describe("--envelope", () => {
     expect(validateEnvelope(envelope), `${label}: ${JSON.stringify(validateEnvelope.errors)}`).toBe(
       true,
     );
-    expect(envelope.schemaVersion, label).toBe("2");
+    expect(envelope.schemaVersion, label).toBe(CONTRACT_VERSION);
     expect(envelope.command, label).toBe(`${command[0]} ${command[1]}`);
     expect(envelope.exitCode, label).toBe(plain.code);
     expect(envelope.ok, label).toBe(plain.code === 0);

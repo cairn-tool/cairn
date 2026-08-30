@@ -1,5 +1,5 @@
 {
-  "name": "@bstockus/cairn",
+  "name": "@cairn-tool/cairn",
   "version": "1.11.0",
   "type": "module",
   "description": "An agent-agnostic CLI toolkit for working with markdown files and related assets",
@@ -16,12 +16,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bstockus/cairn.git"
+    "url": "git+https://github.com/cairn-tool/cairn.git"
   },
   "bugs": {
-    "url": "https://github.com/bstockus/cairn/issues"
+    "url": "https://github.com/cairn-tool/cairn/issues"
   },
-  "homepage": "https://github.com/bstockus/cairn#readme",
+  "homepage": "https://github.com/cairn-tool/cairn#readme",
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
   },
@@ -35,7 +35,8 @@
     "LICENSE"
   ],
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsc && chmod +x dist/cli.js",

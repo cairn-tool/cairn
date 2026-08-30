@@ -45,7 +45,7 @@ export function sarifDocument(
           tool: {
             driver: {
               name: "cairn",
-              informationUri: "https://github.com/bstockus/cairn",
+              informationUri: "https://github.com/cairn-tool/cairn",
               rules,
             },
           },
