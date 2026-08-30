@@ -310,6 +310,35 @@ Everything under the assets root is copied verbatim into every rendered profile.
 object (`AB109`) whose values are objects (`AB117`) keyed by known targets (`AB104`). A
 `resources` or `scripts` path that escapes its component root raises `AB152`.
 
+## Invocation and arguments
+
+Two further frontmatter fields shape how a host offers a skill. Both are portable, and both are
+translated per target rather than passed through:
+
+| Field              | Values                           | Meaning                                    |
+| ------------------ | -------------------------------- | ------------------------------------------ |
+| `invocationPolicy` | `auto` (default), `explicit`     | Whether the model may invoke it on its own |
+| `argumentHint`     | a string, or an array of strings | What arguments the skill expects           |
+
+`invocationPolicy: explicit` means "only a person invokes this" — the portable way to express
+what a host calls a slash command. There is **no `commands` component kind**; a command is a
+skill that the model does not reach for. How it is expressed is
+[per-target profile data](target-profile.md), never a branch in the renderer:
+
+| Target        | Form               | Rendered as                                      |
+| ------------- | ------------------ | ------------------------------------------------ |
+| `claude-code` | `frontmatter-flag` | `disable-model-invocation: true`                 |
+| `codex`       | `openai-yaml`      | `agents/openai.yaml` denying implicit invocation |
+| others        | `advisory`         | reported as `AB310`; the host cannot express it  |
+
+`argumentHint` renders as the host's own hint field where argument substitution is native, and is
+dropped where it is `prose` — a hint about arguments the host will never substitute would be a
+lie. An array is joined with spaces.
+
+Any frontmatter key the parser does not recognize is passed through to the rendered document
+unchanged, so a target-specific field such as `allowed-tools` can be set directly. That is also
+why a typo in a key name is silently carried through rather than reported.
+
 ## Conditional blocks
 
 Any Markdown in the bundle may carry target-conditional regions. The legacy `platform:`

@@ -53,6 +53,7 @@ import { agentAddAction, agentInitAction } from "./commands/agent-scaffold.js";
 import { agentUpgradeAction } from "./commands/agent-upgrade.js";
 import { agentImportAction } from "./commands/agent-import.js";
 import { agentPackageAction } from "./commands/agent-package.js";
+import { agentMarketplaceAction } from "./commands/agent-marketplace.js";
 import { agentAuditAction } from "./commands/agent-audit.js";
 import { agentTestAction } from "./commands/agent-test.js";
 import { agentDoctorAction } from "./commands/agent-doctor.js";
@@ -380,6 +381,33 @@ agent
   )
   .action((source: string, opts: Parameters<typeof agentPackageAction>[1]) =>
     agentActionBoundary("package", opts, () => agentPackageAction(source, opts)),
+  );
+
+agent
+  .command("marketplace")
+  .description("Build a marketplace of several bundles from a collection spec")
+  .argument("<spec>", "agent-marketplace.yaml, or a directory holding one")
+  .option("--output <dir>", "Collection root; required unless --install")
+  .option("--target <target>", "Narrow the spec's targets (repeatable)", collect)
+  .option("--marketplace <mode>", "Catalog mode: repo, local", "repo")
+  .option("--archive", "Also emit a deterministic .tar.gz per plugin")
+  .option("--install", "Install the collection into the host marketplace directory")
+  .option("--scope <scope>", "Install scope: user, project")
+  .option("--into <dir>", "Override the install root the profile declares")
+  .option("--link", "Symlink the installed tree instead of copying it")
+  .option("--register", "Edit host config to activate the collection")
+  .option("--strict", "Treat warnings as blocking findings")
+  .option("--force", "Replace a nonempty destination")
+  .option("--dry-run", "Build in memory without writing")
+  .option("--check", "Compare against an existing collection without writing")
+  .option("--format <fmt>", "Output format: llm, human, json", "llm")
+  .option("--envelope", "Wrap --format json output in the versioned result envelope")
+  .addHelpText(
+    "after",
+    "\nRenders every bundle itself, so a catalog can never certify a stale tree.\nOne aggregated catalog per target, not one per bundle. Never contacts the\nnetwork and never publishes.\n\n--install registers one marketplace offering every plugin, where installing\neach bundle separately would register one marketplace per bundle.\n\nExit codes:\n  0  Collection written or installed, or checks passed\n  1  Invocation or I/O error\n  2  Spec, publish-readiness, install, or stale finding",
+  )
+  .action((spec: string, opts: Parameters<typeof agentMarketplaceAction>[1]) =>
+    agentActionBoundary("marketplace", opts, () => agentMarketplaceAction(spec, opts)),
   );
 
 agent

@@ -21,7 +21,7 @@ function record(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function readStructured(file: string): Record<string, unknown> {
+export function readStructured(file: string): Record<string, unknown> {
   const raw = fs.readFileSync(file, "utf8");
   try {
     return record(file.endsWith(".json") ? JSON.parse(raw) : parseYaml(raw), file);

@@ -15,6 +15,7 @@ import type {
 import type { AuditReport } from "../agent/audit/index.js";
 import type { TestReport } from "../agent/test/index.js";
 import type { InstallReport } from "../agent/install/index.js";
+import type { MarketplaceReport } from "../agent/marketplace/index.js";
 import { formatAgentSarif } from "../agent/sarif.js";
 import { agentFormatsFor } from "../formats.js";
 import type { OutputFormat } from "../types.js";
@@ -217,6 +218,18 @@ function formatInstall(report: InstallReport): string[] {
   ];
 }
 
+function formatMarketplace(report: MarketplaceReport): string[] {
+  const lines = [`marketplace: ${report.name}@${report.version}`];
+  for (const entry of report.targets) {
+    lines.push(`  ${entry.target}: ${entry.catalog ?? "no catalog"}`);
+    for (const plugin of entry.plugins)
+      lines.push(`    ${plugin.name}@${plugin.version}  ${plugin.source}`);
+    if (!entry.plugins.length) lines.push("    no plugins");
+  }
+  if (report.archives.length) lines.push(`  archives: ${report.archives.length}`);
+  return lines;
+}
+
 function formatResult(result: AgentResult, opts: AgentOptions): string {
   const format = opts.format;
   // Keyed off the command so the message stays byte-identical for the
@@ -243,6 +256,7 @@ function formatResult(result: AgentResult, opts: AgentOptions): string {
   if (result.audit) lines.push("", ...formatAudit(result.audit));
   if (result.test) lines.push("", ...formatTest(result.test));
   if (result.install) lines.push("", ...formatInstall(result.install));
+  if (result.marketplace) lines.push("", ...formatMarketplace(result.marketplace));
   if (result.diagnostics.length) {
     lines.push("", "diagnostics:");
     for (const item of result.diagnostics) {

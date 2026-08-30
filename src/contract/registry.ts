@@ -484,6 +484,17 @@ const CONTRACTS: CommandContract[] = [
     notes:
       "Renders the bundle itself rather than trusting an existing tree; --from-dist only verifies one. Never contacts the network and never publishes. The package root is not an agent convert output root, so agent doctor --output must not be pointed at it.",
   }),
+  agentCommand("marketplace", {
+    writes: true,
+    stability: "experimental",
+    exitCodes: [
+      OK("Collection written, or checks passed"),
+      USAGE,
+      FINDINGS("Spec, publish-readiness, or stale finding"),
+    ],
+    notes:
+      "Builds one aggregated catalog per target covering every bundle a collection spec names, rather than one catalog per bundle as agent package does. Renders every bundle itself, so a catalog can never certify a stale tree. Never contacts the network and never publishes. The collection root is not an agent convert output root, so agent doctor --output must not be pointed at it.",
+  }),
   agentCommand("audit", {
     stability: "experimental",
     sarifSchema: SARIF_SCHEMA_URI,

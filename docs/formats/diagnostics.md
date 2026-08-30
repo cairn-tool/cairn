@@ -94,6 +94,7 @@ rejects a malformed one.
 | `AB650`–`AB654` | `agent audit`                 | baseline drift against a previous `sbom.json`                                        |
 | `AB700`–`AB720` | `agent test`                  | test-file validity, assertion failures, skips                                        |
 | `AB800`–`AB807` | `agent install` / `uninstall` | locations, manifests, registration                                                   |
+| `AB900`–`AB907` | `agent marketplace`           | collection spec: schema, required and malformed fields, bundle paths, selection      |
 
 ### The renderer range in detail
 

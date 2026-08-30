@@ -90,24 +90,25 @@ written twice. See [shared archive command behavior](commands/archive/common.md)
 
 ## Agent commands
 
-| Command                                                 | Description                                                                     |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| [`agent init <name>`](commands/agent/init.md)           | Scaffold a new portable agent bundle.                                           |
-| [`agent add <kind> <name>`](commands/agent/add.md)      | Add one component to an existing bundle.                                        |
-| [`agent import <source>`](commands/agent/import.md)     | Import an existing native plugin or project into a portable bundle.             |
-| [`agent convert <source>`](commands/agent/convert.md)   | Convert a portable bundle or legacy Claude plugin into target-native artifacts. |
-| [`agent upgrade <source>`](commands/agent/upgrade.md)   | Migrate a bundle between neutral schema versions.                               |
-| [`agent validate <source>`](commands/agent/validate.md) | Validate a bundle without generating artifacts.                                 |
-| [`agent inspect <source>`](commands/agent/inspect.md)   | Show the normalized bundle, references, overrides, and component graph.         |
-| [`agent compat [source]`](commands/agent/compat.md)     | Show the compatibility matrix or analyze one bundle against selected targets.   |
-| [`agent package <source>`](commands/agent/package.md)   | Build a distributable package with catalogs, checksums, and archives.           |
-| [`agent install <source>`](commands/agent/install.md)   | Install a bundle into a host plugin or project directory.                       |
-| [`agent uninstall <name>`](commands/agent/uninstall.md) | Remove a previously installed bundle.                                           |
-| [`agent installed`](commands/agent/installed.md)        | List bundles installed by this CLI.                                             |
-| [`agent audit <source>`](commands/agent/audit.md)       | Review a bundle's executable surface, permissions, and supply chain.            |
-| [`agent test <source>`](commands/agent/test.md)         | Run the model-free contract tests stored with a bundle.                         |
-| [`agent doctor [source]`](commands/agent/doctor.md)     | Check a bundle and generated output against the target conformance profiles.    |
-| [`agent specs`](commands/agent/specs.md)                | Print the versioned target conformance profiles.                                |
+| Command                                                     | Description                                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [`agent init <name>`](commands/agent/init.md)               | Scaffold a new portable agent bundle.                                           |
+| [`agent add <kind> <name>`](commands/agent/add.md)          | Add one component to an existing bundle.                                        |
+| [`agent import <source>`](commands/agent/import.md)         | Import an existing native plugin or project into a portable bundle.             |
+| [`agent convert <source>`](commands/agent/convert.md)       | Convert a portable bundle or legacy Claude plugin into target-native artifacts. |
+| [`agent upgrade <source>`](commands/agent/upgrade.md)       | Migrate a bundle between neutral schema versions.                               |
+| [`agent validate <source>`](commands/agent/validate.md)     | Validate a bundle without generating artifacts.                                 |
+| [`agent inspect <source>`](commands/agent/inspect.md)       | Show the normalized bundle, references, overrides, and component graph.         |
+| [`agent compat [source]`](commands/agent/compat.md)         | Show the compatibility matrix or analyze one bundle against selected targets.   |
+| [`agent package <source>`](commands/agent/package.md)       | Build a distributable package with catalogs, checksums, and archives.           |
+| [`agent marketplace <spec>`](commands/agent/marketplace.md) | Build a marketplace of several bundles from a collection spec.                  |
+| [`agent install <source>`](commands/agent/install.md)       | Install a bundle into a host plugin or project directory.                       |
+| [`agent uninstall <name>`](commands/agent/uninstall.md)     | Remove a previously installed bundle.                                           |
+| [`agent installed`](commands/agent/installed.md)            | List bundles installed by this CLI.                                             |
+| [`agent audit <source>`](commands/agent/audit.md)           | Review a bundle's executable surface, permissions, and supply chain.            |
+| [`agent test <source>`](commands/agent/test.md)             | Run the model-free contract tests stored with a bundle.                         |
+| [`agent doctor [source]`](commands/agent/doctor.md)         | Check a bundle and generated output against the target conformance profiles.    |
+| [`agent specs`](commands/agent/specs.md)                    | Print the versioned target conformance profiles.                                |
 
 Agent targets are `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, and `all`.
 

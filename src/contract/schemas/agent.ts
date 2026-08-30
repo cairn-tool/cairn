@@ -26,6 +26,7 @@ export const agentResultSchema: SchemaEntry = {
     "agent install",
     "agent uninstall",
     "agent installed",
+    "agent marketplace",
   ],
   schema: {
     $schema: DRAFT,
@@ -54,6 +55,7 @@ export const agentResultSchema: SchemaEntry = {
           "install",
           "uninstall",
           "installed",
+          "marketplace",
         ],
       },
       ok: { type: "boolean" },
@@ -129,6 +131,65 @@ export const agentResultSchema: SchemaEntry = {
                 target: { enum: TARGETS },
                 profile: { enum: PROFILES },
                 path: { type: "string" },
+              },
+            },
+          },
+          archives: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["target", "profile", "path", "sha256", "bytes"],
+              properties: {
+                target: { enum: TARGETS },
+                profile: { enum: PROFILES },
+                path: { type: "string" },
+                sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+                bytes: { type: "integer", minimum: 0 },
+              },
+            },
+          },
+          checksums: { type: "string", description: "Path to the sha256sum-compatible file." },
+          sbom: { type: "string", description: "Path to the file inventory." },
+          checks: {
+            type: "object",
+            required: ["passed", "failed"],
+            properties: {
+              passed: { type: "integer", minimum: 0 },
+              failed: { type: "integer", minimum: 0 },
+            },
+          },
+        },
+      },
+      marketplace: {
+        description: "Collection build result, emitted by `agent marketplace`.",
+        type: "object",
+        required: ["name", "version", "targets", "archives", "checksums", "sbom", "checks"],
+        properties: {
+          name: { type: "string", description: "Catalog name; also the host marketplace key." },
+          version: { type: "string", description: "The collection's own version." },
+          targets: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["target", "catalog", "plugins"],
+              properties: {
+                target: { enum: TARGETS },
+                catalog: {
+                  type: ["string", "null"],
+                  description: "Aggregated catalog path, or null when the target declares none.",
+                },
+                plugins: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["name", "version", "source"],
+                    properties: {
+                      name: { type: "string" },
+                      version: { type: "string" },
+                      source: { type: "string", description: "Spec-relative bundle path." },
+                    },
+                  },
+                },
               },
             },
           },

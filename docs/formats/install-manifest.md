@@ -1,7 +1,8 @@
 # Install manifest
 
-`.cairn-install.json`, written by [`agent install`](../commands/agent/install.md) at the root of
-every installed tree. It is what makes [`agent uninstall`](../commands/agent/uninstall.md)
+`.cairn-install.json`, written by [`agent install`](../commands/agent/install.md) and
+[`agent marketplace --install`](../commands/agent/marketplace.md) at the root of every installed
+tree. It is what makes [`agent uninstall`](../commands/agent/uninstall.md)
 precise: removal is driven by a recorded inventory, not by a guess about which files in a
 merged tree belong to which bundle.
 
@@ -46,7 +47,9 @@ one. Widening those would be noise, not safety.
 | Field          | Required | Meaning                                                        |
 | -------------- | -------- | -------------------------------------------------------------- |
 | `generator`    | yes      | which build wrote it                                           |
-| `bundle`       | yes      | name and version of the installed bundle                       |
+| `kind`         | no       | `bundle` (the default when absent) or `collection`             |
+| `bundle`       | yes      | name and version of the installed **unit**                     |
+| `collection`   | no       | the plugins a collection placed; absent for a single bundle    |
 | `target`       | yes      | `claude-code`, `codex`, `cursor`, `antigravity`, or `opencode` |
 | `profile`      | yes      | `plugin` or `project`                                          |
 | `scope`        | yes      | `user` or `project`                                            |
@@ -59,6 +62,37 @@ one. Widening those would be noise, not safety.
 
 A document missing any required field, or with the wrong type for one, reads as `malformed`
 rather than being partially trusted.
+
+## Collections
+
+`agent marketplace --install` places several plugins under one marketplace directory, and records
+that with `kind: "collection"`:
+
+```jsonc
+{
+  "kind": "collection",
+  "bundle": { "name": "cairn", "version": "1.0.0" },
+  "collection": {
+    "plugins": [
+      { "name": "cairn-markdown", "version": "1.0.0" },
+      { "name": "cairn-agent", "version": "1.0.0" },
+    ],
+  },
+  "registration": {
+    "file": "/Users/me/.claude/settings.json",
+    "marketplaceKey": "cairn",
+    "pluginKeys": ["cairn-markdown@cairn", "cairn-agent@cairn"],
+  },
+}
+```
+
+**`bundle` records the installed unit's identity whichever kind it is** — a bundle's, or a
+collection's. The occupied-destination check, `agent uninstall`, and `agent installed` all key off
+that one field, so a collection reuses it rather than adding a parallel field they would each have
+to learn about. `collection.plugins` is additive detail.
+
+`kind` is absent on every manifest written before collections existed, which is why absent means
+`bundle` rather than being an error.
 
 ## The inventory
 
@@ -90,9 +124,16 @@ Only Claude Code's user-scope marketplace layout needs an activation edit, and `
 the only flag in the toolset that touches host configuration. When it runs, `registration`
 records the file edited and the two keys added, so uninstall can reverse exactly that edit.
 
-`marketplaceKey` is derived from the bundle name, and must match the `name` in the generated
-catalog document — which is why that catalog's `name` is sourced from the manifest. See
+`marketplaceKey` must match the `name` in the generated catalog document. For a single bundle it
+is derived from the bundle name — which is why that catalog's `name` is sourced from the manifest.
+For a collection it is the spec's `name`. See
 [Claude Code: agent bundles](../providers/claude-code/agent-bundles.md#marketplace-catalog).
+
+A bundle install enables one plugin and records it as `pluginKey`; a collection enables one per
+plugin and records them as `pluginKeys`. Both spellings are read, so a manifest written before
+collections still reverses cleanly. Uninstall deletes the marketplace key **only** when its
+recorded `source.path` is the destination being removed, so an unrelated marketplace registered
+under the same name is never touched.
 
 ## Diagnostics
 

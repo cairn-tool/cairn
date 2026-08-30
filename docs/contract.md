@@ -26,16 +26,17 @@ change to one command's output publishes `v2/<id>.json` and changes that command
 
 ### The other hand-owned versions
 
-Five versions in this project are owned by hand rather than by semantic-release, and none of
+Six versions in this project are owned by hand rather than by semantic-release, and none of
 them is the package version. They version different things and move independently:
 
-| Version                        | Versions                                               | Reported by                                    |
-| ------------------------------ | ------------------------------------------------------ | ---------------------------------------------- |
-| Contract `schemaVersion`       | The contract surface described here                    | `describe`, the `--envelope` wrapper           |
-| Target profile `schemaVersion` | The structure of a target conformance profile          | `agent specs`                                  |
-| Bundle `schemaVersion`         | The `agent-bundle.yaml` format authors write           | `agent inspect`                                |
-| Test file `schemaVersion`      | The assertion format `agent test` cases are written in | `agent test` (`test.schemaVersion`)            |
-| Usage store version            | The SQLite schema of `usage.db`                        | `usage index`, `usage migrate`, `usage import` |
+| Version                          | Versions                                               | Reported by                                    |
+| -------------------------------- | ------------------------------------------------------ | ---------------------------------------------- |
+| Contract `schemaVersion`         | The contract surface described here                    | `describe`, the `--envelope` wrapper           |
+| Target profile `schemaVersion`   | The structure of a target conformance profile          | `agent specs`                                  |
+| Bundle `schemaVersion`           | The `agent-bundle.yaml` format authors write           | `agent inspect`                                |
+| Test file `schemaVersion`        | The assertion format `agent test` cases are written in | `agent test` (`test.schemaVersion`)            |
+| Marketplace spec `schemaVersion` | The `agent-marketplace.yaml` format authors write      | `agent marketplace`                            |
+| Usage store version              | The SQLite schema of `usage.db`                        | `usage index`, `usage migrate`, `usage import` |
 
 A normal release bumps none of them.
 

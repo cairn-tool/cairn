@@ -76,12 +76,39 @@ export interface InstallInventoryEntry {
 export interface InstallRegistration {
   file: string;
   marketplaceKey: string;
-  pluginKey: string;
+  /** The single plugin key a bundle install enables. */
+  pluginKey?: string;
+  /**
+   * Every plugin key a collection install enables. A collection registers one
+   * marketplace offering many plugins, so it has no single primary key.
+   */
+  pluginKeys?: string[];
+}
+
+/**
+ * The plugin keys a registration activates, whichever spelling recorded them.
+ * A manifest written before collections carries only `pluginKey`.
+ */
+export function registeredPluginKeys(registration: InstallRegistration): string[] {
+  return registration.pluginKeys ?? (registration.pluginKey ? [registration.pluginKey] : []);
 }
 
 export interface InstallManifest {
   generator: { name: string; version: string };
+  /**
+   * What was installed here: a single bundle, or a collection of them. Absent
+   * means `"bundle"`, so every manifest written before collections still parses.
+   */
+  kind?: "bundle" | "collection";
+  /**
+   * The installed unit's identity — a bundle's, or a collection's. Uninstall,
+   * the occupied-destination check, and `agent installed` all key off this, so
+   * a collection reuses it rather than adding a parallel field they would have
+   * to learn about.
+   */
   bundle: { name: string; version: string };
+  /** The plugins a collection install placed. Absent for a single bundle. */
+  collection?: { plugins: Array<{ name: string; version: string }> };
   target: AgentTarget;
   profile: AgentProfile;
   scope: InstallScope;
@@ -105,7 +132,11 @@ export interface ResolvedInstall {
 }
 
 export interface InstallPlan {
-  bundle: AgentBundle;
+  /**
+   * The bundle a single-bundle install renders. Absent for a collection, which
+   * installs many; nothing reads it, so a collection is not made to invent one.
+   */
+  bundle?: AgentBundle;
   target: AgentTarget;
   profile: AgentProfile;
   scope: InstallScope;
@@ -116,7 +147,7 @@ export interface InstallPlan {
   manifest: InstallManifest;
   diagnostics: AgentDiagnostic[];
   register: boolean;
-  settings?: { file: string; marketplaceKey: string; pluginKey: string };
+  settings?: InstallRegistration;
 }
 
 function sha256(content: Buffer): string {
@@ -324,20 +355,38 @@ function parseManifest(value: unknown): InstallManifest | null {
     inventory.push({ path: row.path, mode: row.mode, sha256: row.sha256 });
   }
   const registration = doc.registration as Record<string, unknown> | undefined;
+  const keys = Array.isArray(registration?.pluginKeys)
+    ? registration.pluginKeys.filter((key): key is string => typeof key === "string")
+    : undefined;
   const parsedRegistration =
     registration &&
     typeof registration.file === "string" &&
     typeof registration.marketplaceKey === "string" &&
-    typeof registration.pluginKey === "string"
+    (typeof registration.pluginKey === "string" || keys !== undefined)
       ? {
           file: registration.file,
           marketplaceKey: registration.marketplaceKey,
-          pluginKey: registration.pluginKey,
+          ...(typeof registration.pluginKey === "string"
+            ? { pluginKey: registration.pluginKey }
+            : {}),
+          ...(keys ? { pluginKeys: keys } : {}),
         }
+      : undefined;
+  const collection = doc.collection as Record<string, unknown> | undefined;
+  const plugins =
+    collection && Array.isArray(collection.plugins)
+      ? collection.plugins.flatMap((entry) => {
+          const row = entry as Record<string, unknown> | null;
+          return row && typeof row.name === "string" && typeof row.version === "string"
+            ? [{ name: row.name, version: row.version }]
+            : [];
+        })
       : undefined;
   return {
     generator: { name: generator.name, version: generator.version },
+    ...(doc.kind === "collection" ? { kind: "collection" as const } : {}),
     bundle: { name: bundle.name, version: bundle.version },
+    ...(plugins ? { collection: { plugins } } : {}),
     target: doc.target as AgentTarget,
     profile: doc.profile as AgentProfile,
     scope: doc.scope as InstallScope,
@@ -450,7 +499,7 @@ function applyRegistration(
   const enabled = {
     ...((current.enabledPlugins as Record<string, unknown> | undefined) ?? {}),
   };
-  enabled[settings.pluginKey] = true;
+  for (const key of registeredPluginKeys(settings)) enabled[key] = true;
   writeJsonAtomically(settings.file, {
     ...current,
     extraKnownMarketplaces: extra,
@@ -469,7 +518,7 @@ function revertRegistration(registration: InstallRegistration, destination: stri
   const enabled = {
     ...((current.enabledPlugins as Record<string, unknown> | undefined) ?? {}),
   };
-  delete enabled[registration.pluginKey];
+  for (const key of registeredPluginKeys(registration)) delete enabled[key];
   writeJsonAtomically(registration.file, {
     ...current,
     extraKnownMarketplaces: extra,
@@ -489,7 +538,7 @@ function registrationCurrent(
     const enabled = current.enabledPlugins as Record<string, unknown> | undefined;
     return (
       extra?.[settings.marketplaceKey]?.source?.path === destination &&
-      enabled?.[settings.pluginKey] === true
+      registeredPluginKeys(settings).every((key) => enabled?.[key] === true)
     );
   } catch {
     return false;
@@ -716,6 +765,180 @@ export function planInstall(
     mode,
     destination,
     artifacts,
+    manifest,
+    diagnostics,
+    register,
+    settings,
+  };
+}
+
+/** What a collection places at one destination. */
+export interface CollectionInstall {
+  /** The collection's name; also the marketplace key hosts index by. */
+  name: string;
+  version: string;
+  target: AgentTarget;
+  /**
+   * Destination-relative artifacts: the aggregated catalog plus one directory
+   * per plugin. Already stripped of the `<target>/` prefix the build uses.
+   */
+  artifacts: Artifact[];
+  plugins: Array<{ name: string; version: string }>;
+}
+
+/**
+ * Plans an install of a whole collection into one host marketplace.
+ *
+ * The difference from {@link planInstall} is entirely in the registration:
+ * a bundle install keys `extraKnownMarketplaces` on the bundle name and enables
+ * one plugin, so installing five bundles yields five marketplaces. A collection
+ * keys it on the collection name once and enables every plugin under it, which
+ * is the shape a host actually offers to a user.
+ *
+ * Everything else — the occupied check, the manifest, the inventory, uninstall —
+ * is shared, because the manifest's `bundle` field records the installed unit's
+ * identity and a collection simply puts its own there.
+ */
+export function planCollectionInstall(
+  collection: CollectionInstall,
+  options: {
+    scope?: InstallScope;
+    into?: string;
+    link?: boolean;
+    force?: boolean;
+    register?: boolean;
+    /** Where a `--link` install materializes; required when `link` is set. */
+    materializeInto?: string;
+  } & InstallContext = {},
+): InstallPlan {
+  const scope = resolveScope(options.scope);
+  const diagnostics: AgentDiagnostic[] = [];
+  const resolved = resolveInstallDestination(collection.target, scope, collection.name, options);
+  if ("code" in resolved)
+    return {
+      target: collection.target,
+      profile: "plugin",
+      scope,
+      layout: "plugin-dir",
+      mode: "copy",
+      destination: "",
+      artifacts: [],
+      manifest: {
+        generator: { name: packageName, version: packageVersion },
+        kind: "collection",
+        bundle: { name: collection.name, version: collection.version },
+        collection: { plugins: collection.plugins },
+        target: collection.target,
+        profile: "plugin",
+        scope,
+        layout: "plugin-dir",
+        mode: "copy",
+        destination: "",
+        files: [],
+      },
+      diagnostics: [resolved],
+      register: Boolean(options.register),
+    };
+
+  const { location, destination } = resolved;
+  if (location.profile !== "plugin")
+    throw new Error(
+      `Install location for ${collection.target}/${scope} uses the ${location.profile} profile; a collection is plugin-only`,
+    );
+
+  const mode: InstallMode = options.link ? "link" : "copy";
+  for (const artifact of collection.artifacts)
+    if (pathEscapesRoot(destination, artifact.path))
+      diagnostics.push(
+        error("AB804", `Destination path escapes the install root: ${artifact.path}`, {
+          path: artifact.path,
+          target: collection.target,
+          profile: "plugin",
+        }),
+      );
+
+  const prior = existsAt(destination) ? readInstallManifest(destination) : "missing";
+  if (occupied(destination, location.layout, collection.artifacts, prior, collection.name)) {
+    if (!options.force)
+      diagnostics.push(
+        error(
+          "AB801",
+          `Destination is occupied by something that is not a prior install of '${collection.name}'`,
+          {
+            path: destination,
+            target: collection.target,
+            remediation: "Pass --force to replace it, or uninstall the occupant first.",
+          },
+        ),
+      );
+  } else if (prior !== "missing" && prior !== "malformed" && prior.bundle.name === collection.name)
+    diagnostics.push(
+      diagnostic(
+        "AB802",
+        `Replacing existing install of ${prior.bundle.name} ${prior.bundle.version} with ${collection.version}`,
+        "exact",
+        { target: collection.target, profile: "plugin", path: destination },
+      ),
+    );
+
+  const settingsFile = location.activation
+    ? expandInstallRoot(location.activation.file, options)
+    : undefined;
+  const pluginKeys = collection.plugins.map((plugin) => `${plugin.name}@${collection.name}`);
+  const settings =
+    location.layout === "marketplace" && settingsFile
+      ? { file: settingsFile, marketplaceKey: collection.name, pluginKeys }
+      : undefined;
+  const register = Boolean(options.register) && Boolean(settings);
+  if (settings && !options.register)
+    diagnostics.push(
+      diagnostic(
+        "AB805",
+        `Host activation edit required but --register was not given. Add extraKnownMarketplaces.${collection.name} (directory ${destination}) and enabledPlugins for ${pluginKeys.join(", ")} to ${settingsFile}.`,
+        "unsupported",
+        {
+          target: collection.target,
+          path: settingsFile,
+          remediation: "Re-run with --register, or apply the edit yourself.",
+        },
+      ),
+    );
+  if (mode === "link")
+    diagnostics.push(
+      diagnostic(
+        "AB807",
+        "--link is in use; edits to the materialized tree are live and the host may not follow symlinks",
+        "exact",
+        { target: collection.target, profile: "plugin", path: destination },
+      ),
+    );
+
+  const materialized = mode === "link" ? options.materializeInto : undefined;
+  if (mode === "link" && !materialized)
+    throw new Error("A --link collection install needs a materialization directory");
+  const manifest: InstallManifest = {
+    generator: { name: packageName, version: packageVersion },
+    kind: "collection",
+    bundle: { name: collection.name, version: collection.version },
+    collection: { plugins: collection.plugins },
+    target: collection.target,
+    profile: "plugin",
+    scope,
+    layout: location.layout,
+    mode,
+    destination,
+    files: inventoryOf(collection.artifacts),
+    ...(materialized ? { materialized } : {}),
+    ...(register && settings ? { registration: settings } : {}),
+  };
+  return {
+    target: collection.target,
+    profile: "plugin",
+    scope,
+    layout: location.layout,
+    mode,
+    destination,
+    artifacts: [...collection.artifacts, manifestArtifact(manifest)].sort(byPath),
     manifest,
     diagnostics,
     register,

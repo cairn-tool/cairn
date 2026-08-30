@@ -101,6 +101,21 @@ redundant, it is an error, and neither kind is caught by `claude plugin validate
 
 Omitting them is what makes `agents/` and `hooks/hooks.json` load at all.
 
+### `author` is deliberately not emitted
+
+Claude Code's plugin schema accepts an `author`, and `claude plugin validate` warns when a
+manifest omits one. Cairn still does not write it, because the only place a bundle carries that
+value is `marketplace.publisher` — and **`marketplace:` is read by `agent package` and ignored by
+`agent convert`**.
+
+Sourcing a rendered manifest field from it would make a schema-2 bundle render differently from
+the schema-1 bundle it was migrated from, ending the "schema 2 is schema 1 plus `marketplace:` and
+`native:`, nothing else" property that lets [`agent upgrade`](../../commands/agent/upgrade.md)
+verify a migration byte-for-byte and refuse (`AB224`) when it does not hold.
+
+The warning is cosmetic; the invariant is not. A bundle that wants the field can supply it through
+a [native overlay](#native-overlays) `manifest.json`, which is merged over the generated one.
+
 ## Paths
 
 | Root     | `plugin`    | `project`               |

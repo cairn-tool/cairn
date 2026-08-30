@@ -144,17 +144,53 @@ export interface CatalogResult {
 }
 
 /**
- * Builds a marketplace catalog per selected target.
+ * How a catalog covering more than one bundle differs from the single-bundle
+ * default. Every option is optional, so `agent package` passes none and gets
+ * byte-identical output to before this generalization.
+ */
+export interface CatalogOptions {
+  /**
+   * Replaces the resolved document-level fields — a collection's `name`,
+   * `description`, and `owner` belong to the collection, not to whichever of
+   * its bundles happened to sort first. Entry fields are unaffected, so each
+   * bundle still supplies its own `author` from `marketplace.publisher`.
+   */
+  document?: Record<string, unknown>;
+  /** Entry `source` per bundle. Defaults to the package-relative `./<target>/<profile>`. */
+  sourceFor?: (bundle: AgentBundle, target: AgentTarget, profile: AgentProfile) => string;
+  /** Where the catalog document is written. Defaults to inside the payload, beside the manifest. */
+  catalogPathFor?: (
+    target: AgentTarget,
+    profile: AgentProfile,
+    location: CatalogLocation,
+  ) => string;
+  /**
+   * Name the offending bundle on `AB500` and `AB501`. A collection needs it to
+   * say which of its bundles is at fault; `agent package` leaves it off, as it
+   * always has, so its diagnostic bytes do not move.
+   */
+  attributeToBundle?: boolean;
+}
+
+type CatalogLocation = { directory: string; file: string };
+
+/**
+ * Builds a marketplace catalog per selected target, covering every bundle given.
  *
  * Field names and requirements come from the target profile, so the packager
  * itself contains no per-target branching and a catalog change is a data edit.
+ * `AB500` and `AB501` fire from here for every caller — `agent package` with one
+ * bundle, `agent marketplace` with a collection — so a consumer's suppression
+ * list means the same thing whichever command produced the catalog.
  */
 export function buildCatalogs(
-  bundle: AgentBundle,
+  bundles: AgentBundle | AgentBundle[],
   targets: AgentTarget[],
   profiles: AgentProfile[],
   mode: MarketplaceMode,
+  options: CatalogOptions = {},
 ): CatalogResult {
+  const list = Array.isArray(bundles) ? bundles : [bundles];
   const artifacts: Artifact[] = [];
   const entries: PackageReport["catalogs"] = [];
   const diagnostics: AgentDiagnostic[] = [];
@@ -174,33 +210,55 @@ export function buildCatalogs(
     }
     for (const profile of profiles) {
       if (profile !== "plugin") continue;
-      const source = `./${target}/${profile}`;
-      const missing = (field: MarketplaceEntryField): void => {
-        diagnostics.push(
-          error("AB500", `Catalog field '${field.name}' is required by ${target}`, {
-            target,
-            profile,
-            remediation: `Set ${sourceField(field)} in agent-bundle.yaml.`,
-          }),
-        );
-      };
-      const document = collectFields(spec.documentFields ?? [], bundle, source, missing);
-      const entry = collectFields(spec.entryFields, bundle, source, missing);
-      // A catalog naming a version the manifest disagrees with would install
-      // one thing and advertise another.
-      if (entry.version !== undefined && entry.version !== bundle.version)
-        diagnostics.push(
-          error("AB501", `Catalog version '${String(entry.version)}' disagrees with the bundle`, {
-            target,
-            profile,
-          }),
+      const at = (bundle: AgentBundle) => (options.attributeToBundle ? { path: bundle.root } : {});
+      const missing =
+        (bundle: AgentBundle) =>
+        (field: MarketplaceEntryField): void => {
+          diagnostics.push(
+            error("AB500", `Catalog field '${field.name}' is required by ${target}`, {
+              target,
+              profile,
+              ...at(bundle),
+              remediation: `Set ${sourceField(field)} in agent-bundle.yaml.`,
+            }),
+          );
+        };
+
+      const collected: Record<string, unknown>[] = [];
+      for (const bundle of list) {
+        const source = options.sourceFor?.(bundle, target, profile) ?? `./${target}/${profile}`;
+        const entry = collectFields(spec.entryFields, bundle, source, missing(bundle));
+        // A catalog naming a version the manifest disagrees with would install
+        // one thing and advertise another.
+        if (entry.version !== undefined && entry.version !== bundle.version)
+          diagnostics.push(
+            error("AB501", `Catalog version '${String(entry.version)}' disagrees with the bundle`, {
+              target,
+              profile,
+              ...at(bundle),
+            }),
+          );
+        collected.push(entry);
+      }
+
+      // Document identity comes from the first bundle unless a caller supplies
+      // it. `source` is irrelevant to document fields, so any value serves.
+      const document =
+        options.document ??
+        collectFields(
+          spec.documentFields ?? [],
+          list[0],
+          `./${target}/${profile}`,
+          missing(list[0]),
         );
 
-      const catalogPath = `${target}/${profile}/${location.directory}/${location.file}`;
+      const catalogPath =
+        options.catalogPathFor?.(target, profile, location) ??
+        `${target}/${profile}/${location.directory}/${location.file}`;
       artifacts.push({
         path: catalogPath,
         content: Buffer.from(
-          JSON.stringify({ ...document, [spec.entriesKey]: [entry] }, null, 2) + "\n",
+          JSON.stringify({ ...document, [spec.entriesKey]: collected }, null, 2) + "\n",
         ),
         mode: 0o644,
       });

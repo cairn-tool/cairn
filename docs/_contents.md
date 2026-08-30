@@ -9,6 +9,7 @@ This directory is the reference documentation for `cairn`.
 - [Project configuration schema](configuration.md)
 - [File formats and schemas](formats.md)
 - [Providers](providers.md)
+- [Cairn's own plugins](plugins.md)
 - [Shared Markdown command behavior](commands/md/common.md)
 - [Shared usage command behavior](commands/usage/common.md)
 - [Shared archive command behavior](commands/archive/common.md)
@@ -20,6 +21,7 @@ change without breaking a consumer.
 
 - [Agent bundle](formats/agent-bundle.md)
 - [Bundle contract tests](formats/agent-tests.md)
+- [Marketplace spec](formats/agent-marketplace.md)
 - [Target profile](formats/target-profile.md)
 - [Conversion output](formats/conversion-output.md)
 - [Package](formats/package.md)
@@ -93,6 +95,7 @@ What is known about each assistant Cairn renders for, reads logs from, or archiv
 - [`agent inspect`](commands/agent/inspect.md)
 - [`agent compat`](commands/agent/compat.md)
 - [`agent package`](commands/agent/package.md)
+- [`agent marketplace`](commands/agent/marketplace.md)
 - [`agent install`](commands/agent/install.md)
 - [`agent uninstall`](commands/agent/uninstall.md)
 - [`agent installed`](commands/agent/installed.md)
