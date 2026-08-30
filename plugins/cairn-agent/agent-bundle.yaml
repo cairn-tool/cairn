@@ -1,0 +1,24 @@
+# Portable agent bundle. Built as part of the collection:
+#   cairn agent marketplace ../../agent-marketplace.yaml --output ../../dist-plugins
+#
+# This bundle is a worked example of what it documents. So is the collection
+# spec at the repository root.
+schemaVersion: "2"
+name: cairn-agent
+version: 1.0.0
+description: Author, convert, test, and publish portable agent bundles.
+
+marketplace:
+  displayName: Cairn Agent
+  summary: One portable bundle rendered for Claude Code, Codex, Cursor, and more.
+  description: >-
+    Write skills, subagents, rules, hooks, policies, and MCP config once, then
+    render them for every host — with conformance checks, model-free contract
+    tests, a supply-chain audit, and marketplace packaging. Wraps the `cairn`
+    CLI, which must be installed separately.
+  categories: [developer-tools, productivity]
+  keywords: [plugins, skills, subagents, marketplace, portability]
+  publisher:
+    name: Bryan Stockus
+    url: https://github.com/bstockus
+  license: MIT

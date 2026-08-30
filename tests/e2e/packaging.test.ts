@@ -51,6 +51,14 @@ describe("published package contents", () => {
     expect(packedFiles).toContain(".markdownlintrc");
   });
 
+  // The plugin bundles are distributed through the marketplace branch, not npm.
+  // package.json "files" already excludes them; nothing else asserted it, so a
+  // future entry could quietly add megabytes of Markdown to every install.
+  it("does not ship the plugin bundle sources", () => {
+    expect(packedFiles.filter((file) => file.startsWith("plugins/"))).toEqual([]);
+    expect(packedFiles).not.toContain("agent-marketplace.yaml");
+  });
+
   // The published schemas and target profiles are TypeScript modules under src/ rather
   // than data directories, precisely so they compile into dist and ship via the existing
   // files entry. A top-level schemas/ or .json profile would be omitted with no error at

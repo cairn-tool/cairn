@@ -104,6 +104,30 @@ at `https://github.com/bstockus/cairn/schema`, and the contract `schemaVersion` 
 Regenerate your shell completion script after upgrading, and re-point anything holding an
 absolute path to the old binary.
 
+## Claude Code plugins
+
+Cairn ships its own toolsets as installable plugins, so an assistant has the command surface
+available without rediscovering it from `--help`:
+
+```text
+/plugin marketplace add bstockus/claude-cli@claude-plugins
+/plugin install cairn-markdown@cairn
+```
+
+| Plugin           | Covers                                               |
+| ---------------- | ---------------------------------------------------- |
+| `cairn-markdown` | The `md` toolset, plus a lint hook and an MCP server |
+| `cairn-scripts`  | `scripts run`, and authoring a `.cairn.yml` registry |
+| `cairn-usage`    | The `usage` reports and the store behind them        |
+| `cairn-archive`  | The `archive` commands and the store format          |
+| `cairn-agent`    | Authoring, testing, and publishing agent bundles     |
+
+They are authored as agent bundles under `plugins/`, collected by `agent-marketplace.yaml`, and
+built with `cairn agent marketplace` — the same commands they document. The `cairn` binary is a
+separate install; the plugins invoke it, they do not carry it.
+
+See [Cairn's own plugins](docs/plugins.md).
+
 ## Development
 
 ```bash
@@ -360,6 +384,7 @@ cairn agent specs --format json
 cairn agent doctor ./my-bundle --target all --output ./dist
 cairn agent convert ./my-bundle --target all --output ./dist --profile both
 cairn agent package ./my-bundle --target all --output ./release --archive
+cairn agent marketplace ./agent-marketplace.yaml --output ./dist-plugins
 cairn agent install ./my-bundle --target cursor --scope user
 cairn agent install ./my-bundle --target claude-code --scope user --register
 cairn agent installed
@@ -398,6 +423,13 @@ It renders the bundle itself — so a package can never certify a stale tree —
 marketplace catalogs, `sha256sum`-compatible checksums, a file inventory, and optional
 byte-reproducible `.tar.gz` archives, with publish-readiness checks over all of it. It never
 contacts the network and never publishes.
+
+`agent marketplace` builds a **collection**: several bundles rendered together into one
+aggregated catalog per target, from an `agent-marketplace.yaml` naming which bundles, which
+targets, and which bundles to skip for which target. Packaging five bundles individually
+produces five marketplaces a user has to add one at a time; this produces one. Entry `source`
+paths are relative, so the tree names no owner, repo, or branch and works however it was
+fetched.
 
 `agent install` takes that same in-memory render and places it where the host actually
 scans: Cursor's user plugin directory, a Claude Code local marketplace, or a project-scope

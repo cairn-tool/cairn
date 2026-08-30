@@ -19,3 +19,6 @@ coverage/
 *.swp
 
 _PLAN.md
+# Plugin build output
+dist-plugins/
+plugins/*/.install/

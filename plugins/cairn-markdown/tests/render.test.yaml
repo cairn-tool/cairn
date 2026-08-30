@@ -1,0 +1,138 @@
+# Contract tests: what this bundle must render, asserted against the same
+# in-memory render `agent convert` writes. No golden tree digest -- one would
+# invalidate on every prose edit and on any `npm run format`, turning these into
+# a formatting tripwire rather than a contract.
+schemaVersion: "1"
+cases:
+  - name: renders-a-complete-claude-code-plugin
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - .claude-plugin/plugin.json
+          - skills/{name}/SKILL.md
+          - agents/markdown-auditor.md
+          - hooks/hooks.json
+          - hooks/md-lint.sh
+          - .mcp.json
+          - assets/cli-basics.md
+        absent:
+          # Rules are project-profile only on this target, and there is no
+          # `commands` component kind -- a command here is a skill.
+          - .claude/rules/**
+          - commands/**
+      json:
+        - path: .claude-plugin/plugin.json
+          contains:
+            name: cairn-markdown
+            version: 1.0.0
+
+  # `agents` and `hooks` are implied manifest fields: the renderer leaves them
+  # out on purpose. Declaring `agents` fails the whole manifest, and declaring
+  # `hooks` duplicates a document the host already loaded and drops the plugin's
+  # hooks. Neither is caught by `claude plugin validate`.
+  - name: manifest-omits-the-implied-fields
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: .claude-plugin/plugin.json
+          excludes: ['"agents"', '"hooks"']
+          includes: ['"skills"', '"mcpServers"']
+
+  # This pins the entire slash-command mechanism -- invocationPolicy and
+  # argumentHint through the target profile's frontmatter-flag form -- against a
+  # renderer or profile change.
+  - name: explicit-skills-are-user-invocable-only
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/md-lint/SKILL.md
+          mode: "0644"
+          includes: ["disable-model-invocation: true", "argument-hint:"]
+        - path: skills/md-fix/SKILL.md
+          includes: ["disable-model-invocation: true", "argument-hint:"]
+        - path: skills/md-toc/SKILL.md
+          includes: ["disable-model-invocation: true", "argument-hint:"]
+
+  # The exclusion is newline-anchored to the frontmatter line: a bare substring
+  # would also match a skill whose prose documents the flag, which the
+  # cairn-agent skills legitimately do.
+  - name: auto-skills-stay-model-invocable
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/markdown-validate/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/markdown-navigate/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/markdown-query/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/markdown-refactor/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+
+  # The predecessor plugin hardcoded `$HOME/.local/bin/claude-cli`, which breaks
+  # on every Node upgrade under a version manager. This is the regression test.
+  - name: the-hook-resolves-cairn-from-path
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: hooks/md-lint.sh
+          mode: "0755"
+          includes: ["command -v cairn"]
+          excludes: ["/.local/bin/", "claude-cli"]
+      json:
+        - path: hooks/hooks.json
+          contains:
+            hooks:
+              PostToolUse:
+                - matcher: Write|Edit
+
+  # `npx @bstockus/cairn` would need a token this environment may not have, and
+  # an unpinned specifier resolves to whatever is newest at launch.
+  - name: mcp-invokes-cairn-from-path
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      json:
+        - path: .mcp.json
+          contains:
+            mcpServers:
+              cairn:
+                command: cairn
+
+  - name: the-shared-reference-asset-ships
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: assets/cli-basics.md
+          includes: ["## Exit codes", "@bstockus/cairn"]
+
+  # Model class and tool capabilities map exactly on this target; the auditor
+  # deliberately has no write access.
+  - name: the-auditor-agent-maps-to-native-values
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: agents/markdown-auditor.md
+          includes: ["model: opus", "Bash", "Read"]
+          excludes: ["Write", "WebFetch"]
+
+  # Hooks render plugin-profile only; rules render project-profile only.
+  - name: the-project-profile-carries-no-plugin-surface
+    targets: [claude-code]
+    profiles: [project]
+    expect:
+      paths:
+        present:
+          - .claude/skills/{name}/SKILL.md
+          - .claude/agents/markdown-auditor.md
+        absent:
+          - hooks/**
+          - .claude-plugin/**

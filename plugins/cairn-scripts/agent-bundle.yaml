@@ -1,0 +1,21 @@
+# Portable agent bundle. Built as part of the collection:
+#   cairn agent marketplace ../../agent-marketplace.yaml --output ../../dist-plugins
+schemaVersion: "2"
+name: cairn-scripts
+version: 1.0.0
+description: Resolve and run named scripts declared in .cairn.yml.
+
+marketplace:
+  displayName: Cairn Scripts
+  summary: Run a repository's named scripts from anywhere in the tree.
+  description: >-
+    A name declared once in a `.cairn.yml` resolves the same from every
+    directory in the repository, and runs with its working directory pinned to
+    the registry that declared it. Wraps the `cairn` CLI, which must be
+    installed separately.
+  categories: [productivity, developer-tools]
+  keywords: [scripts, tasks, monorepo, automation]
+  publisher:
+    name: Bryan Stockus
+    url: https://github.com/bstockus
+  license: MIT

@@ -1,0 +1,72 @@
+# Contract tests: what this bundle must render. No tree digest -- one would
+# invalidate on every prose edit and on any formatter pass.
+schemaVersion: "1"
+cases:
+  - name: renders-a-complete-claude-code-plugin
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - .claude-plugin/plugin.json
+          - skills/{name}/SKILL.md
+          - assets/cli-basics.md
+        absent:
+          # Rules are project-profile only, and a command here is a skill --
+          # there is no `commands` component kind.
+          - .claude/rules/**
+          - commands/**
+          # This bundle stays lean: three commands do not justify a subagent,
+          # and nothing here should run on its own.
+          - agents/**
+          - hooks/**
+          - .mcp.json
+      json:
+        - path: .claude-plugin/plugin.json
+          contains:
+            name: cairn-scripts
+            version: 1.0.0
+
+  # `agents` and `hooks` are implied manifest fields. Declaring `agents` fails
+  # the whole manifest; declaring `hooks` drops the plugin's hooks. Neither is
+  # caught by `claude plugin validate`.
+  - name: manifest-omits-the-implied-fields
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: .claude-plugin/plugin.json
+          excludes: ['"agents"', '"hooks"']
+          includes: ['"skills"']
+
+  # Pins the slash-command mechanism -- invocationPolicy and argumentHint
+  # through the target profile's frontmatter-flag form.
+  - name: explicit-skills-are-user-invocable-only
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/run-script/SKILL.md
+          mode: "0644"
+          includes: ["disable-model-invocation: true", "argument-hint:"]
+
+  # The exclusion is newline-anchored to the frontmatter line: a bare substring
+  # would also match a skill whose prose documents the flag, which the
+  # cairn-agent skills legitimately do.
+  - name: auto-skills-stay-model-invocable
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/scripts-runner/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/scripts-registry/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+
+  - name: the-shared-reference-asset-ships
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: assets/cli-basics.md
+          includes: ["## Exit codes", "@bstockus/cairn"]

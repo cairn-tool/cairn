@@ -1,0 +1,22 @@
+# The collection published to the `claude-plugins` branch. Build it with:
+#   cairn agent marketplace agent-marketplace.yaml --output ./dist-plugins
+# Install it locally with:
+#   cairn agent marketplace agent-marketplace.yaml --install --register
+schemaVersion: "1"
+name: cairn
+version: 1.0.0
+description: Cairn's own toolsets, as plugins.
+owner:
+  name: Bryan Stockus
+  url: https://github.com/bstockus
+
+# Claude Code only for now. The bundles stay portable, but this is the only
+# host we publish a marketplace to.
+targets: [claude-code]
+
+bundles:
+  - path: plugins/cairn-markdown
+  - path: plugins/cairn-scripts
+  - path: plugins/cairn-usage
+  - path: plugins/cairn-archive
+  - path: plugins/cairn-agent

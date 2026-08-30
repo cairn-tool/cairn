@@ -1,0 +1,21 @@
+# Portable agent bundle. Built as part of the collection:
+#   cairn agent marketplace ../../agent-marketplace.yaml --output ../../dist-plugins
+schemaVersion: "2"
+name: cairn-usage
+version: 1.0.0
+description: Report on LLM assistant usage from local session logs.
+
+marketplace:
+  displayName: Cairn Usage
+  summary: Token, tool, session, and skill reporting from local assistant logs.
+  description: >-
+    Reads the session transcripts assistants leave on disk and reports on them.
+    Nothing is sent anywhere. Counts undo each provider's own logging quirks, so
+    the totals are the real ones. Wraps the `cairn` CLI, which must be installed
+    separately.
+  categories: [productivity, developer-tools]
+  keywords: [usage, tokens, cost, telemetry, transcripts]
+  publisher:
+    name: Bryan Stockus
+    url: https://github.com/bstockus
+  license: MIT
