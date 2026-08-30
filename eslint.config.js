@@ -29,17 +29,5 @@ export default tseslint.config(
       ],
     },
   },
-  {
-    // Standalone ops scripts: plain ESM run directly by node, outside the build.
-    files: ["scripts/**/*.js"],
-    languageOptions: {
-      globals: {
-        process: "readonly",
-        console: "readonly",
-        fetch: "readonly",
-        URL: "readonly",
-      },
-    },
-  },
   prettier,
 );

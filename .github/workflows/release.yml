@@ -15,12 +15,7 @@ concurrency:
   group: release
   cancel-in-progress: false
 
-permissions:
-  contents: write # git tags, CHANGELOG commit, GitHub Release
-  issues: write # semantic-release success comments
-  pull-requests: write
-  packages: write # publish to npm.pkg.github.com
-  id-token: write
+permissions: {}
 
 env:
   # `npm ci` runs `prepare: husky`, which would install the commit-msg hook into the
@@ -30,8 +25,13 @@ env:
 
 jobs:
   release:
-    name: Publish to GitHub Packages
+    name: Publish to npm
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # git tags, CHANGELOG commit, GitHub Release
+      issues: write # semantic-release success comments
+      pull-requests: write
+      id-token: write # provenance attestation for the published tarball
     # Only for a green CI run on a push to main — not for PR CI runs.
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -39,7 +39,7 @@ jobs:
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main')
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Explicit ref: a workflow_run checkout otherwise defaults to the default
           # branch tip anyway, and naming it keeps us on a branch rather than a
@@ -49,22 +49,27 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: npm
-          registry-url: https://npm.pkg.github.com
-          scope: "@bstockus"
+          registry-url: https://registry.npmjs.org
+          scope: "@cairn-tool"
 
       - run: npm ci
 
       # No test step: this job only runs after the CI workflow went green across
       # the full Node matrix, so re-running them here would duplicate that work.
 
+      # `publishConfig` in package.json carries `access: public` (scoped packages
+      # default to restricted) and `provenance: true`, which needs the id-token
+      # permission above plus a public repository. Both are load-bearing.
       - name: semantic-release
         env:
+          # GITHUB_TOKEN is for the tag, the GitHub Release, and the CHANGELOG
+          # commit. The npm registry is a separate identity now, so it needs its
+          # own credential rather than reusing this one.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # GitHub Packages authenticates the npm client with the same token.
-          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release

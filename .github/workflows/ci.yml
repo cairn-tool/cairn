@@ -1,5 +1,9 @@
 name: CI
 
+# `pull_request`, deliberately **not** `pull_request_target`. This workflow checks
+# out and executes the PR's own code, so it must run with the fork's read-only
+# token and no access to secrets. Switching the trigger would hand a fork's code
+# a writable token and this repository's secrets.
 on:
   pull_request:
   push:
@@ -9,8 +13,8 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+# Nothing by default; each job grants only what it needs.
+permissions: {}
 
 env:
   # Git hooks serve no purpose in CI; the commitlint job checks messages explicitly.
@@ -20,10 +24,14 @@ jobs:
   quality:
     name: Lint, format, typecheck
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -39,9 +47,19 @@ jobs:
       - name: TypeScript
         run: npm run typecheck
 
+      # Blocks a PR that introduces a dependency with a known high-severity
+      # advisory. Needs a base and a head to diff, so it is a no-op on push.
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+
   test:
     name: Test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -49,9 +67,11 @@ jobs:
         # (^22.22.2 || ^24.15.0 || >=26.0.0); Node 20 is EOL and unsupported.
         node: ["22.x", "24.x"]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -65,13 +85,16 @@ jobs:
   commitlint:
     name: Commit messages
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -90,10 +113,14 @@ jobs:
   plugins:
     name: Plugin bundles
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -131,7 +158,7 @@ jobs:
           --output "$RUNNER_TEMP/marketplace" --strict
 
       # So a reviewer can `/plugin marketplace add` the built tree from a PR.
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cairn-plugins
           path: ${{ runner.temp }}/marketplace
@@ -139,10 +166,14 @@ jobs:
   dogfood:
     name: Self-lint markdown
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
           cache: npm

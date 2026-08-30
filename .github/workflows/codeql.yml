@@ -1,0 +1,46 @@
+name: CodeQL
+
+# Static analysis for the TypeScript sources. Advisory by design: it sits outside
+# the CI -> Release gate, so a CodeQL failure reports a finding without blocking a
+# publish. Findings land in the repository's code-scanning dashboard.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Mondays, 06:00 UTC. The scheduled run is what catches a newly published
+    # query matching code that has not changed.
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  analyze:
+    name: Analyze TypeScript
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # upload the SARIF results
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      # No build step: javascript-typescript is analysed from source, and running
+      # `tsc` first would only add dist/ output for CodeQL to re-scan.
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          category: "/language:javascript-typescript"
