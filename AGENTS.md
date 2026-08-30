@@ -90,6 +90,15 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   **throws the returned token away**, leaving `npm publish` to exchange again on its own. An
   npm that predates the feature therefore passes verification and then fails at the publish,
   after the tag exists. Removing that upgrade step looks like tidying and is not.
+- **The release job pushes as a GitHub App, not as `github-actions[bot]`.** The `main` ruleset
+  requires four CI checks, and semantic-release's own CHANGELOG-and-version commit cannot
+  satisfy them — it is created after CI ran. A ruleset bypass can only name an org-installed
+  App, and GitHub Actions is not one, so `release.yml` mints an installation token with
+  `actions/create-github-app-token` and hands _that_ to semantic-release as `GITHUB_TOKEN`.
+  The job's own `permissions` are therefore `contents: read` plus `id-token: write` — widening
+  them back to `contents: write` would not help, because the identity is what the ruleset
+  checks, not the scope. `RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY` are the only two
+  long-lived secrets, and the token they mint expires in an hour.
 - **`NPM_TOKEN` is a bootstrap, not the auth path.** npm configures a trusted publisher on an
   existing package's settings page, so the first ever publish of a name has nowhere to
   configure it and needs a token. `verify-auth.js` tries OIDC first and only falls back to a
