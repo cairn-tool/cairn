@@ -73,6 +73,13 @@ rejects a malformed one.
 
 ## Code ranges
 
+Every code, with its severity and meaning, is in
+[diagnostic codes](diagnostic-codes.md). This table is the map; that page is the reference.
+
+`agent verify` re-emits `AB402`, `AB403`, `AB404`, and `AB806` rather than minting codes of its
+own, on the same rule `agent audit` follows for `AB504`–`AB506`: one condition keeps one
+identifier whichever command surfaces it, or a consumer's suppression list breaks.
+
 | Range           | Emitted by                    | Concerns                                                                             |
 | --------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
 | `AB000`         | `src/commands/agent.ts`       | invocation failure                                                                   |
@@ -85,6 +92,7 @@ rejects a malformed one.
 | `AB230`–`AB239` | `agent import`                | detection, normalization, provenance                                                 |
 | `AB302`–`AB370` | renderer                      | per-feature mapping losses; see below                                                |
 | `AB400`–`AB414` | `agent doctor`                | host status, undeclared paths, output drift                                          |
+| `AB420`–`AB439` | `agent verify`                | pinned versions, committed-tree drift, orphaned generated files                      |
 | `AB500`–`AB509` | `agent package`               | catalog completeness, assets, collisions, pinning, archives                          |
 | `AB600`–`AB607` | `agent audit`                 | what hook and MCP commands actually run                                              |
 | `AB610`–`AB614` | `agent audit`                 | credentials and environment handed to MCP servers                                    |

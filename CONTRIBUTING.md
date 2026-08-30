@@ -72,7 +72,10 @@ what each one covers and when it legitimately moves.
 The checklist is in `AGENTS.md`, and it is enforced: `tests/e2e/contract.test.ts` fails on any
 command that is not declared in `src/contract/registry.ts`. In short — an action in
 `src/commands/`, a registration in `src/cli.ts`, a registry entry, a docs page with links from
-`docs/commands.md` and `docs/_contents.md`, a README entry, and e2e coverage.
+`docs/commands.md` and `docs/_contents.md`, and e2e coverage. A new `AB###` also needs a row in
+`docs/formats/diagnostic-codes.md`, which `tests/unit/diagnostic-codes.test.ts` enforces in both
+directions. The README links into `docs/` rather than listing commands, so it usually needs no
+change.
 
 ## Reporting a vulnerability
 

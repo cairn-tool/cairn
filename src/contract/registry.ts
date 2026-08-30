@@ -512,6 +512,16 @@ const CONTRACTS: CommandContract[] = [
     notes:
       "Experimental because the test-file format may still change; it carries its own hand-owned schemaVersion, reported back as `test.schemaVersion`. Model-free by construction: expectations are evaluated against the same in-memory render agent convert would write, so no model is called, no host tooling is executed, and no file is written. `test.native` is reserved for evidence from a host's own validator and is always empty; agent specs publishes the validator commands to run yourself. An unmet expectation is an error, so unlike agent audit no per-code split is needed; a forwarded parse or render warning blocks only under --strict, and so does AB701, which reports that a bundle carried no test cases at all. An unknown --case name is a usage error rather than a run that selects nothing, so a typo in CI cannot read as a pass. --target and --profile intersect each case's own selection rather than widening it.",
   }),
+  agentCommand("verify", {
+    stability: "experimental",
+    exitCodes: [
+      OK("Every declared entry matches, and every pin is satisfied"),
+      USAGE,
+      FINDINGS("Drift, an orphaned file, or a violated pin"),
+    ],
+    notes:
+      "Reads what to verify from the `agent.verify` block of a cairn configuration document rather than from flags, so CI runs it bare. Renders each declared bundle in memory through the same install planner agent install uses, so a verification is always derived from the bundle and never from a possibly-drifted tree. Pins are asserted against the running CLI \u2014 its version, PROFILE_SCHEMA_VERSION, and each target's documentationRevision \u2014 which together with byte equality prove the tree was produced by a cairn matching the pin, without requiring a provenance document to exist. Provenance found at a destination is reported as corroboration and never decides the verdict. The unmanaged walk is bounded to the directory prefixes the target profile declares and that the render actually populated; a wholly-literal declared path such as AGENTS.md or .mcp.json is compared by bytes and never walked, so pointing an entry at a repository root cannot enumerate the repository. Approximate render diagnostics do not fail verify, unlike convert and validate.",
+  }),
   agentCommand("install", {
     writes: true,
     stability: "experimental",
