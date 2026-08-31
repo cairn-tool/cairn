@@ -58,7 +58,7 @@ failure to retry. The [complete command listing](docs/commands.md) has all of th
 
 ## What is in it
 
-Five toolsets, plus `describe`, `schema`, `serve`, `completion`, and `check-update`.
+Six toolsets, plus `describe`, `schema`, `serve`, `completion`, and `check-update`.
 
 | Toolset   | Does                                                                      | Guide                                        |
 | --------- | ------------------------------------------------------------------------- | -------------------------------------------- |
@@ -67,6 +67,7 @@ Five toolsets, plus `describe`, `schema`, `serve`, `completion`, and `check-upda
 | `scripts` | Resolve and run a repository's named commands from anywhere inside it.    | [Named scripts](docs/guide/scripts.md)       |
 | `usage`   | Report on local assistant transcripts: tokens, tools, sessions, and cost. | [Usage reporting](docs/guide/usage.md)       |
 | `archive` | Keep what a session produced before the logs are pruned, and get it back. | [Archiving](docs/guide/archiving.md)         |
+| `jira`    | Convert Jira and Confluence rich text between ADF and Markdown.           | [Jira rich text](docs/guide/jira.md)         |
 
 Nothing calls a model, and nothing sends anything anywhere. `scripts run` is the only command
 that executes anything, and only what a tracked file in your repository names.
@@ -84,9 +85,9 @@ Full documentation lives in
 | [Project configuration](docs/configuration.md)       | The `.cairn.yml` schema.                               |
 | [Machine-readable result contract](docs/contract.md) | JSON output, the envelope, and what may change.        |
 | [File formats and schemas](docs/formats.md)          | The files Cairn itself reads and writes.               |
-| [Diagnostic codes](docs/formats/diagnostic-codes.md) | Every `AB###`, with its severity and meaning.          |
+| [Diagnostic codes](docs/formats/diagnostic-codes.md) | Every `AB###` and `AD###`, with severity and meaning.  |
 | [Providers](docs/providers.md)                       | What is known about each assistant's own formats.      |
-| [Cairn's own plugins](docs/plugins.md)               | The five toolsets, shipped as agent bundles.           |
+| [Cairn's own plugins](docs/plugins.md)               | The six toolsets, shipped as agent bundles.            |
 | [Installing Cairn](docs/install.md)                  | Node versions, stable paths, and building from source. |
 | [Migrating from claude-cli](docs/migration.md)       | Every pre-rename identifier, and what still reads it.  |
 

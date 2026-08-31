@@ -1,12 +1,13 @@
 # Diagnostics
 
-Two finding shapes exist in this project, for two different kinds of check, and they are not
+Three finding shapes exist in this project, for three different kinds of check, and they are not
 interchangeable.
 
-| Shape             | Produced by           | Carries                                                |
-| ----------------- | --------------------- | ------------------------------------------------------ |
-| `Issue`           | every `md` checker    | file, line, checker, message                           |
-| `AgentDiagnostic` | every `agent` command | a stable `AB###` code, severity, quality, and location |
+| Shape                  | Produced by              | Carries                                                |
+| ---------------------- | ------------------------ | ------------------------------------------------------ |
+| `Issue`                | every `md` checker       | file, line, checker, message                           |
+| `AgentDiagnostic`      | every `agent` command    | a stable `AB###` code, severity, quality, and location |
+| `ConversionDiagnostic` | every `jira adf` command | a stable `AD###` code, severity, quality, and location |
 
 ## `Issue`
 
@@ -63,13 +64,44 @@ came from the renderer. Consumers that need one or the other normalize; the SARI
 
 ### Codes are stable identifiers
 
-`AB###`, and a code is never reused for a different condition. One condition keeps one ID
+`AB###` for an agent bundle and `AD###` for a conversion, and a code is never reused for a
+different condition. One condition keeps one ID
 whichever command surfaces it — which is why `agent audit` **re-emits** `AB504`, `AB505`, and
 `AB506` from the packager rather than minting its own. Doing otherwise breaks a consumer's
 suppression list.
 
 Every target profile declares which codes it may emit per feature, and `validateProfile`
 rejects a malformed one.
+
+## `ConversionDiagnostic`
+
+```ts
+interface ConversionDiagnostic {
+  code: string; // AD###
+  severity: "notice" | "warning" | "error";
+  message: string;
+  quality: "exact" | "approximate" | "unsupported";
+  node?: string;
+  location?: string;
+  remediation?: string;
+}
+```
+
+Emitted by every `jira adf` subcommand. `code`, `severity`, `message`, and `quality` are always
+present; `node` names the ADF node or mark type the finding concerns, `location` is the
+slash-joined trail of ancestor types, and `remediation` appears where there is something to do
+about it.
+
+`quality` means what it means for an `AgentDiagnostic`, and severity is derived from it by the
+same rule — which is why the mapping lives in `src/mapping-quality.ts` rather than in either
+family, so the two cannot drift. A caller that means "refuse" sets `error` explicitly. So an
+`AD1xx` code is an `error` when the input is invalid, while an `AD2xx` or `AD3xx` code describing
+a lossy mapping is a `warning`.
+
+Findings are deduplicated by code, node, and location. A table with two hundred flattened cells
+reports the condition once per cell position rather than burying every other finding under it.
+
+The published schema is `adf-result`.
 
 ## Code ranges
 
@@ -103,6 +135,15 @@ identifier whichever command surfaces it, or a consumer's suppression list break
 | `AB700`–`AB720` | `agent test`                  | test-file validity, assertion failures, skips                                        |
 | `AB800`–`AB809` | `agent install` / `uninstall` | locations, manifests, registration, co-resident installs                             |
 | `AB900`–`AB907` | `agent marketplace`           | collection spec: schema, required and malformed fields, bundle paths, selection      |
+| `AD001`–`AD005` | `jira adf` input reader       | invocation, I/O, and input bounds                                                    |
+| `AD100`–`AD112` | `jira adf validate`           | ADF source validation: unknown types, illegal nesting, attributes                    |
+| `AD200`–`AD211` | `jira adf to-markdown`        | ADF to Markdown mapping losses                                                       |
+| `AD300`–`AD311` | `jira adf from-markdown`      | Markdown to ADF mapping and degradation                                              |
+| `AD400`–        | —                             | reserved for a future round-trip fidelity mode                                       |
+
+The `AD` range is chosen by where the condition is detected, not by which command the user typed:
+`AD100` and `AD101` are emitted by both `jira adf validate` and `jira adf to-markdown`, on the
+same one-condition-one-identifier rule the `AB` family follows.
 
 ### The renderer range in detail
 
@@ -227,6 +268,19 @@ Per-command meanings are in `cairn describe` output under `exitCodes`.
 `import`, `upgrade`, `package`, `audit`, and `test`, where approximation is the expected
 outcome rather than a defect. Those decide their own exit. A new command reporting
 approximations should do the same.
+
+`jira adf` is one of those, and deliberately not the `agent convert` rule: an error always
+blocks, and an `approximate` or `unsupported` finding blocks only under `--strict`. Almost every
+real Jira description carries an approximation, so failing on one by default would make a working
+conversion indistinguishable from a broken one.
+
+| Command                                          | Exits 2 when                                                    |
+| ------------------------------------------------ | --------------------------------------------------------------- |
+| `jira adf to-markdown`, `jira adf from-markdown` | Any error; any `approximate` or `unsupported` under `--strict`. |
+| `jira adf validate`                              | Any error; `AD100` or `AD101` under `--strict`.                 |
+| `jira adf inspect`                               | Never. It reports no findings of its own.                       |
+
+**`ok: true` therefore does not mean the conversion was lossless.** Read `diagnostics` for that.
 
 ## Related
 

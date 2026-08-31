@@ -1,6 +1,6 @@
 # Complete command listing
 
-`cairn` contains five toolsets plus update and contract commands. Angle brackets in usage
+`cairn` contains six toolsets plus update and contract commands. Angle brackets in usage
 signatures are required arguments; square brackets are optional arguments.
 
 Each command page lives under `commands/<toolset>/`; the top-level commands are directly under
@@ -25,6 +25,7 @@ Each command page lives under `commands/<toolset>/`; the top-level commands are 
 | `cairn scripts`                                      | Resolve and run named scripts declared in `.cairn.yml`.                |
 | `cairn usage`                                        | Report on Claude Code usage from its own session logs.                 |
 | `cairn archive`                                      | Archive plans, artifacts, and logs into long-term storage.             |
+| `cairn jira`                                         | Work with Jira and Confluence content formats.                         |
 
 ## Script commands
 
@@ -91,6 +92,24 @@ The narrative version is in [the archiving guide](guide/archiving.md).
 | [`archive extract`](commands/archive/extract.md) | Write an archived file back out.        |
 | [`archive verify`](commands/archive/verify.md)   | Check the archive against its index.    |
 | [`archive migrate`](commands/archive/migrate.md) | Apply pending archive index migrations. |
+
+## Jira commands
+
+Jira Cloud's REST API v3 and Confluence Cloud never accept or return Markdown: every rich-text
+field is Atlassian Document Format, a JSON tree of typed nodes and marks. The `adf` group
+converts both ways, deterministically and locally — no credentials, no network, no model call.
+
+Conversion is lossy in both directions and every loss reports an `AD###` code. Approximation is
+the expected outcome on almost every real issue description, so it blocks only under `--strict`;
+exit 0 therefore does not mean lossless. See
+[shared `jira adf` behavior](commands/jira/adf/common.md).
+
+| Command                                                        | Description                                           |
+| -------------------------------------------------------------- | ----------------------------------------------------- |
+| [`jira adf to-markdown`](commands/jira/adf/to-markdown.md)     | Convert an ADF document to Markdown.                  |
+| [`jira adf from-markdown`](commands/jira/adf/from-markdown.md) | Convert a Markdown document to ADF.                   |
+| [`jira adf validate`](commands/jira/adf/validate.md)           | Check an ADF document's structure without converting. |
+| [`jira adf inspect`](commands/jira/adf/inspect.md)             | List node and mark types, with per-type fidelity.     |
 
 ## Agent commands
 

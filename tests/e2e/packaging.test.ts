@@ -92,6 +92,20 @@ describe("published package contents", () => {
     expect(packedFiles).toContain("dist/scripts/execute.js");
   });
 
+  // The same trap once more, and the one most likely to be sprung: src/jira/adf/
+  // holds the ADF content model and the degradation table, and they read as data.
+  // Moving either into a .json file would drop it from dist with no error at all —
+  // rootDir is "src" and resolveJsonModule is off — and every conversion would
+  // then report AD100 for node types the tool actually models.
+  it("ships the ADF converters and their content model", () => {
+    expect(packedFiles).toContain("dist/commands/jira.js");
+    expect(packedFiles).toContain("dist/jira/adf/profile.js");
+    expect(packedFiles).toContain("dist/jira/adf/to-markdown.js");
+    expect(packedFiles).toContain("dist/jira/adf/from-markdown.js");
+    expect(packedFiles).toContain("dist/jira/adf/diagnostics.js");
+    expect(packedFiles).toContain("dist/mapping-quality.js");
+  });
+
   it("ships the docs but not the sources or tests", () => {
     expect(packedFiles).toContain("README.md");
     expect(packedFiles).toContain("LICENSE");

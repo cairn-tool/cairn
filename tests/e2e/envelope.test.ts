@@ -5,6 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
+import { COMMAND_CONTRACTS } from "../../src/contract/registry.js";
 import { SCHEMA_BY_ID } from "../../src/contract/schemas/index.js";
 import { CONTRACT_VERSION } from "../../src/contract/version.js";
 
@@ -90,6 +91,24 @@ describe("--envelope", () => {
     args: (context: { workspace: string; bundle: string }) => string[];
   }
 
+  /**
+   * The command id is the longest leading run of words the registry declares,
+   * not a fixed number of them: `md graph` is two and `md query tasks` is still
+   * two because `tasks` is an argument, while `jira adf to-markdown` is three.
+   */
+  function commandIdFor(args: string[]): string {
+    const words: string[] = [];
+    for (const arg of args) {
+      if (arg.startsWith("-")) break;
+      words.push(arg);
+    }
+    for (let length = words.length; length > 0; length -= 1) {
+      const candidate = words.slice(0, length).join(" ");
+      if (candidate in COMMAND_CONTRACTS) return candidate;
+    }
+    return words[0] ?? "";
+  }
+
   // One test per command rather than one test for all of them: each case is two
   // spawns, so a loaded machine cannot push the whole set past a single
   // timeout, and a failure names the command in the test title.
@@ -151,7 +170,7 @@ describe("--envelope", () => {
       true,
     );
     expect(envelope.schemaVersion, label).toBe(CONTRACT_VERSION);
-    expect(envelope.command, label).toBe(`${command[0]} ${command[1]}`);
+    expect(envelope.command, label).toBe(commandIdFor(command));
     expect(envelope.exitCode, label).toBe(plain.code);
     expect(envelope.ok, label).toBe(plain.code === 0);
     // The whole point: unwrapping yields exactly the unenveloped output.

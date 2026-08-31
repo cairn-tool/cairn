@@ -17,8 +17,18 @@ updates:
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
     groups:
+      # Its own group, and excluded from dev-dependencies below. A bump here can
+      # change the ADF content model, which fails
+      # tests/unit/jira-adf-profile.test.ts until src/jira/adf/profile.ts is
+      # updated to match — and that failure must not hold up every unrelated
+      # dev-dependency bump in the same pull request.
+      adf-schema:
+        patterns:
+          - "@atlaskit/adf-schema"
       dev-dependencies:
         dependency-type: development
+        exclude-patterns:
+          - "@atlaskit/adf-schema"
       production-dependencies:
         dependency-type: production
         update-types:

@@ -81,6 +81,14 @@ import {
   type ArchiveOptions,
 } from "./commands/archive.js";
 import {
+  adfActionBoundary,
+  adfFromMarkdownAction,
+  adfInspectAction,
+  adfToMarkdownAction,
+  adfValidateAction,
+  type AdfOptions,
+} from "./commands/jira.js";
+import {
   usageAgentsAction,
   usageCommandsAction,
   usageHooksAction,
@@ -610,6 +618,74 @@ program
   )
   .action((protocol: string, opts: Record<string, unknown>) =>
     serveAction(protocol, opts as unknown as ServeOptions),
+  );
+
+const jira = program
+  .command("jira")
+  .description("Work with Jira and Confluence content formats")
+  .addHelpText(
+    "after",
+    "\nEvery subcommand is a local, deterministic transformation: no credentials, no network,\nand no Jira or Confluence API call. Project configuration is not consulted.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+  );
+
+const adf = jira
+  .command("adf")
+  .description("Convert Jira and Confluence rich text between ADF and Markdown")
+  .addHelpText(
+    "after",
+    '\nConverts a bare Atlassian Document Format document, not a REST response. Extract the\nfield first:\n  curl -s "$JIRA/rest/api/3/issue/PROJ-1" | jq .fields.description | cairn jira adf to-markdown -\n\nThe converted document goes to stdout and diagnostics go to stderr, so the output can\nbe redirected without findings landing in it.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json',
+  );
+
+const adfCommon = (command: Command): Command =>
+  command
+    .argument("<source>", "Input file, or - for stdin")
+    .option("--format <fmt>", "Output format: llm, human, json", "llm")
+    .option("--envelope", "Wrap --format json output in the versioned result envelope");
+
+const adfConverter = (command: Command): Command =>
+  adfCommon(command)
+    .option("--output <file>", "Write the converted document to this file instead of stdout")
+    .option("--strict", "Treat approximations as blocking findings");
+
+adfConverter(adf.command("to-markdown"))
+  .description("Convert an ADF document to Markdown")
+  .addHelpText(
+    "after",
+    "\nEmits no frontmatter: an ADF document carries no title, key, status, or author, so\nthere is nothing to put there.\n\nExit codes:\n  0  Converted; read diagnostics to learn what was approximated\n  1  Invocation or I/O error, or the input is not an ADF document\n  2  An error, or any approximation under --strict",
+  )
+  .action((source: string, opts: AdfOptions) =>
+    adfActionBoundary("to-markdown", opts, () => adfToMarkdownAction(source, opts)),
+  );
+
+adfConverter(adf.command("from-markdown"))
+  .description("Convert a Markdown document to ADF")
+  .addHelpText(
+    "after",
+    "\nThe default format already emits pure ADF JSON, so --format json wraps that document\nin the result envelope rather than changing its encoding. Frontmatter is dropped with\na finding rather than becoming body content.\n\nExit codes:\n  0  Converted; read diagnostics to learn what was approximated\n  1  Invocation or I/O error\n  2  An error, or any approximation under --strict",
+  )
+  .action((source: string, opts: AdfOptions) =>
+    adfActionBoundary("from-markdown", opts, () => adfFromMarkdownAction(source, opts)),
+  );
+
+adfCommon(adf.command("validate"))
+  .description("Check an ADF document's structure without converting it")
+  .option("--strict", "Treat an unrecognized node or mark type as a blocking finding")
+  .addHelpText(
+    "after",
+    "\nChecks nesting, required content, and attribute constraints against this tool's own\ncontent model. It is not a wrapper around Atlassian's schema: a node type the model\ndoes not know reports AD100 rather than being judged.\n\nExit codes:\n  0  No structural errors\n  1  Invocation or I/O error, or the input is not an ADF document\n  2  Invalid structure, or an unknown node type under --strict",
+  )
+  .action((source: string, opts: AdfOptions) =>
+    adfActionBoundary("validate", opts, () => adfValidateAction(source, opts)),
+  );
+
+adfCommon(adf.command("inspect"))
+  .description("List the node and mark types in an ADF document, with per-type fidelity")
+  .addHelpText(
+    "after",
+    "\nAnswers what a conversion will cost before paying it. A type this tool does not model\nis listed as unsupported rather than omitted.\n\nExit codes:\n  0  Inventory written to stdout\n  1  Invocation or I/O error, or the input is not an ADF document",
+  )
+  .action((source: string, opts: AdfOptions) =>
+    adfActionBoundary("inspect", opts, () => adfInspectAction(source, opts)),
   );
 
 const scripts = program
