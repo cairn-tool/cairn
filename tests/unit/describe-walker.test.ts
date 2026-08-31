@@ -21,6 +21,24 @@ function program(): Command {
   return root;
 }
 
+/**
+ * A three-level tree: `tool outer inner leaf`.
+ *
+ * `jira adf to-markdown` is the real one. The walk has never assumed a depth,
+ * but nothing pinned that until a toolset actually nested a group inside a
+ * group, and three test sites elsewhere did assume it.
+ */
+function nestedProgram(): Command {
+  const root = new Command().name("tool");
+  const outer = root.command("outer").description("An outer group");
+  const inner = outer.command("inner").description("An inner group");
+  inner
+    .command("leaf")
+    .description("A nested leaf")
+    .action(() => undefined);
+  return root;
+}
+
 const leaf = () => walkCommands(program()).find((command) => command.id === "group leaf")!;
 const option = (flags: string) => leaf().options.find((item) => item.flags === flags)!;
 
@@ -28,6 +46,22 @@ describe("walkCommands", () => {
   it("walks nested commands and records their paths", () => {
     const ids = walkCommands(program()).map((command) => command.id);
     expect(ids).toEqual(["group", "group leaf"]);
+  });
+
+  it("walks a group nested inside a group", () => {
+    const ids = walkCommands(nestedProgram()).map((command) => command.id);
+    expect(ids).toEqual(["outer", "outer inner", "outer inner leaf"]);
+    const paths = walkCommands(nestedProgram()).map((command) => command.path);
+    expect(paths).toEqual([["outer"], ["outer", "inner"], ["outer", "inner", "leaf"]]);
+  });
+
+  it("records subcommands at every level of a nested tree", () => {
+    const walked = walkCommands(nestedProgram());
+    expect(walked.find((command) => command.id === "outer")!.subcommands).toEqual(["outer inner"]);
+    expect(walked.find((command) => command.id === "outer inner")!.subcommands).toEqual([
+      "outer inner leaf",
+    ]);
+    expect(walked.find((command) => command.id === "outer inner leaf")!.subcommands).toEqual([]);
   });
 
   it("excludes hidden commands and the implicit help placeholder", () => {

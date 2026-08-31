@@ -1,8 +1,9 @@
 # Diagnostic codes
 
-Every `AB###` an `agent` command can emit, with its severity, what emits it, and what it means.
-This page is a reference; [diagnostics](diagnostics.md) explains the two finding _shapes_ and
-what a severity implies for an exit code.
+Every code an `agent` or `jira` command can emit, with its severity, what emits it, and what it
+means. There are two families: `AB###` for agent bundles and `AD###` for ADF conversion. This
+page is a reference; [diagnostics](diagnostics.md) explains the finding _shapes_ and what a
+severity implies for an exit code.
 
 **Markdown commands emit no codes.** An `Issue` carries no severity and no identifier — every
 finding a `md` checker reports is of equal weight, and whether it blocks is decided by the
@@ -283,15 +284,95 @@ Per-feature mapping losses. Severity depends on what the target profile declares
 | `AB906` | warning  | `agent marketplace` | A selected target has no bundles left after include/exclude.  |
 | `AB907` | notice   | `agent marketplace` | A bundle was skipped for a target by its own include/exclude. |
 
+## ADF invocation and input
+
+Emitted by `jira adf` while reading its input, before any conversion is attempted. All are
+errors: there is no document to convert.
+
+| Code    | Severity | Emitted by               | Meaning                                                        |
+| ------- | -------- | ------------------------ | -------------------------------------------------------------- |
+| `AD001` | error    | every `jira adf` command | An unexpected failure. The boundary-catch analogue of `AB000`. |
+| `AD002` | error    | every `jira adf` command | The input is not an ADF document.                              |
+| `AD003` | error    | every `jira adf` command | The input is larger than the two-megabyte cap.                 |
+| `AD004` | error    | every `jira adf` command | The input nests deeper than 200 levels.                        |
+| `AD005` | error    | every `jira adf` command | The input is not valid JSON, or contains a NUL byte.           |
+
+`AD002` is the one worth knowing. Handing `jira adf to-markdown` a whole Jira issue response is
+the likeliest first mistake, so when a document is nested somewhere inside the input, the
+remediation names the field and prints the `jq` that extracts it. That message is why there is no
+`--pointer` option: the tool converts a bare ADF document and knows nothing about the REST
+response shape.
+
+## ADF source validation
+
+| Code    | Severity | Emitted by                                  | Meaning                                                   |
+| ------- | -------- | ------------------------------------------- | --------------------------------------------------------- |
+| `AD100` | warning  | `jira adf validate`, `jira adf to-markdown` | An unrecognized ADF node type. Not converted, not judged. |
+| `AD101` | warning  | `jira adf validate`, `jira adf to-markdown` | An unrecognized ADF mark. Its formatting is dropped.      |
+| `AD110` | error    | `jira adf validate`                         | A node appears somewhere the content model forbids.       |
+| `AD111` | error    | `jira adf validate`                         | A node has less content than ADF requires.                |
+| `AD112` | error    | `jira adf validate`                         | An attribute is missing or outside its permitted values.  |
+
+`AD100` and `AD101` are warnings rather than errors on purpose: an unknown node means this tool
+cannot tell, not that the document is wrong. `jira adf validate` blocks on them only under
+`--strict`, and they are why it never claims to be Atlassian's validator — see
+[`jira adf validate`](../commands/jira/adf/validate.md).
+
+## ADF to Markdown
+
+Every code here describes a lossy mapping, so none is ever an error: a valid ADF document always
+converts. They block only under `--strict`.
+
+| Code    | Severity | Emitted by             | Meaning                                                                           |
+| ------- | -------- | ---------------------- | --------------------------------------------------------------------------------- |
+| `AD200` | warning  | `jira adf to-markdown` | Table structure flattened: cell blocks became inline, or a span was dropped.      |
+| `AD201` | warning  | `jira adf to-markdown` | A task list became a GFM task list; `localId` is not represented.                 |
+| `AD202` | warning  | `jira adf to-markdown` | A panel became a block quote led by its type.                                     |
+| `AD203` | warning  | `jira adf to-markdown` | An expand became a bold title followed by its body.                               |
+| `AD204` | warning  | `jira adf to-markdown` | Media became an image or a link.                                                  |
+| `AD205` | warning  | `jira adf to-markdown` | An attachment has no URL, so it became a link carrying its media id.              |
+| `AD206` | warning  | `jira adf to-markdown` | A decision list became a plain list; decision state is not represented.           |
+| `AD207` | warning  | `jira adf to-markdown` | A column layout collapsed into sequential blocks.                                 |
+| `AD208` | warning  | `jira adf to-markdown` | A card became a link to its URL.                                                  |
+| `AD209` | warning  | `jira adf to-markdown` | An inline construct became text or inline code — mention, emoji, status, or date. |
+| `AD210` | warning  | `jira adf to-markdown` | An extension, macro, or placeholder has no Markdown form and was omitted.         |
+| `AD211` | warning  | `jira adf to-markdown` | A mark has no Markdown equivalent and its formatting was dropped.                 |
+
+## Markdown to ADF
+
+ADF validates per-node content and Markdown permits nestings it forbids, so most of these report
+a degradation rather than a loss. The rule they follow is flatten in place, never lift: promoting
+a heading out of a list item would move it past the text that followed it, producing output that
+is legal, plausible, and says something the input did not.
+
+| Code    | Severity | Emitted by               | Meaning                                                                       |
+| ------- | -------- | ------------------------ | ----------------------------------------------------------------------------- |
+| `AD300` | warning  | `jira adf from-markdown` | A heading in a list item or block quote became a paragraph in bold, in place. |
+| `AD301` | warning  | `jira adf from-markdown` | A block quote's contents were lifted into its parent in place.                |
+| `AD302` | warning  | `jira adf from-markdown` | A table in a list item or block quote became one paragraph per row.           |
+| `AD304` | warning  | `jira adf from-markdown` | Content was dropped, or block content was joined into inline content.         |
+| `AD305` | warning  | `jira adf from-markdown` | A paragraph was split around an image, or an image became a link.             |
+| `AD306` | warning  | `jira adf from-markdown` | Raw HTML was preserved verbatim in a code block, or inline as inline code.    |
+| `AD308` | warning  | `jira adf from-markdown` | A footnote marker became superscript text and its body moved to the end.      |
+| `AD309` | warning  | `jira adf from-markdown` | YAML frontmatter is metadata and was not converted into the document body.    |
+| `AD310` | warning  | `jira adf from-markdown` | Table column alignment was dropped: an ADF cell has no alignment attribute.   |
+| `AD311` | warning  | `jira adf from-markdown` | A list was split into runs, or a task list was downgraded to a bulleted list. |
+
+`AD304` and `AD310` carry `quality: "unsupported"`; the rest are `approximate`. Both map to
+`warning`, so the severity does not distinguish them — read `quality` for that. `AD305` is worth
+reading twice: ADF images are block-level and `mediaInline` cannot carry an external URL, so an
+inline Markdown image cannot stay inside its paragraph. Splitting preserves reading order
+exactly, which is what separates it from lifting.
+
 ## Keeping this page honest
 
-`tests/unit/diagnostic-codes.test.ts` extracts every `AB###` literal from `src/` and every code
-from the tables above and asserts the two sets are equal. A code that ships undocumented fails
+`tests/unit/diagnostic-codes.test.ts` extracts every `AB###` and `AD###` literal from `src/` and
+every code from the tables above and asserts the two sets are equal. A code that ships undocumented fails
 the build, and so does a documented code that no longer exists — the same discipline
 `tests/e2e/contract.test.ts` applies to the command registry in both directions.
 
 ## Related surfaces
 
-- [Diagnostics](diagnostics.md) — the two finding shapes, the code ranges, and the streaming formats.
+- [Diagnostics](diagnostics.md) — the three finding shapes, the code ranges, and the streaming formats.
 - [Target profile](target-profile.md) — where a feature's declared diagnostics come from.
 - [`agent specs`](../commands/agent/specs.md) — the machine-readable profiles, including each feature's diagnostics.

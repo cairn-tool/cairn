@@ -20,3 +20,4 @@ bundles:
   - path: plugins/cairn-usage
   - path: plugins/cairn-archive
   - path: plugins/cairn-agent
+  - path: plugins/cairn-jira

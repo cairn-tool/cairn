@@ -13,6 +13,18 @@ import { describe, expect, it } from "vitest";
 
 const root = path.join(__dirname, "..", "..");
 
+/**
+ * Both families: `AB###` for agent bundles, `AD###` for ADF conversion.
+ *
+ * Built once and shared by the four matchers below. The pattern used to be
+ * written out at each of them, which is three chances for a widening to be
+ * applied inconsistently.
+ */
+const CODE = "A[BD]\\d{3}";
+const EMITTED = new RegExp(`"(${CODE})"`, "g");
+const ROW = new RegExp(`^\\|\\s*\`(${CODE})\`\\s*\\|`);
+const ROW_WITH_SEVERITY = new RegExp(`^\\|\\s*\`(${CODE})\`\\s*\\|\\s*([a-z]+)\\s*\\|`);
+
 function sourceFiles(directory: string): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(directory, entry.name);
@@ -25,7 +37,7 @@ function sourceFiles(directory: string): string[] {
 function emittedCodes(): Set<string> {
   const codes = new Set<string>();
   for (const file of sourceFiles(path.join(root, "src")))
-    for (const match of fs.readFileSync(file, "utf8").matchAll(/"(AB\d{3})"/g)) codes.add(match[1]);
+    for (const match of fs.readFileSync(file, "utf8").matchAll(EMITTED)) codes.add(match[1]);
   return codes;
 }
 
@@ -33,7 +45,7 @@ function documentedCodes(): Set<string> {
   const page = fs.readFileSync(path.join(root, "docs/formats/diagnostic-codes.md"), "utf8");
   const codes = new Set<string>();
   for (const line of page.split("\n")) {
-    const row = /^\|\s*`(AB\d{3})`\s*\|/.exec(line);
+    const row = ROW.exec(line);
     if (row) codes.add(row[1]);
   }
   return codes;
@@ -59,7 +71,7 @@ describe("diagnostic code reference", () => {
     const page = fs.readFileSync(path.join(root, "docs/formats/diagnostic-codes.md"), "utf8");
     const seen = new Map<string, number>();
     for (const line of page.split("\n")) {
-      const row = /^\|\s*`(AB\d{3})`\s*\|/.exec(line);
+      const row = ROW.exec(line);
       if (row) seen.set(row[1], (seen.get(row[1]) ?? 0) + 1);
     }
     expect([...seen].filter(([, count]) => count > 1)).toEqual([]);
@@ -70,7 +82,7 @@ describe("diagnostic code reference", () => {
     const allowed = new Set(["notice", "warning", "error", "varies"]);
     const bad: string[] = [];
     for (const line of page.split("\n")) {
-      const row = /^\|\s*`(AB\d{3})`\s*\|\s*([a-z]+)\s*\|/.exec(line);
+      const row = ROW_WITH_SEVERITY.exec(line);
       if (row && !allowed.has(row[2])) bad.push(`${row[1]}: ${row[2]}`);
     }
     expect(bad).toEqual([]);

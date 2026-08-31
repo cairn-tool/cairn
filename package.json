@@ -66,11 +66,13 @@
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.1.0",
     "yaml": "^2.8.2"
   },
   "devDependencies": {
+    "@atlaskit/adf-schema": "^57.2.8",
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint/js": "^10.0.1",
@@ -80,6 +82,7 @@
     "@types/katex": "^0.16.0",
     "@types/mdast": "^4.0.4",
     "@types/node": "^26.4.0",
+    "ajv-draft-04": "^1.0.0",
     "eslint": "^10.9.1",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",

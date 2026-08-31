@@ -14,6 +14,7 @@ This directory is the reference documentation for `cairn`.
 - [Shared Markdown command behavior](commands/md/common.md)
 - [Shared usage command behavior](commands/usage/common.md)
 - [Shared archive command behavior](commands/archive/common.md)
+- [Shared `jira adf` command behavior](commands/jira/adf/common.md)
 
 ## Project
 
@@ -32,6 +33,7 @@ Why each toolset exists, and the facts that make its answers trustworthy.
 - [Named scripts](guide/scripts.md)
 - [Usage reporting](guide/usage.md)
 - [Long-term archiving](guide/archiving.md)
+- [Jira and Confluence rich text](guide/jira.md)
 
 ## File formats
 
@@ -167,6 +169,14 @@ subagent, hook, MCP server, asset, and contract test.
 - [`archive extract`](commands/archive/extract.md)
 - [`archive verify`](commands/archive/verify.md)
 - [`archive migrate`](commands/archive/migrate.md)
+
+## Jira commands
+
+- [Common behavior](commands/jira/adf/common.md)
+- [`jira adf to-markdown`](commands/jira/adf/to-markdown.md)
+- [`jira adf from-markdown`](commands/jira/adf/from-markdown.md)
+- [`jira adf validate`](commands/jira/adf/validate.md)
+- [`jira adf inspect`](commands/jira/adf/inspect.md)
 
 ## Other top-level commands
 

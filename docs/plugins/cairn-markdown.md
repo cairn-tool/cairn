@@ -5,7 +5,7 @@ Source: `plugins/cairn-markdown/`. Bundle `schemaVersion: "2"`, version `1.0.0`.
 Wraps the `md` toolset: linting and validation, reading a document's structure without opening it, querying a whole workspace, and safe refactors. The only plugin that carries both a hook and an MCP server.
 
 See [the `md` command listing](../commands.md) for the commands these skills invoke, and
-[Cairn's own plugins](../plugins.md) for installing, building, and versioning all five.
+[Cairn's own plugins](../plugins.md) for installing, building, and versioning all six.
 
 ## At a glance
 
@@ -155,7 +155,7 @@ host — but Claude Code is the only marketplace published.
 
 ## Related
 
-- [Cairn's own plugins](../plugins.md) — installing, building, and versioning all five.
+- [Cairn's own plugins](../plugins.md) — installing, building, and versioning all six.
 - [Agent bundle format](../formats/agent-bundle.md) — the source format this is written in.
 - [Bundle contract tests](../formats/agent-tests.md) — the assertion format above.
 - [Complete command listing](../commands.md) — every command these skills invoke.

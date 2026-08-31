@@ -5,7 +5,7 @@ Source: `plugins/cairn-agent/`. Bundle `schemaVersion: "2"`, version `1.1.0`.
 Wraps the `agent` toolset: authoring a portable bundle, migrating a repository onto one, checking it against every host's conformance profile, and publishing it. This plugin is a worked example of what it documents — its own source is a bundle, built by the collection spec at the repository root.
 
 See [the `agent` command listing](../commands.md) for the commands these skills invoke, and
-[Cairn's own plugins](../plugins.md) for installing, building, and versioning all five.
+[Cairn's own plugins](../plugins.md) for installing, building, and versioning all six.
 
 ## At a glance
 
@@ -145,7 +145,7 @@ host — but Claude Code is the only marketplace published.
 
 ## Related
 
-- [Cairn's own plugins](../plugins.md) — installing, building, and versioning all five.
+- [Cairn's own plugins](../plugins.md) — installing, building, and versioning all six.
 - [Agent bundle format](../formats/agent-bundle.md) — the source format this is written in.
 - [Bundle contract tests](../formats/agent-tests.md) — the assertion format above.
 - [Complete command listing](../commands.md) — every command these skills invoke.

@@ -90,6 +90,29 @@ function usageCommand(name: string, extra: Partial<CommandContract> = {}): Comma
   };
 }
 
+/**
+ * A `jira adf` subcommand.
+ *
+ * The stream split is what makes these different from every `agent` subcommand:
+ * the converted document owns stdout so it can be redirected, and findings go to
+ * stderr. Declared per row in `notes` as well, because a consumer that guesses
+ * wrong splices diagnostics into a document.
+ */
+function jiraAdfCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+  return {
+    id: `jira adf ${name}`,
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "adf-result",
+    exitCodes: [OK("No blocking findings"), USAGE, FINDINGS("Blocking findings")],
+    stream: { success: "stdout", findings: "stderr" },
+    writes: false,
+    stability: "experimental",
+    ...extra,
+  };
+}
+
 const CONTRACTS: CommandContract[] = [
   // Top level
   {
@@ -177,6 +200,25 @@ const CONTRACTS: CommandContract[] = [
       "Speaks the Model Context Protocol over stdio. stdout carries JSON-RPC frames rather than a payload, so --format is not accepted and no output schema applies; every diagnostic goes to stderr, which MCP treats as the server log. Tool arguments and results are described by each tool's own JSON Schema, retrieved through tools/list rather than through `schema`. Every tool is read-only and every path argument is confined to --root, resolved through symlinks; refactor tools are deliberately absent rather than gated. Configuration is discovered from --root, so a tool answers the same as the equivalent md command in that workspace. Unlike md index this never writes the workspace cache: the server keeps a bounded in-memory cache and leaves the on-disk index alone.",
   },
 
+  // Jira
+  jiraAdfCommand("to-markdown", {
+    writes: true,
+    notes:
+      "The converted document owns stdout and diagnostics go to stderr, so the output can be redirected to a file without findings being spliced into it. This differs from every agent subcommand, which puts findings on stdout. Under --format json the payload carries both and goes to stdout instead, which means -fj is not the same output in JSON. Approximation is the expected outcome on almost every real document, so an approximate or unsupported finding blocks only under --strict; an error always blocks. ok:true therefore does not mean the conversion was lossless -- read diagnostics for that. Converts a bare ADF document only: it has no knowledge of the Jira REST response shape, and a whole issue response reports AD002 naming the field to extract. Emits no frontmatter, ever, and this is not an option: an ADF document carries no title, key, status, or author, so there is nothing to put there. --output writes one file atomically and suppresses the document on stdout.",
+  }),
+  jiraAdfCommand("from-markdown", {
+    writes: true,
+    notes:
+      "The converted document owns stdout and diagnostics go to stderr, so the output can be redirected to a file without findings being spliced into it. This differs from every agent subcommand, which puts findings on stdout. Under --format json the payload carries both and goes to stdout instead, which means -fj is not the same output in JSON. Approximation is the expected outcome on almost every real document, so an approximate or unsupported finding blocks only under --strict; an error always blocks. ok:true therefore does not mean the conversion was lossless -- read diagnostics for that. Converts a bare ADF document only: it has no knowledge of the Jira REST response shape, and a whole issue response reports AD002 naming the field to extract. The default llm format already emits pure ADF JSON, so --format json wraps that document in the result envelope rather than changing its encoding; a consumer wanting the bare document uses the default. Frontmatter is metadata and is dropped with a finding rather than becoming body content. ADF validates per-node content and Markdown permits nestings it forbids, so an illegal nesting is flattened in place -- never lifted, which would move content past its neighbours -- and legal Markdown is never an error. --output writes one file atomically and suppresses the document on stdout.",
+  }),
+  jiraAdfCommand("validate", {
+    notes:
+      "Checks an ADF document against this tool's own content model: node nesting, required content, and the attribute constraints for headings, panels, task and decision lists, media, and text. It is not a wrapper around Atlassian's schema, which is a devDependency used only by the unit test that proves the two agree; a node type the model does not know reports AD100 rather than being judged. That is the same line agent test --native draws. An invalid document exits 2; an unknown node type does so only under --strict.",
+  }),
+  jiraAdfCommand("inspect", {
+    notes:
+      "Counts every node and mark type and rates each against the fidelity tables, so the cost of a conversion can be read before paying it. Reports no findings of its own and exits 0 unless the input could not be read or is not an ADF document. A type the content model does not know is listed as unsupported rather than omitted.",
+  }),
   // Scripts
   {
     id: "scripts run",

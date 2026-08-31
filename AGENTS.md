@@ -23,20 +23,23 @@ src/sqlite.ts          the node:sqlite loader, shared by every store
 src/sqlite-store.ts    generic open + migrate for the two owned SQLite stores
 src/archive/*.ts       artifact sets, tar reading, segments, and the archive index
 src/usage/providers/*.ts  per-LLM log-source profiles
+src/jira/adf/*.ts      ADF content model, both converters, and the AD diagnostic family
+src/mapping-quality.ts quality-to-severity, shared by the AB and AD families
 src/config-schema.ts   validators shared by the config loader and the script registry
 tests/{unit,integration,e2e}
 ```
 
-There are five toolsets, `md`, `agent`, `scripts`, `usage`, and `archive`, plus the top-level `check-update`,
-`describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
+There are six toolsets, `md`, `agent`, `scripts`, `usage`, `archive`, and `jira`, plus the top-level
+`check-update`, `describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
 `command(...)` registration in `src/cli.ts`, a `src/contract/registry.ts` entry, a
 `docs/commands/<toolset>/<name>.md` page (top-level commands stay directly under
 `docs/commands/`) with entries in `docs/commands.md` and `docs/_contents.md`, a row in
-`docs/formats/diagnostic-codes.md` for any new `AB###`, and e2e coverage. The README is a
+`docs/formats/diagnostic-codes.md` for any new `AB###` or `AD###`, and e2e coverage. The README is a
 README: it links into `docs/` and does not list commands. For an `agent` subcommand, also widen
 `AgentResult["command"]` in `src/agent/types.ts` and the `command` enum plus `commands` list
-in `src/contract/schemas/agent.ts`. A new toolset group also needs adding to the `groups` set
-in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `undeclared`.
+in `src/contract/schemas/agent.ts`. A new toolset group also needs adding to **both** `groups` sets
+in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `undeclared`. A
+nested group such as `jira adf` is two entries, not one: the walk emits a node per level.
 
 ## Conventions
 
@@ -46,7 +49,8 @@ in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `un
   `-fh`/`-fj` shorthands expanded in `src/cli.ts` before commander parses argv.
 - Exit codes: `0` success, `1` usage error, `2` actionable issues found.
 - `md rename-heading`, `md rename-file`, `md toc --write`, `md fix --write`,
-  `md check-snippets --write`, and `agent convert` are the commands that write to files.
+  `md check-snippets --write`, `agent convert`, and `jira adf to-markdown`/`jira adf from-markdown`
+  with `--output` are the commands that write to files.
 - Every `--format json` payload goes through `jsonPayload` in `src/result.ts`, which is what
   makes `--envelope` reach all of them. Writing `JSON.stringify` inline at a new site silently
   opts that command out.
@@ -483,6 +487,61 @@ part.time_updated)` with the row counts as `size` — **not** the `.db` file's s
   The first would make every additive change break validating consumers; the second would make
   `cairn schema <id>` return something that cannot be compiled on its own.
   `tests/unit/contract-schemas.test.ts` enforces both.
+- **The `jira adf` commands put the document on stdout and findings on stderr.** Every `agent`
+  subcommand puts findings on stdout; these do the opposite, because
+  `cairn jira adf to-markdown x.json > out.md` must not splice diagnostics into the document.
+  Under `--format json` the payload carries both on stdout instead, which also means `-fj` on
+  `jira adf from-markdown` is not "the same output in JSON" — the default already emits pure ADF,
+  and `-fj` wraps it. Both divergences are recorded in the contract registry `notes`.
+- **`jira` never loads project configuration.** `loadConfig` runs only when `argv[2]` is `md` or
+  `serve` (`src/cli.ts`), and `argv[2]` for these is `jira`, so `.cairn.yml` has no say over a
+  conversion. `src/jira/adf/read.ts` does its own bounded read rather than using `src/input.ts` —
+  `requireFile` would register the document into the workspace and resolve it against
+  `runtime().config.root`, which here is just the process cwd. Widening `servesWorkspace` is a
+  deliberate decision, not a cleanup.
+- **`adf` is a group under `jira`, so a command id here is three tokens.** Nothing in `src/`
+  assumes a depth — `walkCommands` joins whatever path it walked — but three test sites used to
+  reconstruct an id positionally, and now resolve it as the longest leading run the registry
+  declares: the two sets in `tests/e2e/contract.test.ts` (which need **both** `jira` and
+  `jira adf` listed as containers) and `commandIdFor` in `tests/e2e/envelope.test.ts`. Adding a
+  fourth token anywhere needs no further change; adding a two-token toolset still works.
+- **`src/jira/adf/profile.ts` is probed, not transcribed, and `tests/unit/jira-adf-profile.test.ts`
+  is why it can be trusted.** That test compiles Atlassian's published JSON Schema — a
+  devDependency, `@atlaskit/adf-schema`, read from nowhere else and shipped nowhere — and checks
+  the content model against it in _both_ directions, so the profile can neither permit an illegal
+  nesting nor needlessly degrade a legal one. It also fails the build on any (parent, child) pair
+  the Markdown walk can form that has neither a legal mapping nor a degradation rule. Nothing is
+  vendored or generated: `jira adf validate` reports against the profile and emits `AD100` for a
+  node type it does not model, which is the same line `agent test --native` draws.
+- **Deriving the content model from the ADF schema at runtime was rejected.** It trades a small
+  authored table for a parser against someone else's schema structure, which a restructure breaks
+  and the agreement test would have survived. The schema is also draft-04, so `Ajv2020` cannot
+  compile it — hence the separate `ajv-draft-04` devDependency, test-only.
+- **`from-markdown` must parse frontmatter-aware.** Under a parser without `remark-frontmatter`,
+  `---\ntitle: x\n---` yields `thematicBreak, heading(2), paragraph`, so frontmatter does not go
+  missing — it converts into an ADF `rule` plus a heading reading `title: x`. Plausible enough
+  that nobody reports it. `parseMarkdown` has been frontmatter-aware since the phantom-heading
+  fix, which is why this reads as an ordinary call rather than a special one.
+- **Every `remark-stringify` option in `src/jira/adf/to-markdown.ts` is pinned.** Left at their
+  defaults, a minor bump silently changes the bytes of every document the converter has produced.
+  `emphasis: "_"` and `strong: "*"` also match this repo's `.markdownlintrc`, so converted
+  documents lint clean where they land. `remark-stringify` is a **runtime** dependency for this
+  reason; it was not one before the toolset landed.
+- **Emitted ADF key order is contract**, fixed once in `src/jira/adf/serialize.ts`
+  (`version`, `type`, `attrs`, `content`, `marks`, `text`, with attrs in byte order) for the same
+  reason `src/sarif.ts` has a load-bearing order. `taskList`/`taskItem` `localId` is derived from
+  a counter, never `crypto.randomUUID()`, or the output is untestable.
+- **`jira adf` decides its own exit, never `hasFindings`.** Approximation is the expected outcome
+  on almost every real Jira description, so an `error` blocks and an approximation blocks only
+  under `--strict`. `ok: true` does not mean lossless.
+- **An unrecognized ADF node must never fall through to "dropped."** It gets `AD100`. Dropping is
+  the one degradation whose output is indistinguishable from success.
+- **`AD###` is a third finding family**, alongside `AB###` and the `md` checker strings.
+  `MappingQuality` and the quality-to-severity rule live in `src/mapping-quality.ts` — re-exported
+  by `src/agent/types.ts` rather than defined there — so the agent and conversion families cannot
+  drift. `tests/unit/diagnostic-codes.test.ts` matches `A[BD]\d{3}`, so a new code in either
+  family must be documented in `docs/formats/diagnostic-codes.md` or the build fails, and a
+  documented code that nothing emits fails it too.
 
 ## Commits
 

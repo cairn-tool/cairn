@@ -1,0 +1,22 @@
+# Portable agent bundle. Built as part of the collection:
+#   cairn agent marketplace ../../agent-marketplace.yaml --output ../../dist-plugins
+schemaVersion: "2"
+name: cairn-jira
+version: 1.0.0
+description: Convert Jira and Confluence rich text between ADF and Markdown.
+
+marketplace:
+  displayName: Cairn Jira
+  summary: Read and write Jira and Confluence rich text without hand-editing JSON.
+  description: >-
+    Jira Cloud's REST API v3 and Confluence Cloud never accept or return
+    Markdown — every rich-text field is Atlassian Document Format, a JSON tree
+    of typed nodes and marks. Converts both ways, deterministically and
+    locally, and reports exactly what each direction approximated or lost.
+    Wraps the `cairn` CLI, which must be installed separately.
+  categories: [productivity, developer-tools]
+  keywords: [jira, confluence, adf, atlassian, markdown]
+  publisher:
+    name: Bryan Stockus
+    url: https://github.com/cairn-tool
+  license: MIT

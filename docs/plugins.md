@@ -30,6 +30,7 @@ cannot find `cairn` on `PATH` exits quietly rather than failing an edit.
 | [`cairn-usage`](plugins/cairn-usage.md)       | The 13 `usage` reports, the store, and each provider's log quirks       | [cairn-usage](plugins/cairn-usage.md)       |
 | [`cairn-archive`](plugins/cairn-archive.md)   | `archive run\|status\|list\|extract\|verify\|migrate`                   | [cairn-archive](plugins/cairn-archive.md)   |
 | [`cairn-agent`](plugins/cairn-agent.md)       | The 18 `agent` commands: authoring, migrating, testing, publishing      | [cairn-agent](plugins/cairn-agent.md)       |
+| [`cairn-jira`](plugins/cairn-jira.md)         | `jira adf` in both directions, and what each conversion costs           | [cairn-jira](plugins/cairn-jira.md)         |
 
 Each carries model-invoked skills for the workflows and explicit skills that appear as slash
 commands. Skill bodies stay short; full flag tables live in `reference/` sidecars that load only
@@ -48,6 +49,7 @@ ones, so "this plugin has no hook" and "nobody has written one yet" stay differe
 - [cairn-usage](plugins/cairn-usage.md)
 - [cairn-archive](plugins/cairn-archive.md)
 - [cairn-agent](plugins/cairn-agent.md)
+- [cairn-jira](plugins/cairn-jira.md)
 
 `cairn-agent` is a worked example of what it documents: its own source is a bundle, and
 `agent-marketplace.yaml` at the repository root is a collection spec.

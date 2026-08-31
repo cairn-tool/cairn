@@ -11,7 +11,10 @@ import type { VerifyReport } from "./verify/index.js";
 export const TARGETS = ["claude-code", "codex", "cursor", "antigravity", "opencode"] as const;
 export type AgentTarget = (typeof TARGETS)[number];
 export type AgentProfile = "plugin" | "project";
-export type MappingQuality = "exact" | "approximate" | "unsupported";
+// Re-exported rather than defined here: the ADF converters derive severity from
+// the same triple by the same rule, so it lives in one place.
+export type { MappingQuality } from "../mapping-quality.js";
+import type { MappingQuality } from "../mapping-quality.js";
 
 export interface AgentDiagnostic {
   code: string;

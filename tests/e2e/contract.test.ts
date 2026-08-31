@@ -226,7 +226,7 @@ describe("describe", () => {
       commands: Array<{ id: string; stability: string }>;
     };
     // Leaf commands are the ones a contract applies to; groups are containers.
-    const groups = new Set(["md", "agent", "scripts", "usage", "archive"]);
+    const groups = new Set(["md", "agent", "scripts", "usage", "archive", "jira", "jira adf"]);
     const walked = described.commands
       .map((command) => command.id)
       .filter((id) => !groups.has(id))
@@ -855,8 +855,24 @@ describe("declared output schemas match real output", () => {
     },
   ];
 
-  // Groups whose id is two tokens.
-  const GROUPS = new Set(["md", "agent", "scripts", "usage", "archive"]);
+  /**
+   * A command id is the leading non-flag words, but how many is not fixed: a
+   * top-level command is one, most toolsets are two, and `jira adf` nests a
+   * third. So take the longest leading run that the registry actually declares
+   * rather than reconstructing by position.
+   */
+  function contractIdFor(args: string[]): string {
+    const words: string[] = [];
+    for (const arg of args) {
+      if (arg.startsWith("-")) break;
+      words.push(arg);
+    }
+    for (let length = words.length; length > 0; length -= 1) {
+      const candidate = words.slice(0, length).join(" ");
+      if (candidate in COMMAND_CONTRACTS) return candidate;
+    }
+    return words[0] ?? "";
+  }
 
   it.each(cases)("$label", async (testCase) => {
     const context = {
@@ -870,7 +886,7 @@ describe("declared output schemas match real output", () => {
     const args = testCase.args(context);
     const result = await run(...args);
 
-    const id = GROUPS.has(args[0]) ? `${args[0]} ${args[1]}` : args[0];
+    const id = contractIdFor(args);
     const contract = COMMAND_CONTRACTS[id];
     expect(contract, `${id} has no contract entry`).toBeDefined();
     expect(

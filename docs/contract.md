@@ -173,16 +173,17 @@ description is not a command result.
 ## Experimental commands
 
 Most commands are `stability: "stable"` and are covered by the breaking-change rules above. The
-agent lifecycle commands added most recently are declared `stability: "experimental"` in
-`describe` output, meaning their payload shapes may still change without a major schema
-version:
+agent lifecycle commands added most recently, and every `jira adf` subcommand, are declared
+`stability: "experimental"` in `describe` output, meaning their payload shapes may still change
+without a major schema version:
 
 ```bash
 cairn describe -fj | jq -r '.commands[] | select(.stability=="experimental") | .id'
 ```
 
-They share the `agent-result` schema with the stable agent commands. The stable commands'
-guarantees are unaffected.
+The agent ones share the `agent-result` schema with the stable agent commands; the `jira adf`
+subcommands, also experimental, publish `adf-result`. The stable commands' guarantees are
+unaffected.
 
 ## Published schemas
 
@@ -202,6 +203,7 @@ guarantees are unaffected.
 | `md-diff`           | `md diff`                                                                  |
 | `md-fix`            | `md fix`                                                                   |
 | `agent-result`      | Every `agent` subcommand, including the failure form.                      |
+| `adf-result`        | Every `jira adf` subcommand, including the failure form.                   |
 | `check-update`      | `check-update`                                                             |
 | `describe`          | `describe --format json`                                                   |
 | `schema-list`       | `schema --format json` with no id                                          |

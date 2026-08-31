@@ -1,0 +1,75 @@
+# Contract tests: what this bundle must render. No tree digest -- one would
+# invalidate on every prose edit and on any formatter pass.
+schemaVersion: "1"
+cases:
+  - name: renders-a-complete-claude-code-plugin
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - .claude-plugin/plugin.json
+          - skills/adf-convert/SKILL.md
+          - skills/adf-convert/reference/fidelity.md
+        absent:
+          # Rules are project-profile only, and there is no `commands` kind.
+          - .claude/rules/**
+          - commands/**
+          # Four read-only conversion commands justify neither a subagent nor
+          # anything that runs on its own.
+          - agents/**
+          - hooks/**
+          - .mcp.json
+      json:
+        - path: .claude-plugin/plugin.json
+          contains:
+            name: cairn-jira
+            version: 1.0.0
+
+  # `agents` and `hooks` are implied manifest fields. Declaring `agents` fails
+  # the whole manifest; declaring `hooks` drops the plugin's hooks. Neither is
+  # caught by `claude plugin validate`.
+  - name: manifest-omits-the-implied-fields
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: .claude-plugin/plugin.json
+          excludes: ['"agents"', '"hooks"']
+          includes: ['"skills"']
+
+  # The skill is model-invocable: a conversion is something the assistant should
+  # reach for on its own, not a slash command a user has to know about. The
+  # exclusion is newline-anchored so prose documenting the flag cannot match it.
+  - name: the-skill-stays-model-invocable
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/adf-convert/SKILL.md
+          mode: "0644"
+          excludes: ["\ndisable-model-invocation: true\n"]
+
+  # The three facts a caller gets wrong without reading the skill: the command
+  # path is three tokens, the streams are split, and exit 0 is not lossless.
+  - name: the-skill-pins-the-load-bearing-facts
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/adf-convert/SKILL.md
+          includes:
+            - "cairn jira adf to-markdown"
+            - "Diagnostics are on stderr"
+            - "does not mean lossless"
+          # The pre-`jira` command path must not survive anywhere.
+          excludes: ["cairn adf "]
+
+  - name: the-fidelity-reference-ships
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/adf-convert/reference/fidelity.md
+          includes: ["approximate", "unsupported"]
+          excludes: ["cairn adf "]
