@@ -48,6 +48,48 @@ describe("agent bundles", () => {
     expect(processTargetBlocks(source, "cursor")).not.toContain("X");
   });
 
+  it("treats a comma list as OR and a leading not as negation", () => {
+    const source =
+      "<!-- if target:codex, cursor -->BOTH<!-- endif -->\n<!-- if not target:cursor -->NOTCURSOR<!-- endif -->\n";
+    expect(processTargetBlocks(source, "cursor")).toContain("BOTH");
+    expect(processTargetBlocks(source, "codex")).toContain("BOTH");
+    expect(processTargetBlocks(source, "claude-code")).not.toContain("BOTH");
+    expect(processTargetBlocks(source, "cursor")).not.toContain("NOTCURSOR");
+    expect(processTargetBlocks(source, "codex")).toContain("NOTCURSOR");
+  });
+
+  it("takes exactly one branch of an if/elif/else chain", () => {
+    const source =
+      "<!-- if target:claude-code -->A<!-- elif target:codex,cursor -->B<!-- else -->C<!-- endif -->";
+    expect(processTargetBlocks(source, "claude-code")).toBe("A");
+    expect(processTargetBlocks(source, "codex")).toBe("B");
+    expect(processTargetBlocks(source, "cursor")).toBe("B");
+    expect(processTargetBlocks(source, "antigravity")).toBe("C");
+  });
+
+  it("resolves nested conditionals", () => {
+    const source =
+      "<!-- if not target:cursor -->outer<!-- if target:codex -->inner<!-- endif --><!-- endif -->";
+    expect(processTargetBlocks(source, "codex")).toBe("outerinner");
+    expect(processTargetBlocks(source, "claude-code")).toBe("outer");
+    expect(processTargetBlocks(source, "cursor")).toBe("");
+  });
+
+  it("leaves markers inside a fenced code block alone", () => {
+    // The defect this guard exists for: a fenced *example* of the syntax was
+    // stripped as if it were live, so this project's own bundle-format
+    // reference rendered with an empty code block.
+    const source =
+      "before\n\n```markdown\n<!-- target:cursor -->\nX\n<!-- /target:cursor -->\n```\n\nafter\n";
+    expect(processTargetBlocks(source, "codex")).toBe(source);
+    expect(processTargetBlocks(source, "cursor")).toBe(source);
+  });
+
+  it("leaves an unbalanced document alone rather than half-stripping it", () => {
+    const source = "<!-- if target:codex -->kept\n";
+    expect(processTargetBlocks(source, "codex")).toBe(source);
+  });
+
   it("renders deterministic target layouts and preserves executable modes", () => {
     const rendered = renderBundle(
       loadBundle(bundleRoot()),
@@ -97,6 +139,58 @@ describe("agent bundles", () => {
     );
     const codes = loadBundle(root).diagnostics.map((item) => item.code);
     expect(codes).toEqual(expect.arrayContaining(["AB106", "AB120", "AB121"]));
+  });
+
+  it("reports AB123 for a marker that looks conditional but does not parse", () => {
+    // Each of these used to match neither regex and so did nothing, silently.
+    for (const marker of [
+      "<!-- target: cursor -->",
+      "<!-- targets:cursor -->",
+      "<!-- if target: cursor -->",
+      "<!-- elif not target -->",
+    ]) {
+      const root = bundleRoot();
+      fs.writeFileSync(
+        path.join(root, "skills", "release", "SKILL.md"),
+        `---\nname: release\ndescription: Release\n---\n${marker}\n`,
+      );
+      const codes = loadBundle(root).diagnostics.map((item) => item.code);
+      expect(codes, marker).toContain("AB123");
+    }
+  });
+
+  it("does not mistake an ordinary HTML comment for a conditional", () => {
+    const root = bundleRoot();
+    fs.writeFileSync(
+      path.join(root, "skills", "release", "SKILL.md"),
+      "---\nname: release\ndescription: Release\n---\n<!-- if you change this, update the docs -->\n<!-- TODO: platform support -->\n",
+    );
+    const codes = loadBundle(root).diagnostics.map((item) => item.code);
+    expect(codes).not.toContain("AB123");
+    expect(codes).not.toContain("AB121");
+  });
+
+  it("reports an else with no enclosing block, and a doubled else", () => {
+    const root = bundleRoot();
+    fs.writeFileSync(
+      path.join(root, "skills", "release", "SKILL.md"),
+      "---\nname: release\ndescription: Release\n---\n<!-- else -->\n<!-- if target:codex -->a<!-- else -->b<!-- else -->c<!-- endif -->\n",
+    );
+    const codes = loadBundle(root).diagnostics.map((item) => item.code);
+    expect(codes).toContain("AB121");
+  });
+
+  it("validates conditional blocks in a textual asset, not only Markdown", () => {
+    // The renderer processes blocks in hook scripts too, so an unclosed block
+    // there was silently mangled with no diagnostic.
+    const root = bundleRoot();
+    fs.mkdirSync(path.join(root, "assets"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "assets", "setup.sh"),
+      "#!/bin/sh\n<!-- if target: codex -->\n",
+    );
+    const codes = loadBundle(root).diagnostics.map((item) => item.code);
+    expect(codes).toContain("AB123");
   });
 
   it("normalizes typed hooks and copies executable hook scripts", () => {

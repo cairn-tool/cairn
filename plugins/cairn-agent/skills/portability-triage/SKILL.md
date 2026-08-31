@@ -35,7 +35,7 @@ render warnings say nothing about whether a bundle is safe to trust.
 | 1   | Accept it, and say so               | The loss is real but tolerable.               | You must name it in the description.                                      |
 | 2   | Restructure to a portable surface   | A portable kind already covers it.            | Usually none. This is the one people miss.                                |
 | 3   | `include:` / `exclude:` frontmatter | The component only makes sense on some hosts. | The feature is absent elsewhere, deliberately.                            |
-| 4   | A `target:` conditional block       | Only the _prose_ differs.                     | One file stays one file.                                                  |
+| 4   | A conditional block                 | Only the _prose_ differs.                     | One file stays one file. Branches with `if`/`elif`/`else`.                |
 | 5   | A `native/<target>/` overlay        | There is genuinely no portable surface.       | Verbatim copy: no placeholders, no conditionals, not conformance-checked. |
 
 Reach down this list, not up. Most `AB310` and `AB302` findings are remedy 1; most "I need a

@@ -9,11 +9,11 @@ import type {
   SourceFile,
 } from "./types.js";
 import { diagnostic, TARGETS } from "./types.js";
+import { CONDITIONAL_TEXT, validateConditionals } from "./conditionals.js";
 import { normalizeManifest } from "./manifest.js";
 import { loadOverlays } from "./overlays.js";
 
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const TARGET_BLOCK = /<!--\s*(\/)?(target|platform):([^\s]+)\s*-->/g;
 
 function record(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -119,42 +119,6 @@ function configuredPath(manifest: Record<string, unknown>, key: string, fallback
   return fallback;
 }
 
-function validateBlocks(body: string, file: string, diagnostics: AgentDiagnostic[]): void {
-  const stack: Array<{ syntax: string; target: string }> = [];
-  for (const match of body.matchAll(TARGET_BLOCK)) {
-    const closing = Boolean(match[1]);
-    const syntax = match[2];
-    const target = match[3];
-    if (!TARGETS.includes(target as never))
-      diagnostics.push({
-        ...diagnostic("AB120", `Unknown target block '${target}'`, "unsupported", {
-          path: file,
-          remediation: `Use ${TARGETS.join(", ")}.`,
-        }),
-        severity: "error",
-      });
-    if (closing) {
-      const opened = stack.pop();
-      if (!opened || opened.target !== target || opened.syntax !== syntax)
-        diagnostics.push({
-          ...diagnostic("AB121", "Unmatched or misnested target block", "unsupported", {
-            path: file,
-            remediation: "Close target blocks in nesting order.",
-          }),
-          severity: "error",
-        });
-    } else stack.push({ syntax, target });
-  }
-  if (stack.length)
-    diagnostics.push({
-      ...diagnostic("AB121", "Unclosed target block", "unsupported", {
-        path: file,
-        remediation: "Add the matching closing target marker.",
-      }),
-      severity: "error",
-    });
-}
-
 function loadMarkdownComponents(
   root: string,
   relative: string,
@@ -213,7 +177,7 @@ function loadMarkdownComponents(
         }),
         severity: "error",
       });
-    validateBlocks(body, full, diagnostics);
+    validateConditionals(body, full, diagnostics);
     const componentRoot = kind === "skill" ? path.dirname(full) : directory;
     if (
       metadata.targets &&
@@ -553,10 +517,18 @@ export function loadBundle(source: string): AgentBundle {
   const primaryMarkdown = new Set(
     [...skills, ...agents, ...rules].map((component) => component.path),
   );
+  // Validated wherever the renderer *processes* blocks, which is every textual
+  // asset and not only Markdown: a broken block in a hook script used to be
+  // silently mangled with no diagnostic at all.
   for (const file of allFiles(root)) {
     const full = path.join(root, file.path);
-    if (file.path.endsWith(".md") && !primaryMarkdown.has(full))
-      validateBlocks(file.content.toString("utf8"), full, diagnostics);
+    if (primaryMarkdown.has(full)) continue;
+    if (!CONDITIONAL_TEXT.test(file.path)) continue;
+    const content = file.content;
+    if (content.includes(0)) continue;
+    validateConditionals(content.toString("utf8"), full, diagnostics, {
+      markdown: file.path.endsWith(".md"),
+    });
   }
   for (const rule of rules)
     if (!["always", "files", "model", "manual"].includes(rule.activation))

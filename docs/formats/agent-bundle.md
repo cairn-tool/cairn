@@ -341,8 +341,12 @@ why a typo in a key name is silently carried through rather than reported.
 
 ## Conditional blocks
 
-Any Markdown in the bundle may carry target-conditional regions. The legacy `platform:`
-spelling is still accepted.
+Any Markdown in the bundle may carry target-conditional regions, and so may any textual asset
+the renderer processes.
+
+Two forms are read. The **legacy** form carries one literal target name and nothing else. The
+`platform:` spelling is still accepted, and the closer repeats whichever keyword and name the
+opener used:
 
 ```markdown
 <!-- target:cursor -->
@@ -352,8 +356,65 @@ Cursor-specific instructions.
 <!-- /target:cursor -->
 ```
 
-An unknown target raises `AB120`; an unmatched, misnested, or unclosed block raises `AB121`.
-Blocks are validated in **every** `.md` file in the bundle, not only in recognized components.
+The **conditional** form carries the expressiveness:
+
+```markdown
+<!-- if target:claude-code -->
+
+!`git status --short`
+<!-- elif target:codex, cursor -->
+
+Run `git status --short` and read the output before continuing.
+<!-- else -->
+
+Check the working tree before continuing.
+<!-- endif -->
+```
+
+| Form                              | Selects                                      |
+| --------------------------------- | -------------------------------------------- |
+| `<!-- if target:codex -->`        | one target                                   |
+| `<!-- if target:codex,cursor -->` | either — a comma list is an OR               |
+| `<!-- if not target:cursor -->`   | every target except the listed ones          |
+| `<!-- elif ... -->`               | the next branch; any number, before `else`   |
+| `<!-- else -->`                   | the remaining targets; at most one per block |
+| `<!-- endif -->`                  | closes an `if`                               |
+
+`not` negates the whole list, so `not target:codex,cursor` is "neither". Spaces are accepted
+around the commas. Blocks nest, and exactly one branch of a chain is taken.
+
+The two forms do not mix: an `else` inside a legacy block, or an `endif` closing one, is
+`AB121`.
+
+### Markers inside a fenced code block are inert
+
+A fenced _example_ of this syntax is not a live block — the same guard the
+[table-of-contents markers](markdown-conventions.md#markers-inside-code-blocks-are-ignored)
+need, and for the same reason. Without it, a document explaining the syntax has its example
+stripped: this project's own `bundle-authoring` reference rendered with an empty code block
+until the guard was added.
+
+The guard applies to Markdown. A textual asset that is not Markdown has no fence concept, so
+every marker in one is live.
+
+### Diagnostics
+
+| Code    | Severity | Meaning                                               |
+| ------- | -------- | ----------------------------------------------------- |
+| `AB120` | error    | A conditional names an unknown target.                |
+| `AB121` | error    | A block is unmatched, misnested, or unclosed.         |
+| `AB123` | error    | A marker looks like a conditional but does not parse. |
+
+`AB123` exists because a near-miss used to be **silent**. `<!-- target: cursor -->` — with a
+space after the colon — matched nothing, so the block simply never applied and the content
+appeared for every target. So did `<!-- targets:cursor -->` and `<!-- if target: cursor -->`.
+A comment is held to the grammar when it starts with `target`/`platform`, or is `else` or
+`endif`, or begins `if`/`elif` **and** mentions a predicate keyword — that last clause is what
+keeps an ordinary `<!-- if you change this, update X -->` from becoming an error.
+
+Blocks are validated in **every** file the renderer processes them in, which is every textual
+asset and not only recognized components: an unclosed block in a hook script used to be
+silently mangled with no diagnostic.
 
 ## Placeholders
 

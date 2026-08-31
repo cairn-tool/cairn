@@ -450,10 +450,12 @@ agent
 
 agent
   .command("install")
-  .description("Install a bundle into a host plugin or project directory")
-  .argument("<source>", "Bundle root")
-  .requiredOption("--target <target>", `Target: ${TARGETS.join(", ")}`, collect)
-  .option("--scope <scope>", "Install scope: user or project", "user")
+  .description("Install one or more bundles into a host plugin or project directory")
+  .argument("[source]", "Bundle root; omit when using --config")
+  .option("--target <target>", `Target (repeatable, or all): ${TARGETS.join(", ")}`, collect)
+  .option("--config <file>", "Install the agent.install block declared in a config file")
+  .option("--name <name>", "With --config, install only the named bundle (repeatable)", collect)
+  .option("--scope <scope>", "Install scope: user or project")
   .option("--into <dir>", "Override the install root declared by the target profile")
   .option("--profile <profile>", "Must match the location's profile when given")
   .option("--link", "Symlink the rendered tree instead of copying")
@@ -466,9 +468,9 @@ agent
   .option("--envelope", "Wrap --format json output in the versioned result envelope")
   .addHelpText(
     "after",
-    "\nRenders and packages in memory, so an install is always derived from the\nbundle rather than from a possibly-drifted dist tree. Destinations come from\nthe target profiles. --register is the only flag that edits host config.\n\nExit codes:\n  0  Installed, or checks passed\n  1  Invocation or I/O error\n  2  Install finding, or --check found drift",
+    "\nRenders and packages in memory, so an install is always derived from the\nbundle rather than from a possibly-drifted dist tree. Destinations come from\nthe target profiles. --register is the only flag that edits host config.\n\n--target is repeatable, and one destination may hold several installs: they are\ntold apart by bundle, target, profile and scope. A run is planned in full before\nanything is written, so a blocked plan writes nothing at all. --target all covers\nevery target declaring a location for the scope.\n\n--config installs the agent.install block a repository declares, and --target\nthere narrows that block rather than adding to it.\n\nExit codes:\n  0  Installed, or checks passed\n  1  Invocation or I/O error\n  2  Install finding, or --check found drift",
   )
-  .action((source: string, opts: Parameters<typeof agentInstallAction>[1]) =>
+  .action((source: string | undefined, opts: Parameters<typeof agentInstallAction>[1]) =>
     agentActionBoundary("install", opts, () => agentInstallAction(source, opts)),
   );
 

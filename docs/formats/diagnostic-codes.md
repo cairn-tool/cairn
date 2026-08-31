@@ -66,6 +66,7 @@ Emitted by the bundle and manifest parsers, so every command that loads a bundle
 | `AB120` | error    | bundle parser   | A conditional block names an unknown target.                                                                         |
 | `AB121` | error    | bundle parser   | A conditional block is unmatched, misnested, or unclosed.                                                            |
 | `AB122` | error    | manifest parser | A `marketplace` field has the wrong type.                                                                            |
+| `AB123` | error    | bundle parser   | A conditional marker looks like one but does not parse.                                                              |
 | `AB126` | notice   | manifest parser | A component path sits at the manifest's top level, which `schemaVersion: '2'` deprecates in favour of `components.`. |
 | `AB127` | error    | manifest parser | A manifest field requires `schemaVersion: '2'`.                                                                      |
 | `AB130` | error    | bundle parser   | A rule declares an unknown `activation`.                                                                             |
@@ -159,25 +160,25 @@ Per-feature mapping losses. Severity depends on what the target profile declares
 
 `agent doctor` and `agent verify`.
 
-| Code    | Severity | Emitted by                     | Meaning                                                                |
-| ------- | -------- | ------------------------------ | ---------------------------------------------------------------------- |
-| `AB400` | error    | `agent doctor`                 | A target profile failed its own consistency check.                     |
-| `AB401` | error    | `agent doctor`                 | A rendered path is not described by the target profile.                |
-| `AB402` | error    | `agent doctor`; `agent verify` | The generated tree is missing a file or differs from the bundle.       |
-| `AB403` | warning  | `agent doctor`; `agent verify` | A file in the generated tree is not owned by any artifact.             |
-| `AB404` | warning  | `agent doctor`                 | The generated tree predates the current target profile revision.       |
-| `AB405` | notice   | `agent doctor`                 | No readable `conversion-report.json` at the output root.               |
-| `AB410` | error    | `agent doctor`                 | The installed host is below the profile's recorded minimum.            |
-| `AB411` | notice   | `agent doctor`                 | The installed host is within the profile's verified range.             |
-| `AB412` | warning  | `agent doctor`                 | The installed host is newer than the profile's verified ceiling.       |
-| `AB414` | notice   | `agent doctor`                 | No host version was supplied, or the profile records no range.         |
-| `AB420` | error    | `agent verify`                 | The running CLI is outside the declared `pins.cli` range.              |
-| `AB421` | error    | `agent verify`                 | `PROFILE_SCHEMA_VERSION` does not match the pin.                       |
-| `AB422` | error    | `agent verify`                 | A target's documentation revision is outside its pin.                  |
-| `AB423` | error    | `agent verify`                 | An entry's destination does not exist, or is not a directory.          |
-| `AB424` | error    | `agent verify`                 | A recorded file is no longer rendered by the bundle.                   |
-| `AB425` | notice   | `agent verify`                 | The tree records a different generator version than the one verifying. |
-| `AB426` | notice   | `agent verify`                 | No install manifest, so orphaned files cannot be detected.             |
+| Code    | Severity | Emitted by                     | Meaning                                                                 |
+| ------- | -------- | ------------------------------ | ----------------------------------------------------------------------- |
+| `AB400` | error    | `agent doctor`                 | A target profile failed its own consistency check.                      |
+| `AB401` | error    | `agent doctor`                 | A rendered path is not described by the target profile.                 |
+| `AB402` | error    | `agent doctor`; `agent verify` | The generated tree is missing a file or differs from the bundle.        |
+| `AB403` | warning  | `agent doctor`; `agent verify` | A file in the generated tree is not owned by any artifact.              |
+| `AB404` | warning  | `agent doctor`                 | The generated tree predates the current target profile revision.        |
+| `AB405` | notice   | `agent doctor`                 | No readable `conversion-report.json` at the output root.                |
+| `AB410` | error    | `agent doctor`                 | The installed host is below the profile's recorded minimum.             |
+| `AB411` | notice   | `agent doctor`                 | The installed host is within the profile's verified range.              |
+| `AB412` | warning  | `agent doctor`                 | The installed host is newer than the profile's verified ceiling.        |
+| `AB414` | notice   | `agent doctor`                 | No host version was supplied, or the profile records no range.          |
+| `AB420` | error    | `agent verify`                 | The running CLI is outside the declared `pins.cli` range.               |
+| `AB421` | error    | `agent verify`                 | `PROFILE_SCHEMA_VERSION` does not match the pin.                        |
+| `AB422` | error    | `agent verify`                 | A target's documentation revision is outside its pin.                   |
+| `AB423` | error    | `agent verify`                 | An entry's destination does not exist, or is not a directory.           |
+| `AB424` | error    | `agent verify`                 | A recorded file is no longer rendered by the bundle.                    |
+| `AB425` | notice   | `agent verify`                 | The tree records a different generator version than the one verifying.  |
+| `AB426` | notice   | `agent verify`                 | No install of this bundle recorded here, so orphans cannot be detected. |
 
 ## Packaging
 
@@ -264,6 +265,8 @@ Per-feature mapping losses. Severity depends on what the target profile declares
 | `AB805` | warning  | `agent install`, `agent uninstall`                 | Host activation edit required but `--register` was not given.                                   |
 | `AB806` | error    | `agent install`, `agent uninstall`; `agent verify` | Install manifest missing or malformed, or nothing to uninstall.                                 |
 | `AB807` | notice   | `agent install`, `agent uninstall`                 | `--link` in use; edits are live and the host may not follow symlinks.                           |
+| `AB808` | error    | `agent install`, `agent marketplace`               | A path is claimed by two installs at one destination.                                           |
+| `AB809` | error    | `agent install`, `agent marketplace`               | A `--link` install cannot share a destination with another install.                             |
 
 ## Collections
 

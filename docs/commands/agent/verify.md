@@ -40,7 +40,7 @@ never mentioned.
 ## Configuration
 
 The block is documented in full under
-[project configuration](../../configuration.md#agent-verification).
+[project configuration](../../configuration.md#agentverify).
 
 ```yaml
 version: 1
@@ -136,19 +136,19 @@ cost is orphan detection, reported once as `AB426`.
 Four codes are re-emitted rather than duplicated, so one condition keeps one ID whichever
 command surfaces it.
 
-| Code    | Severity | Meaning                                                                |
-| ------- | -------- | ---------------------------------------------------------------------- |
-| `AB402` | error    | An expected file is missing, or differs from the bundle.               |
-| `AB403` | warning  | A file inside generated territory is not accounted for.                |
-| `AB404` | warning  | The tree predates the current target profile revision.                 |
-| `AB420` | error    | The running CLI is outside the declared `pins.cli` range.              |
-| `AB421` | error    | `PROFILE_SCHEMA_VERSION` does not match the pin.                       |
-| `AB422` | error    | A target's documentation revision is outside its pin.                  |
-| `AB423` | error    | An entry's destination does not exist, or is not a directory.          |
-| `AB424` | error    | A recorded file is no longer rendered by the bundle.                   |
-| `AB425` | notice   | The tree records a different generator version than the one verifying. |
-| `AB426` | notice   | No install manifest, so orphaned files cannot be detected.             |
-| `AB806` | error    | The destination's install manifest is malformed.                       |
+| Code    | Severity | Meaning                                                                 |
+| ------- | -------- | ----------------------------------------------------------------------- |
+| `AB402` | error    | An expected file is missing, or differs from the bundle.                |
+| `AB403` | warning  | A file inside generated territory is not accounted for.                 |
+| `AB404` | warning  | The tree predates the current target profile revision.                  |
+| `AB420` | error    | The running CLI is outside the declared `pins.cli` range.               |
+| `AB421` | error    | `PROFILE_SCHEMA_VERSION` does not match the pin.                        |
+| `AB422` | error    | A target's documentation revision is outside its pin.                   |
+| `AB423` | error    | An entry's destination does not exist, or is not a directory.           |
+| `AB424` | error    | A recorded file is no longer rendered by the bundle.                    |
+| `AB425` | notice   | The tree records a different generator version than the one verifying.  |
+| `AB426` | notice   | No install of this bundle recorded here, so orphans cannot be detected. |
+| `AB806` | error    | The destination's install manifest is malformed.                        |
 
 ## Examples
 
@@ -183,5 +183,5 @@ them by design, and they say nothing about whether the committed tree drifted.
 - [`agent doctor`](doctor.md) checks a bundle and one `agent convert` output root given on the command line.
 - [`agent install`](install.md) writes the trees this command verifies, and records the inventory it reads.
 - [Install manifest](../../formats/install-manifest.md) is the document `orphaned` detection reads.
-- [Project configuration](../../configuration.md#agent-verification) documents the `agent.verify` block.
+- [Project configuration](../../configuration.md#agentverify) documents the `agent.verify` block.
 - [Diagnostic codes](../../formats/diagnostic-codes.md) lists every code with its meaning.

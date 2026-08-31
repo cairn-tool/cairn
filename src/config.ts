@@ -5,6 +5,7 @@ import { parse as parseYaml } from "yaml";
 import { isInside, knownKeys, object, optionalString, strings } from "./config-schema.js";
 import { parseScriptsBlock } from "./scripts/registry.js";
 import { parseVerifyBlock } from "./agent/verify/config.js";
+import { parseInstallBlock } from "./agent/install/config.js";
 import type { OutputFormat } from "./types.js";
 
 export type PathStyle = "absolute" | "relative";
@@ -480,6 +481,7 @@ export function loadConfig(
     // configuration discovery disabled. Validating here is what makes a typo an
     // error at `md lint` rather than a surprise in CI.
     parseVerifyBlock(rootObject.agent, { file: configPath, directory: base });
+    parseInstallBlock(rootObject.agent, { file: configPath, directory: base });
   }
 
   const files = object(rootObject.files, "files");

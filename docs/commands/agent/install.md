@@ -4,6 +4,7 @@
 
 ```text
 cairn agent install <source> --target <target> [options]
+cairn agent install --config <file> [options]
 ```
 
 Places a bundle where a host actually scans for plugins or project files. Rendering and
@@ -18,29 +19,93 @@ on the target name.
 
 ## Arguments
 
-| Argument | Required | Description  |
-| -------- | -------- | ------------ |
-| `source` | Yes      | Bundle root. |
+| Argument | Required | Description                              |
+| -------- | -------- | ---------------------------------------- |
+| `source` | No       | Bundle root. Omit when using `--config`. |
+
+Exactly one of `source` and `--config` is required.
 
 ## Options
 
-| Option                | Default  | Description                                                                                            |
-| --------------------- | -------- | ------------------------------------------------------------------------------------------------------ |
-| `--target <target>`   | Required | One target: `claude-code`, `codex`, `cursor`, `antigravity`, or `opencode`. Not repeatable, not `all`. |
-| `--scope <scope>`     | `user`   | `user` or `project`.                                                                                   |
-| `--into <dir>`        | Profile  | Override the install root the profile declares.                                                        |
-| `--profile <profile>` | Location | Must match the location's profile when given.                                                          |
-| `--link`              | Off      | Symlink the rendered tree instead of copying it.                                                       |
-| `--register`          | Off      | Edit host config to activate a marketplace install.                                                    |
-| `--strict`            | Off      | Treat warnings as blocking findings.                                                                   |
-| `--force`             | Off      | Replace a destination that is not a prior install of this bundle.                                      |
-| `--dry-run`           | Off      | Plan the install without writing.                                                                      |
-| `--check`             | Off      | Compare against an existing install without writing.                                                   |
-| `--format <fmt>`      | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                                         |
-| `--envelope`          | Off      | Wrap `--format json` output in the versioned result envelope.                                          |
-| `-h`, `--help`        | —        | Show help.                                                                                             |
+| Option                | Default  | Description                                                                        |
+| --------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `--target <target>`   | Required | Repeatable: `claude-code`, `codex`, `cursor`, `antigravity`, `opencode`, or `all`. |
+| `--config <file>`     | —        | Install the `agent.install` block a config file declares.                          |
+| `--name <name>`       | all      | With `--config`, install only the named bundle. Repeatable.                        |
+| `--scope <scope>`     | `user`   | `user` or `project`. With `--config`, defaults to the block.                       |
+| `--into <dir>`        | Profile  | Override the install root the profile declares.                                    |
+| `--profile <profile>` | Location | Must match the location's profile when given.                                      |
+| `--link`              | Off      | Symlink the rendered tree instead of copying it.                                   |
+| `--register`          | Off      | Edit host config to activate a marketplace install.                                |
+| `--strict`            | Off      | Treat warnings as blocking findings.                                               |
+| `--force`             | Off      | Replace a destination that is not a prior install of this bundle.                  |
+| `--dry-run`           | Off      | Plan the install without writing.                                                  |
+| `--check`             | Off      | Compare against an existing install without writing.                               |
+| `--format <fmt>`      | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                     |
+| `--envelope`          | Off      | Wrap `--format json` output in the versioned result envelope.                      |
+| `-h`, `--help`        | —        | Show help.                                                                         |
 
-`--check` and `--dry-run` cannot be combined.
+`--check` and `--dry-run` cannot be combined. `--profile` applies to a single `--target`,
+because install uses one profile per destination.
+
+`--target all` expands to every target that declares a location for the requested scope, not to
+every target. Expanding to all five would make `--target all --scope user` hard-fail on `codex`
+and `opencode` — and a hard fail writes nothing at all, see below. An explicitly named target
+with no location still reports `AB800`.
+
+## Several installs in one run
+
+`--target` is repeatable, and every target's project scope resolves to the same merge root, so
+one destination may hold several installs. They are told apart by
+`(bundle, target, profile, scope)`, recorded that way in the
+[install manifest](../../formats/install-manifest.md#several-installs-at-one-destination), and
+reinstalling one prunes only its own stale files.
+
+```bash
+cairn agent install ./bundle --target claude-code --target codex --scope project --into .
+```
+
+**A run is planned in full before anything is written.** If any plan is blocked, nothing is
+written for any of them — committing the clean part of a run is how a destination ends up
+half-populated with no record of it.
+
+Two installs writing byte-identical content to one path is co-ownership; writing different
+content there is `AB808`.
+
+## Installing a declared block
+
+A repository can declare what it installs into itself, in the `agent:` block of `.cairn.yml` —
+the same file [`agent verify`](verify.md) reads, found by the same walk:
+
+```yaml
+agent:
+  install:
+    targets: [claude-code, codex]
+    scope: project
+    into: .
+    bundles:
+      - path: plugins/cairn-markdown
+      - path: plugins/cairn-agent
+        exclude: [codex]
+```
+
+| Key        | Default   | Meaning                                                         |
+| ---------- | --------- | --------------------------------------------------------------- |
+| `targets`  | Required  | Targets every bundle is installed for.                          |
+| `scope`    | `project` | `user` or `project`.                                            |
+| `into`     | Profile   | Install root override; must not escape the config directory.    |
+| `link`     | `false`   | Symlink the rendered trees.                                     |
+| `register` | `false`   | Edit host config to activate a marketplace install.             |
+| `bundles`  | Required  | One entry per bundle: `path`, and one of `include` / `exclude`. |
+
+The full key schema is in [project configuration](../../configuration.md#agentinstall).
+
+`cairn agent install --config cairn-verify.yml` installs the cross product, minus each bundle's
+own `include`/`exclude`. A flag on the command line overrides the block, except `--target`,
+which **narrows** it and may not name a target the block does not declare — the same rule
+[`agent marketplace`](marketplace.md#--target-narrows-never-widens) uses, and for the same
+reason: a flag that could add a target would let CI install for a host the repository never
+declared.
 
 ## Destinations
 
@@ -83,8 +148,9 @@ version, target, profile, scope, layout, mode (`copy`/`link`), and a path/mode/s
 inventory. [`agent uninstall`](uninstall.md) removes exactly that inventory.
 [`agent installed`](installed.md) lists what it finds.
 
-A prior install of **this** bundle is replaced and reported as `AB802`. A destination occupied
-by anything else is `AB801` unless `--force` is given.
+A prior install with the same `(bundle, target, profile, scope)` is replaced and reported as
+`AB802`. A path that exists and no record accounts for is `AB801` unless `--force` is given. A
+destination is **not** occupied merely because a different bundle is recorded there.
 
 ## Diagnostics
 
@@ -112,6 +178,12 @@ cairn agent install ./bundle --target claude-code --scope user --register
 
 # Project-scope merge into a named directory, preview only.
 cairn agent install ./bundle --target cursor --scope project --into ./app --dry-run
+
+# Both hosts into a repository, in one run.
+cairn agent install ./bundle --target claude-code --target codex --scope project --into .
+
+# Everything the repository declares.
+cairn agent install --config cairn-verify.yml
 
 # Live edits while iterating on a plugin.
 cairn agent install ./bundle --target cursor --scope user --link

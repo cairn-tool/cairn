@@ -101,7 +101,7 @@ identifier whichever command surfaces it, or a consumer's suppression list break
 | `AB640`–`AB642` | `agent audit`                 | manifest claims with nothing behind them                                             |
 | `AB650`–`AB654` | `agent audit`                 | baseline drift against a previous `sbom.json`                                        |
 | `AB700`–`AB720` | `agent test`                  | test-file validity, assertion failures, skips                                        |
-| `AB800`–`AB807` | `agent install` / `uninstall` | locations, manifests, registration                                                   |
+| `AB800`–`AB809` | `agent install` / `uninstall` | locations, manifests, registration, co-resident installs                             |
 | `AB900`–`AB907` | `agent marketplace`           | collection spec: schema, required and malformed fields, bundle paths, selection      |
 
 ### The renderer range in detail

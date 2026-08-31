@@ -93,8 +93,14 @@ export function registeredPluginKeys(registration: InstallRegistration): string[
   return registration.pluginKeys ?? (registration.pluginKey ? [registration.pluginKey] : []);
 }
 
-export interface InstallManifest {
-  generator: { name: string; version: string };
+/**
+ * One install recorded in a destination's manifest.
+ *
+ * A destination may hold several: every target declares the same project-scope
+ * merge root, so a repository installing for two hosts, or two bundles, records
+ * them side by side. {@link installKey} is what tells them apart.
+ */
+export interface InstallRecord {
   /**
    * What was installed here: a single bundle, or a collection of them. Absent
    * means `"bundle"`, so every manifest written before collections still parses.
@@ -118,6 +124,53 @@ export interface InstallManifest {
   files: InstallInventoryEntry[];
   materialized?: string;
   registration?: InstallRegistration;
+}
+
+/**
+ * The `.cairn-install.json` document: which build wrote it, and every install
+ * it accounts for.
+ *
+ * Serialized in one of two shapes — see {@link serializeDocument}. Both parse,
+ * and a document that fails to parse in full is `malformed` rather than
+ * partially trusted: its job is to be an *exhaustive* statement of what cairn
+ * owns here, and a dropped entry would make that entry's files look unowned to
+ * the occupancy check and to `retirePrior`, which is the destruction this shape
+ * exists to prevent.
+ */
+export interface InstallDocument {
+  generator: { name: string; version: string };
+  installs: InstallRecord[];
+}
+
+/**
+ * An install's identity within one destination.
+ *
+ * Keyed on the bundle **and** the target, which is the whole fix: keyed on the
+ * bundle name alone, a second target's install read the first's inventory as
+ * its own stale files and deleted them.
+ *
+ * NUL-separated for the reason `artifactKey` and `sessionKey` are — no half can
+ * contain one. `profile` is redundant while `locationFor(target, scope)` fixes
+ * it, and is included so a future target declaring two locations for one scope
+ * does not silently collide. `destination` is deliberately absent: the key is
+ * only ever compared within one manifest file.
+ */
+export function installKey(record: {
+  bundle: { name: string };
+  target: AgentTarget;
+  profile: AgentProfile;
+  scope: InstallScope;
+}): string {
+  return [record.bundle.name, record.target, record.profile, record.scope].join("\0");
+}
+
+/** Byte comparison, never `localeCompare`: these bytes are generated output. */
+function sortRecords(records: InstallRecord[]): InstallRecord[] {
+  return [...records].sort((a, b) => {
+    const left = installKey(a);
+    const right = installKey(b);
+    return left < right ? -1 : left > right ? 1 : 0;
+  });
 }
 
 export interface InstallContext {
@@ -144,7 +197,24 @@ export interface InstallPlan {
   mode: InstallMode;
   destination: string;
   artifacts: Artifact[];
-  manifest: InstallManifest;
+  /** This install's own record. */
+  record: InstallRecord;
+  /**
+   * The whole document this plan writes, siblings included. Byte-identical for
+   * every plan sharing a destination in one batch.
+   */
+  document: InstallDocument;
+  /**
+   * The document as it stood when the plan was made.
+   *
+   * `retirePrior` prunes against this snapshot and never against a re-read at
+   * commit time: every plan in a destination group writes the same merged
+   * document, so once the first has committed, the file already lists the
+   * second's record — a re-read would make the second find itself, compute an
+   * empty stale set, and silently never prune. It also closes the window
+   * between planning and committing.
+   */
+  prior: InstallDocument | "missing" | "malformed";
   diagnostics: AgentDiagnostic[];
   register: boolean;
   settings?: InstallRegistration;
@@ -183,7 +253,7 @@ function isResolved(value: ResolvedInstall | AgentDiagnostic): value is Resolved
   return "location" in value;
 }
 
-function toEntry(manifest: InstallManifest): InstallEntry {
+function toEntry(manifest: InstallRecord): InstallEntry {
   return {
     name: manifest.bundle.name,
     version: manifest.bundle.version,
@@ -320,16 +390,12 @@ function inventoryOf(artifacts: Artifact[]): InstallInventoryEntry[] {
     .sort(byPath);
 }
 
-function parseManifest(value: unknown): InstallManifest | null {
+function parseRecord(value: unknown): InstallRecord | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const doc = value as Record<string, unknown>;
-  const generator = doc.generator as Record<string, unknown> | undefined;
   const bundle = doc.bundle as Record<string, unknown> | undefined;
   const files = doc.files;
   if (
-    !generator ||
-    typeof generator.name !== "string" ||
-    typeof generator.version !== "string" ||
     !bundle ||
     typeof bundle.name !== "string" ||
     typeof bundle.version !== "string" ||
@@ -383,7 +449,6 @@ function parseManifest(value: unknown): InstallManifest | null {
         })
       : undefined;
   return {
-    generator: { name: generator.name, version: generator.version },
     ...(doc.kind === "collection" ? { kind: "collection" as const } : {}),
     bundle: { name: bundle.name, version: bundle.version },
     ...(plugins ? { collection: { plugins } } : {}),
@@ -399,9 +464,61 @@ function parseManifest(value: unknown): InstallManifest | null {
   };
 }
 
-export function readInstallManifest(
+/**
+ * Both serializations of the manifest document.
+ *
+ * A `bundle` at the top level is the single-record shape — which is also every
+ * manifest written before a destination could hold more than one, so an install
+ * made by an older cairn stays removable. `installs` is the multi-record shape.
+ * A document carrying both is `malformed` rather than a guess, the same rule as
+ * two manifest filenames and two matching install scopes.
+ */
+function parseDocument(value: unknown): InstallDocument | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const doc = value as Record<string, unknown>;
+  const generator = doc.generator as Record<string, unknown> | undefined;
+  if (!generator || typeof generator.name !== "string" || typeof generator.version !== "string")
+    return null;
+  const stamp = { name: generator.name, version: generator.version };
+  if (doc.installs !== undefined && doc.bundle !== undefined) return null;
+  if (doc.installs !== undefined) {
+    if (!Array.isArray(doc.installs)) return null;
+    const installs: InstallRecord[] = [];
+    for (const entry of doc.installs) {
+      const record = parseRecord(entry);
+      // One unparseable entry poisons the whole file. See InstallDocument.
+      if (!record) return null;
+      installs.push(record);
+    }
+    return { generator: stamp, installs };
+  }
+  const single = parseRecord(doc);
+  return single ? { generator: stamp, installs: [single] } : null;
+}
+
+/**
+ * Writes the single-record shape while there is one record, and the `installs`
+ * shape only from two.
+ *
+ * A cairn predating multi-record destinations reads an `installs` document as
+ * `malformed`, which makes `agent uninstall` refuse (`AB806`) rather than
+ * mis-remove — but makes `agent install --force` overwrite the file and orphan
+ * every sibling's inventory. Keeping the old shape for the single-record case
+ * confines that hazard to destinations that could not have existed before.
+ */
+function serializeDocument(document: InstallDocument): unknown {
+  const [only] = document.installs;
+  if (document.installs.length === 1) return { generator: document.generator, ...only };
+  return { generator: document.generator, installs: document.installs };
+}
+
+function currentGenerator(): { name: string; version: string } {
+  return { name: packageName, version: packageVersion };
+}
+
+export function readInstallDocument(
   destination: string,
-): InstallManifest | "missing" | "malformed" {
+): InstallDocument | "missing" | "malformed" {
   // Two manifests in one destination is the "two matches is an error rather than
   // a guess" rule again: only a hand edit produces it, and picking one would
   // silently orphan the other install's file list.
@@ -413,11 +530,21 @@ export function readInstallManifest(
   const file = installManifestIn(destination);
   if (!file) return "missing";
   try {
-    const parsed = parseManifest(JSON.parse(fs.readFileSync(file, "utf8")));
+    const parsed = parseDocument(JSON.parse(fs.readFileSync(file, "utf8")));
     return parsed ?? "malformed";
   } catch {
     return "malformed";
   }
+}
+
+/** The record matching `key` at `destination`, if the document records one. */
+export function readInstallRecord(
+  destination: string,
+  key: string,
+): InstallRecord | "missing" | "malformed" {
+  const document = readInstallDocument(destination);
+  if (document === "missing" || document === "malformed") return document;
+  return document.installs.find((record) => installKey(record) === key) ?? "missing";
 }
 
 export function resolveInstallDestination(
@@ -442,32 +569,87 @@ export function resolveInstallDestination(
   return { location, locationRoot, destination };
 }
 
-function occupied(
+/**
+ * What stands between this payload and its destination.
+ *
+ * Occupancy is a question about **paths**, not about which bundle was here
+ * first. The previous rule — a merge destination recording any other bundle is
+ * occupied — made a second bundle in a repository root an AB801 every time,
+ * while a second *target* of the same bundle passed the check entirely and then
+ * had its predecessor's files pruned as stale. Both fall out of asking per path
+ * who owns it.
+ */
+interface Occupancy {
+  /** A path this payload writes that exists on disk and no record accounts for. */
+  foreign?: string;
+  /**
+   * Paths a *different* record at this destination owns with **different**
+   * content. Two installs writing byte-identical content to one path — the
+   * common case for a bundle's shared assets, which several targets each place
+   * at the destination root — is co-ownership rather than a conflict: both
+   * records list the path, and uninstalling one leaves it for the other.
+   */
+  conflicts: Array<{ path: string; owner: InstallRecord }>;
+  /** This install's own prior record, when the destination records one. */
+  mine?: InstallRecord;
+}
+
+function assessDestination(
   destination: string,
   layout: InstallLayout,
-  artifacts: Artifact[],
-  prior: InstallManifest | "missing" | "malformed",
-  bundleName: string,
-): boolean {
-  if (layout === "merge") {
-    if (prior !== "missing" && prior !== "malformed" && prior.bundle.name !== bundleName)
-      return true;
-    const owned =
-      prior !== "missing" && prior !== "malformed" && prior.bundle.name === bundleName
-        ? new Set(prior.files.map((file) => file.path))
-        : new Set<string>();
-    return artifacts.some((artifact) => {
-      if (artifact.path === INSTALL_MANIFEST) return false;
-      if (owned.has(artifact.path)) return false;
-      return existsAt(path.join(destination, artifact.path));
-    });
+  payload: Artifact[],
+  prior: InstallDocument | "missing" | "malformed",
+  key: string,
+): Occupancy {
+  const records = prior === "missing" || prior === "malformed" ? [] : prior.installs;
+  const mine = records.find((record) => installKey(record) === key);
+  const owners = new Map<string, { record: InstallRecord; sha256: string }>();
+  for (const record of records) {
+    if (installKey(record) === key) continue;
+    for (const file of record.files) owners.set(file.path, { record, sha256: file.sha256 });
   }
-  if (!existsAt(destination)) return false;
-  if (prior !== "missing" && prior !== "malformed" && prior.bundle.name === bundleName)
-    return false;
-  const listing = fs.lstatSync(destination);
-  if (listing.isDirectory() && fs.readdirSync(destination).length === 0) return false;
-  return true;
+  const result: Occupancy = { conflicts: [], ...(mine ? { mine } : {}) };
+  const ours = new Set(mine?.files.map((file) => file.path) ?? []);
+
+  // A destination that records nothing and is not empty is occupied wholesale
+  // for the layouts that own their directory. Merge shares its root by design,
+  // so it is only ever assessed per path.
+  if (layout !== "merge" && !records.length && existsAt(destination)) {
+    const listing = fs.lstatSync(destination);
+    if (!listing.isDirectory() || fs.readdirSync(destination).length)
+      return { ...result, foreign: destination };
+  }
+
+  for (const artifact of payload) {
+    if (artifact.path === INSTALL_MANIFEST) continue;
+    const owner = owners.get(artifact.path);
+    if (owner) {
+      if (owner.sha256 !== sha256(artifact.content))
+        result.conflicts.push({ path: artifact.path, owner: owner.record });
+      continue;
+    }
+    if (ours.has(artifact.path)) continue;
+    if (!result.foreign && existsAt(path.join(destination, artifact.path)))
+      result.foreign = artifact.path;
+  }
+  return result;
+}
+
+/** `AB808`, in the form raised against an install already at the destination. */
+function conflictDiagnostic(
+  conflict: { path: string; owner: InstallRecord },
+  destination: string,
+  target: AgentTarget,
+): AgentDiagnostic {
+  return error(
+    "AB808",
+    `Destination path '${conflict.path}' is already owned by the install of '${conflict.owner.bundle.name}' for ${conflict.owner.target}/${conflict.owner.profile}`,
+    {
+      path: conflict.path,
+      target,
+      remediation: `Uninstall '${conflict.owner.bundle.name}' for ${conflict.owner.target} first, install to a different destination, or pass --force to overwrite it.`,
+    },
+  );
 }
 
 function writeJsonAtomically(file: string, value: unknown): void {
@@ -571,6 +753,9 @@ function payloadMatches(destination: string, artifacts: Artifact[]): boolean {
 
 export function installIsCurrent(plan: InstallPlan): boolean {
   if (!payloadMatches(plan.destination, plan.artifacts)) return false;
+  // The files matching is not enough: a record hand-removed from the manifest
+  // would leave --check reporting "current" while uninstall reports not-found.
+  if (readInstallRecord(plan.destination, installKey(plan.record)) === "missing") return false;
   if (plan.register && plan.settings && !registrationCurrent(plan.settings, plan.destination))
     return false;
   return true;
@@ -606,58 +791,97 @@ function buildPayload(
   return { artifacts, diagnostics };
 }
 
-function manifestArtifact(manifest: InstallManifest): Artifact {
+/**
+ * The manifest as an ordinary artifact, so it lands through the same atomic
+ * writer as everything else and `--dry-run` reports its real bytes.
+ *
+ * It takes the whole document rather than one record, and there is no cycle in
+ * that: a record's inventory comes from its own payload, which `inventoryOf`
+ * strips this file from; the document comes from the records. Deriving a
+ * sibling's record from a sibling's *artifacts* would introduce one.
+ */
+function manifestArtifact(document: InstallDocument): Artifact {
   return {
     path: INSTALL_MANIFEST,
-    content: Buffer.from(JSON.stringify(manifest, null, 2) + "\n"),
+    content: Buffer.from(JSON.stringify(serializeDocument(document), null, 2) + "\n"),
     mode: 0o644,
   };
 }
 
+/** Options shared by every install plan in one run. */
+export interface PlanInstallOptions extends InstallContext {
+  scope?: string;
+  into?: string;
+  profile?: string;
+  link?: boolean;
+  register?: boolean;
+  force?: boolean;
+}
+
 /**
- * Plans an install: renders and packages in memory, resolves the destination
- * from profile data, and records AB8xx findings. Nothing is written.
+ * Phase one: everything about an install that does not depend on its
+ * neighbours. The manifest artifact is deliberately absent — its bytes depend
+ * on sibling records, which only {@link finishGroup} knows.
  */
-export function planInstall(
+interface DraftInstall {
+  bundle?: AgentBundle;
+  target: AgentTarget;
+  profile: AgentProfile;
+  scope: InstallScope;
+  layout: InstallLayout;
+  mode: InstallMode;
+  destination: string;
+  payload: Artifact[];
+  record: InstallRecord;
+  diagnostics: AgentDiagnostic[];
+  register: boolean;
+  settings?: InstallRegistration;
+}
+
+/** An unresolvable install: AB800 already recorded, nothing to place. */
+function unresolvedPlan(
   bundle: AgentBundle,
   target: AgentTarget,
-  options: {
-    scope?: string;
-    into?: string;
-    profile?: string;
-    link?: boolean;
-    register?: boolean;
-    force?: boolean;
-  } & InstallContext,
+  scope: InstallScope,
+  mode: InstallMode,
+  resolved: AgentDiagnostic,
 ): InstallPlan {
+  const record: InstallRecord = {
+    bundle: { name: bundle.name, version: bundle.version },
+    target,
+    profile: "plugin",
+    scope,
+    layout: "plugin-dir",
+    mode: "copy",
+    destination: "",
+    files: [],
+  };
+  return {
+    bundle,
+    target,
+    profile: "plugin",
+    scope,
+    layout: "plugin-dir",
+    mode,
+    destination: "",
+    artifacts: [],
+    record,
+    document: { generator: currentGenerator(), installs: [record] },
+    prior: "missing",
+    diagnostics: [resolved],
+    register: false,
+  };
+}
+
+function draftInstall(
+  bundle: AgentBundle,
+  target: AgentTarget,
+  options: PlanInstallOptions,
+): DraftInstall | InstallPlan {
   const scope = resolveScope(options.scope, "user");
   const resolved = resolveInstallDestination(target, scope, bundle.name, options);
-  const diagnostics: AgentDiagnostic[] = [];
-  if (!isResolved(resolved)) {
-    return {
-      bundle,
-      target,
-      profile: "plugin",
-      scope,
-      layout: "plugin-dir",
-      mode: options.link ? "link" : "copy",
-      destination: "",
-      artifacts: [],
-      manifest: {
-        generator: { name: packageName, version: packageVersion },
-        bundle: { name: bundle.name, version: bundle.version },
-        target,
-        profile: "plugin",
-        scope,
-        layout: "plugin-dir",
-        mode: "copy",
-        destination: "",
-        files: [],
-      },
-      diagnostics: [resolved],
-      register: Boolean(options.register),
-    };
-  }
+  const mode: InstallMode = options.link ? "link" : "copy";
+  if (!isResolved(resolved)) return unresolvedPlan(bundle, target, scope, mode, resolved);
 
   const { location, destination } = resolved;
   if (options.profile && options.profile !== "both" && options.profile !== location.profile)
@@ -667,7 +891,7 @@ export function planInstall(
       "Install uses one profile per destination; pass plugin or project, or omit --profile",
     );
 
-  const mode: InstallMode = options.link ? "link" : "copy";
+  const diagnostics: AgentDiagnostic[] = [];
   const built = buildPayload(bundle, target, location.profile, location.layout);
   diagnostics.push(...built.diagnostics);
 
@@ -680,30 +904,6 @@ export function planInstall(
           profile: location.profile,
         }),
       );
-
-  const prior = existsAt(destination) ? readInstallManifest(destination) : "missing";
-  if (occupied(destination, location.layout, built.artifacts, prior, bundle.name)) {
-    if (!options.force)
-      diagnostics.push(
-        error(
-          "AB801",
-          `Destination is occupied by something that is not a prior install of '${bundle.name}'`,
-          {
-            path: destination,
-            target,
-            remediation: "Pass --force to replace it, or uninstall the occupant first.",
-          },
-        ),
-      );
-  } else if (prior !== "missing" && prior !== "malformed" && prior.bundle.name === bundle.name)
-    diagnostics.push(
-      diagnostic(
-        "AB802",
-        `Replacing existing install of ${prior.bundle.name} ${prior.bundle.version} with ${bundle.version}`,
-        "exact",
-        { target, profile: location.profile, path: destination },
-      ),
-    );
 
   const settingsFile = location.activation
     ? expandInstallRoot(location.activation.file, options)
@@ -742,20 +942,6 @@ export function planInstall(
 
   const materialized =
     mode === "link" ? path.join(bundle.root, INSTALL_CACHE, target, location.profile) : undefined;
-  const manifest: InstallManifest = {
-    generator: { name: packageName, version: packageVersion },
-    bundle: { name: bundle.name, version: bundle.version },
-    target,
-    profile: location.profile,
-    scope,
-    layout: location.layout,
-    mode,
-    destination,
-    files: inventoryOf(built.artifacts),
-    ...(materialized ? { materialized } : {}),
-    ...(register && settings ? { registration: settings } : {}),
-  };
-  const artifacts = [...built.artifacts, manifestArtifact(manifest)].sort(byPath);
   return {
     bundle,
     target,
@@ -764,12 +950,220 @@ export function planInstall(
     layout: location.layout,
     mode,
     destination,
-    artifacts,
-    manifest,
+    payload: built.artifacts,
+    record: {
+      bundle: { name: bundle.name, version: bundle.version },
+      target,
+      profile: location.profile,
+      scope,
+      layout: location.layout,
+      mode,
+      destination,
+      files: inventoryOf(built.artifacts),
+      ...(materialized ? { materialized } : {}),
+      ...(register && settings ? { registration: settings } : {}),
+    },
     diagnostics,
     register,
     settings,
   };
+}
+
+/**
+ * Phase two: one destination's drafts become plans that share one document.
+ *
+ * The document is merged here rather than at commit so that `--dry-run` and
+ * `--check` report the bytes that would actually land. There is no cycle to
+ * untangle: a record's inventory comes from its own payload, which
+ * {@link inventoryOf} strips the manifest from; the document comes from the
+ * records; the manifest artifact comes from the document. Only deriving a
+ * sibling's record from a sibling's *artifacts* would reintroduce one.
+ */
+function finishGroup(
+  destination: string,
+  drafts: DraftInstall[],
+  options: { force?: boolean },
+): { plans: InstallPlan[]; diagnostics: AgentDiagnostic[] } {
+  // Read once per group: every plan must carry the identical snapshot.
+  const prior = existsAt(destination) ? readInstallDocument(destination) : "missing";
+  const priorRecords = prior === "missing" || prior === "malformed" ? [] : prior.installs;
+  const ordered = [...drafts].sort((a, b) => {
+    const left = installKey(a.record);
+    const right = installKey(b.record);
+    return left < right ? -1 : left > right ? 1 : 0;
+  });
+  const batchKeys = new Set(ordered.map((draft) => installKey(draft.record)));
+  const document: InstallDocument = {
+    generator: currentGenerator(),
+    installs: sortRecords([
+      ...priorRecords.filter((record) => !batchKeys.has(installKey(record))),
+      ...ordered.map((draft) => draft.record),
+    ]),
+  };
+
+  const diagnostics: AgentDiagnostic[] = [];
+  const claimed = new Map<string, { draft: DraftInstall; content: Buffer }>();
+  const plans: InstallPlan[] = [];
+  for (const draft of ordered) {
+    const key = installKey(draft.record);
+    const assessment = assessDestination(destination, draft.layout, draft.payload, prior, key);
+    const findings: AgentDiagnostic[] = [];
+    if (assessment.foreign && !options.force)
+      findings.push(
+        error(
+          "AB801",
+          `Destination is occupied by something that is not a prior install of '${draft.record.bundle.name}'`,
+          {
+            path: destination,
+            target: draft.target,
+            remediation: "Pass --force to replace it, or uninstall the occupant first.",
+          },
+        ),
+      );
+    if (!options.force)
+      for (const conflict of assessment.conflicts)
+        findings.push(conflictDiagnostic(conflict, destination, draft.target));
+    if (assessment.mine)
+      findings.push(
+        diagnostic(
+          "AB802",
+          `Replacing existing install of ${assessment.mine.bundle.name} ${assessment.mine.bundle.version} with ${draft.record.bundle.version}`,
+          "exact",
+          { target: draft.target, profile: draft.profile, path: destination },
+        ),
+      );
+    // A --link install of a layout that owns its directory replaces the whole
+    // destination with a symlink, which cannot coexist with a sibling record.
+    if (draft.mode === "link" && draft.layout !== "merge" && document.installs.length > 1)
+      findings.push(
+        error(
+          "AB809",
+          `A --link install cannot share a destination with another install: ${destination} already records '${document.installs.find((record) => installKey(record) !== key)?.bundle.name ?? "another bundle"}'`,
+          {
+            path: destination,
+            target: draft.target,
+            remediation: "Install without --link, or use a destination of its own.",
+          },
+        ),
+      );
+
+    // Within one run, two installs writing one path is not something --force can
+    // resolve: it cannot make a single run write two byte streams to one path,
+    // and suppressing it would make the result depend on commit order.
+    for (const artifact of draft.payload) {
+      if (artifact.path === INSTALL_MANIFEST) continue;
+      const other = claimed.get(artifact.path);
+      if (other && !other.content.equals(artifact.content))
+        diagnostics.push(
+          error(
+            "AB808",
+            `Two installs in this run both write '${artifact.path}' at ${destination}: '${other.draft.record.bundle.name}' (${other.draft.target}/${other.draft.profile}) and '${draft.record.bundle.name}' (${draft.target}/${draft.profile})`,
+            {
+              path: artifact.path,
+              target: draft.target,
+              remediation: "Install them to separate destinations, or drop one --target.",
+            },
+          ),
+        );
+      else if (!other) claimed.set(artifact.path, { draft, content: artifact.content });
+    }
+
+    plans.push({
+      ...(draft.bundle ? { bundle: draft.bundle } : {}),
+      target: draft.target,
+      profile: draft.profile,
+      scope: draft.scope,
+      layout: draft.layout,
+      mode: draft.mode,
+      destination,
+      artifacts: [...draft.payload, manifestArtifact(document)].sort(byPath),
+      record: draft.record,
+      document,
+      prior,
+      diagnostics: [...draft.diagnostics, ...findings],
+      register: draft.register,
+      ...(draft.settings ? { settings: draft.settings } : {}),
+    });
+  }
+  return { plans, diagnostics };
+}
+
+/** One bundle to install for one target. */
+export interface InstallRequest {
+  bundle: AgentBundle;
+  target: AgentTarget;
+}
+
+export interface InstallBatch {
+  plans: InstallPlan[];
+  /** Batch-level findings — the in-run AB808. Per-plan findings stay on the plan. */
+  diagnostics: AgentDiagnostic[];
+}
+
+/**
+ * Plans every requested install, grouped by destination.
+ *
+ * Nothing is written here, and the caller must treat the batch as all-or-nothing:
+ * committing a subset of a run whose remainder is blocked is how a destination
+ * ends up half-populated with no record of it.
+ */
+export function planInstalls(
+  requests: InstallRequest[],
+  options: PlanInstallOptions,
+): InstallBatch {
+  const drafted = requests.map((request) => draftInstall(request.bundle, request.target, options));
+  const groups = new Map<string, DraftInstall[]>();
+  const unresolved: InstallPlan[] = [];
+  const order: Array<{ destination: string; key: string } | { plan: InstallPlan }> = [];
+  for (const draft of drafted) {
+    if ("payload" in draft) {
+      const destination = path.resolve(draft.destination);
+      const list = groups.get(destination) ?? [];
+      list.push(draft);
+      groups.set(destination, list);
+      order.push({ destination, key: installKey(draft.record) });
+    } else {
+      unresolved.push(draft);
+      order.push({ plan: draft });
+    }
+  }
+
+  const planned = new Map<string, InstallPlan>();
+  const diagnostics: AgentDiagnostic[] = [];
+  for (const [destination, drafts] of groups) {
+    const finished = finishGroup(destination, drafts, options);
+    diagnostics.push(...finished.diagnostics);
+    for (const plan of finished.plans)
+      planned.set(`${destination}\0${installKey(plan.record)}`, plan);
+  }
+
+  // Requests are reported back in the order they were given, not in the order
+  // grouping happened to visit them.
+  const plans: InstallPlan[] = [];
+  for (const item of order) {
+    if ("plan" in item) plans.push(item.plan);
+    else {
+      const plan = planned.get(`${item.destination}\0${item.key}`);
+      if (plan) plans.push(plan);
+    }
+  }
+  return { plans, diagnostics };
+}
+
+/**
+ * Plans a single install: renders and packages in memory, resolves the
+ * destination from profile data, and records AB8xx findings. Nothing is written.
+ */
+export function planInstall(
+  bundle: AgentBundle,
+  target: AgentTarget,
+  options: PlanInstallOptions,
+): InstallPlan {
+  const batch = planInstalls([{ bundle, target }], options);
+  const plan = batch.plans[0];
+  return batch.diagnostics.length
+    ? { ...plan, diagnostics: [...plan.diagnostics, ...batch.diagnostics] }
+    : plan;
 }
 
 /** What a collection places at one destination. */
@@ -823,19 +1217,12 @@ export function planCollectionInstall(
       mode: "copy",
       destination: "",
       artifacts: [],
-      manifest: {
-        generator: { name: packageName, version: packageVersion },
-        kind: "collection",
-        bundle: { name: collection.name, version: collection.version },
-        collection: { plugins: collection.plugins },
-        target: collection.target,
-        profile: "plugin",
-        scope,
-        layout: "plugin-dir",
-        mode: "copy",
-        destination: "",
-        files: [],
+      record: unresolvedCollectionRecord(collection, scope),
+      document: {
+        generator: currentGenerator(),
+        installs: [unresolvedCollectionRecord(collection, scope)],
       },
+      prior: "missing",
       diagnostics: [resolved],
       register: Boolean(options.register),
     };
@@ -856,30 +1243,6 @@ export function planCollectionInstall(
           profile: "plugin",
         }),
       );
-
-  const prior = existsAt(destination) ? readInstallManifest(destination) : "missing";
-  if (occupied(destination, location.layout, collection.artifacts, prior, collection.name)) {
-    if (!options.force)
-      diagnostics.push(
-        error(
-          "AB801",
-          `Destination is occupied by something that is not a prior install of '${collection.name}'`,
-          {
-            path: destination,
-            target: collection.target,
-            remediation: "Pass --force to replace it, or uninstall the occupant first.",
-          },
-        ),
-      );
-  } else if (prior !== "missing" && prior !== "malformed" && prior.bundle.name === collection.name)
-    diagnostics.push(
-      diagnostic(
-        "AB802",
-        `Replacing existing install of ${prior.bundle.name} ${prior.bundle.version} with ${collection.version}`,
-        "exact",
-        { target: collection.target, profile: "plugin", path: destination },
-      ),
-    );
 
   const settingsFile = location.activation
     ? expandInstallRoot(location.activation.file, options)
@@ -916,49 +1279,79 @@ export function planCollectionInstall(
   const materialized = mode === "link" ? options.materializeInto : undefined;
   if (mode === "link" && !materialized)
     throw new Error("A --link collection install needs a materialization directory");
-  const manifest: InstallManifest = {
-    generator: { name: packageName, version: packageVersion },
+  const draft: DraftInstall = {
+    target: collection.target,
+    profile: "plugin",
+    scope,
+    layout: location.layout,
+    mode,
+    destination,
+    payload: collection.artifacts,
+    record: {
+      kind: "collection",
+      bundle: { name: collection.name, version: collection.version },
+      collection: { plugins: collection.plugins },
+      target: collection.target,
+      profile: "plugin",
+      scope,
+      layout: location.layout,
+      mode,
+      destination,
+      files: inventoryOf(collection.artifacts),
+      ...(materialized ? { materialized } : {}),
+      ...(register && settings ? { registration: settings } : {}),
+    },
+    diagnostics,
+    register,
+    ...(settings ? { settings } : {}),
+  };
+  // Through the same grouping as a bundle install: a collection resolves every
+  // target to `<into>/<name>`, so without it `--into X --target all` reproduced
+  // the destruction this change exists to remove.
+  const finished = finishGroup(destination, [draft], options);
+  const plan = finished.plans[0];
+  return finished.diagnostics.length
+    ? { ...plan, diagnostics: [...plan.diagnostics, ...finished.diagnostics] }
+    : plan;
+}
+
+function unresolvedCollectionRecord(
+  collection: CollectionInstall,
+  scope: InstallScope,
+): InstallRecord {
+  return {
     kind: "collection",
     bundle: { name: collection.name, version: collection.version },
     collection: { plugins: collection.plugins },
     target: collection.target,
     profile: "plugin",
     scope,
-    layout: location.layout,
-    mode,
-    destination,
-    files: inventoryOf(collection.artifacts),
-    ...(materialized ? { materialized } : {}),
-    ...(register && settings ? { registration: settings } : {}),
-  };
-  return {
-    target: collection.target,
-    profile: "plugin",
-    scope,
-    layout: location.layout,
-    mode,
-    destination,
-    artifacts: [...collection.artifacts, manifestArtifact(manifest)].sort(byPath),
-    manifest,
-    diagnostics,
-    register,
-    settings,
+    layout: "plugin-dir",
+    mode: "copy",
+    destination: "",
+    files: [],
   };
 }
 
 function writeCopy(plan: InstallPlan): void {
   const payload = plan.artifacts;
-  if (plan.layout === "merge")
+  // Replacing the destination wholesale is what guarantees no leftovers when a
+  // manifest was lost and --force was used, so it is kept for the layouts that
+  // own their directory — but only while this install is the sole record there.
+  // With a sibling, it would delete the sibling's tree.
+  const wholesale = plan.layout !== "merge" && plan.document.installs.length === 1;
+  if (wholesale)
+    writeArtifactsAtomically(plan.destination, payload, { managedRoots: ["."], force: true });
+  else
     writeArtifactsAtomically(plan.destination, payload, {
       managedRoots: [],
       looseFiles: payload.map((artifact) => artifact.path),
       force: true,
     });
-  else writeArtifactsAtomically(plan.destination, payload, { managedRoots: ["."], force: true });
 }
 
 function writeLink(plan: InstallPlan): void {
-  const materialized = plan.manifest.materialized;
+  const materialized = plan.record.materialized;
   if (!materialized) throw new Error("Link install is missing a materialized tree");
   writeArtifactsAtomically(materialized, plan.artifacts, { managedRoots: ["."], force: true });
   if (plan.layout === "merge") {
@@ -980,30 +1373,28 @@ function writeLink(plan: InstallPlan): void {
 }
 
 function retirePrior(plan: InstallPlan): void {
-  if (!existsAt(plan.destination)) return;
-  const prior = readInstallManifest(plan.destination);
+  const prior = plan.prior;
   if (prior === "missing" || prior === "malformed") return;
-  const next = new Set(plan.manifest.files.map((file) => file.path));
-  if (prior.bundle.name !== plan.manifest.bundle.name) {
-    commitUninstall({
-      name: prior.bundle.name,
-      target: prior.target,
-      destination: plan.destination,
-      manifest: prior,
-      diagnostics: [],
-      missing: false,
-    });
-    return;
-  }
-  for (const file of prior.files) {
-    if (next.has(file.path)) continue;
+  const key = installKey(plan.record);
+  const previous = prior.installs.find((record) => installKey(record) === key);
+  if (!previous) return;
+  const next = new Set(plan.record.files.map((file) => file.path));
+  // Owners after this run, not before it: reading the prior document alone would
+  // let this delete a file a sibling in the same batch has just written.
+  const claimed = new Set(
+    plan.document.installs
+      .filter((record) => installKey(record) !== key)
+      .flatMap((record) => record.files.map((file) => file.path)),
+  );
+  for (const file of previous.files) {
+    if (next.has(file.path) || claimed.has(file.path)) continue;
     removePath(path.join(plan.destination, file.path));
     pruneEmptyAncestors(plan.destination, file.path);
   }
-  if (prior.materialized && prior.materialized !== plan.manifest.materialized)
-    removePath(prior.materialized);
-  if (prior.registration && !plan.manifest.registration)
-    revertRegistration(prior.registration, plan.destination);
+  if (previous.materialized && previous.materialized !== plan.record.materialized)
+    removePath(previous.materialized);
+  if (previous.registration && !plan.record.registration)
+    revertRegistration(previous.registration, plan.destination);
 }
 
 /** Writes a planned install. Caller must have already decided the run is not blocked. */
@@ -1015,14 +1406,14 @@ export function commitInstall(plan: InstallPlan): void {
 }
 
 export function planToEntry(plan: InstallPlan): InstallEntry {
-  return toEntry(plan.manifest);
+  return toEntry(plan.record);
 }
 
 export interface UninstallPlan {
   name: string;
   target: AgentTarget;
   destination: string;
-  manifest: InstallManifest | null;
+  manifest: InstallRecord | null;
   diagnostics: AgentDiagnostic[];
   missing: boolean;
 }
@@ -1055,11 +1446,10 @@ export function planUninstall(
     ? [resolveScope(options.scope)]
     : [...INSTALL_SCOPES];
   const diagnostics: AgentDiagnostic[] = [];
-  const matches: Array<{ scope: InstallScope; destination: string; manifest: InstallManifest }> =
-    [];
+  const matches: Array<{ scope: InstallScope; destination: string; manifest: InstallRecord }> = [];
   for (const candidate of candidatesFor(target, name, scopes, options)) {
     const read = existsAt(candidate.destination)
-      ? readInstallManifest(candidate.destination)
+      ? readInstallDocument(candidate.destination)
       : "missing";
     if (read === "malformed")
       diagnostics.push(
@@ -1071,8 +1461,13 @@ export function planUninstall(
           remediation: "Inspect the destination; uninstall refuses to guess.",
         }),
       );
-    else if (read !== "missing" && read.bundle.name === name)
-      matches.push({ ...candidate, manifest: read });
+    else if (read !== "missing")
+      // Filtering on the target as well as the name is required now that a
+      // destination records several installs: matching on the name alone would
+      // remove a different target's inventory from the same document.
+      for (const record of read.installs)
+        if (record.bundle.name === name && record.target === target)
+          matches.push({ ...candidate, manifest: record });
   }
   if (diagnostics.length)
     return { name, target, destination: "", manifest: null, diagnostics, missing: false };
@@ -1145,28 +1540,48 @@ function removePath(file: string): void {
 }
 
 export function commitUninstall(plan: UninstallPlan): void {
-  const manifest = plan.manifest;
-  if (!manifest) return;
+  const record = plan.manifest;
+  if (!record) return;
   const destination = plan.destination;
+  const document = readInstallDocument(destination);
+  const key = installKey(record);
+  const remaining =
+    document === "missing" || document === "malformed"
+      ? []
+      : document.installs.filter((entry) => installKey(entry) !== key);
+  // A path a sibling still owns is not this install's to remove.
+  const claimed = new Set(remaining.flatMap((entry) => entry.files.map((file) => file.path)));
   const listing = fs.lstatSync(destination, { throwIfNoEntry: false });
-  if (listing?.isSymbolicLink()) removePath(destination);
+  if (listing?.isSymbolicLink() && !remaining.length) removePath(destination);
   else {
-    for (const file of manifest.files) {
+    for (const file of record.files) {
+      if (claimed.has(file.path)) continue;
       removePath(path.join(destination, file.path));
       pruneEmptyAncestors(destination, file.path);
     }
     const manifestFile = installManifestIn(destination);
-    if (manifestFile) removePath(manifestFile);
-    if (
-      manifest.layout !== "merge" &&
-      existsAt(destination) &&
-      fs.statSync(destination).isDirectory() &&
-      fs.readdirSync(destination).length === 0
-    )
-      fs.rmdirSync(destination);
+    if (remaining.length) {
+      writeJsonAtomically(
+        path.join(destination, INSTALL_MANIFEST),
+        serializeDocument({ generator: currentGenerator(), installs: sortRecords(remaining) }),
+      );
+      // The survivors are rewritten under the current name, so a legacy-named
+      // file left beside it would read as `malformed` from here on.
+      if (manifestFile && path.basename(manifestFile) === LEGACY_INSTALL_MANIFEST)
+        removePath(manifestFile);
+    } else {
+      if (manifestFile) removePath(manifestFile);
+      if (
+        record.layout !== "merge" &&
+        existsAt(destination) &&
+        fs.statSync(destination).isDirectory() &&
+        fs.readdirSync(destination).length === 0
+      )
+        fs.rmdirSync(destination);
+    }
   }
-  if (manifest.materialized) removePath(manifest.materialized);
-  if (manifest.registration) revertRegistration(manifest.registration, destination);
+  if (record.materialized) removePath(record.materialized);
+  if (record.registration) revertRegistration(record.registration, destination);
 }
 
 function scanRoot(
@@ -1176,15 +1591,15 @@ function scanRoot(
   locationRoot: string,
 ): InstallEntry[] {
   const entries: InstallEntry[] = [];
+  const collect = (destination: string): void => {
+    const read = existsAt(destination) ? readInstallDocument(destination) : "missing";
+    if (read === "missing" || read === "malformed") return;
+    for (const record of read.installs)
+      if (record.target === target && record.scope === scope)
+        entries.push(toEntry({ ...record, destination }));
+  };
   if (location.layout === "merge") {
-    const read = existsAt(locationRoot) ? readInstallManifest(locationRoot) : "missing";
-    if (
-      read !== "missing" &&
-      read !== "malformed" &&
-      read.target === target &&
-      read.scope === scope
-    )
-      entries.push(toEntry({ ...read, destination: locationRoot }));
+    collect(locationRoot);
     return entries;
   }
   if (!existsAt(locationRoot) || !fs.statSync(locationRoot).isDirectory()) return entries;
@@ -1192,10 +1607,7 @@ function scanRoot(
     const destination = path.join(locationRoot, name);
     const listing = fs.lstatSync(destination);
     if (!listing.isDirectory() && !listing.isSymbolicLink()) continue;
-    const read = readInstallManifest(destination);
-    if (read === "missing" || read === "malformed") continue;
-    if (read.target !== target || read.scope !== scope) continue;
-    entries.push(toEntry({ ...read, destination }));
+    collect(destination);
   }
   return entries;
 }
@@ -1220,8 +1632,10 @@ export function listInstalled(
     }
   }
   return entries.sort((a, b) => {
-    const left = `${a.target}/${a.scope}/${a.name}`;
-    const right = `${b.target}/${b.scope}/${b.name}`;
+    // Profile and destination are in the key because one destination now yields
+    // several rows, and `agent installed -fj` byte order is what consumers read.
+    const left = `${a.target}/${a.scope}/${a.name}/${a.profile}/${a.destination}`;
+    const right = `${b.target}/${b.scope}/${b.name}/${b.profile}/${b.destination}`;
     return left < right ? -1 : left > right ? 1 : 0;
   });
 }

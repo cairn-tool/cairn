@@ -87,7 +87,7 @@ urls:
 
 scripts: {} # named scripts for the scripts toolset; schema documented below
 
-agent: {} # what `agent verify` checks; schema documented below
+agent: {} # what `agent install` writes and `agent verify` checks; schema documented below
 
 commands: {} # command-specific defaults; schema documented below
 ```
@@ -131,15 +131,71 @@ block of each file it consults. An ancestor's malformed `urls:` block belongs to
 project and does not break `scripts run` for a sibling package, even though `loadConfig` would
 reject the same file.
 
-## Agent verification
+## Agent installs and verification
 
-`agent` is a top-level key, not a `commands.` entry. Its one member, `verify`, declares what
-[`agent verify`](commands/agent/verify.md) checks: which bundles a repository generated its
-committed agent trees from, and which toolchain is allowed to have generated them.
+`agent` is a top-level key, not a `commands.` entry. It has two members, which pair up:
+`install` declares what a repository places into itself, and `verify` declares what
+[`agent verify`](commands/agent/verify.md) asserts about the result.
 
-Markdown commands never read this block, but they do validate it — the same rule as
+Markdown commands never read either block, but they do validate both — the same rule as
 `scripts`, and for the same reason. A typo here is an error for every command that loads
 configuration rather than a surprise in CI.
+
+They are separate blocks rather than one because they answer different questions — one says
+what to _write_, the other asserts what is _there_ — and a flag that widened either would be a
+surprise in the other. A repository may declare one without the other.
+
+## `agent.install`
+
+What [`agent install`](commands/agent/install.md) places into this repository, so a local
+in-repo install is one command rather than one per bundle per target.
+
+```yaml
+agent:
+  install:
+    targets: [claude-code, codex]
+    scope: project
+    into: .
+    bundles:
+      - path: plugins/cairn-markdown
+      - path: plugins/cairn-agent
+        exclude: [codex]
+```
+
+| Key        | Required | Description                                                              |
+| ---------- | -------- | ------------------------------------------------------------------------ |
+| `targets`  | Yes      | Targets every bundle is installed for. At least one.                     |
+| `bundles`  | Yes      | One entry per bundle. At least one.                                      |
+| `scope`    | No       | `user` or `project`. Defaults to `project`.                              |
+| `into`     | No       | Install root override, relative to this file. Defaults to the profile's. |
+| `link`     | No       | Symlink the rendered trees instead of copying. Defaults to `false`.      |
+| `register` | No       | Edit host config to activate a marketplace install. Defaults to `false`. |
+
+Each `bundles` entry takes a `path` and, optionally, one of `include` or `exclude` — never
+both, the same rule the [marketplace spec](formats/agent-marketplace.md) uses, because their
+intersection has no reading a user would predict.
+
+| Key       | Required | Description                                                   |
+| --------- | -------- | ------------------------------------------------------------- |
+| `path`    | Yes      | Directory holding `agent-bundle.yaml`, relative to this file. |
+| `include` | No       | Install this bundle only for these targets.                   |
+| `exclude` | No       | Install this bundle for every declared target except these.   |
+
+The block is the cross product of `bundles` and `targets`, minus each bundle's own selector.
+`--target` on the command line **narrows** it and may not name a target the block omits: a
+flag that could add one would let CI install for a host the repository never declared.
+
+`path` and `into` are both resolved against the directory holding the configuration file and
+must stay inside it, for the same reason `agent.verify`'s paths are — see below.
+
+Every target declares the same project-scope merge root, so all of these land in one
+destination and one manifest. They are told apart by bundle, target, profile and scope; see
+[Several installs at one destination](formats/install-manifest.md#several-installs-at-one-destination).
+
+## `agent.verify`
+
+What [`agent verify`](commands/agent/verify.md) checks: which bundles a repository generated
+its committed agent trees from, and which toolchain is allowed to have generated them.
 
 ```yaml
 agent:
@@ -359,6 +415,29 @@ scripts:
     run: ./.claude/scripts/gather-context.sh "$@"
   lint-changed:
     exec: ["npm", "run", "lint"]
+agent:
+  install:
+    targets: [claude-code, codex]
+    scope: project
+    into: .
+    bundles:
+      - path: plugins/cairn-markdown
+  verify:
+    pins:
+      cli: { min: "2.0.0" }
+    defaults:
+      scope: project
+      profile: project
+      layout: merge
+    entries:
+      - name: markdown-claude-code
+        bundle: plugins/cairn-markdown
+        target: claude-code
+        destination: .
+      - name: markdown-codex
+        bundle: plugins/cairn-markdown
+        target: codex
+        destination: .
 commands:
   lint-dir:
     summary: true

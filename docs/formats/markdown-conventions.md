@@ -154,7 +154,8 @@ newline, which is not valid Markdown.
 
 ## Target-conditional blocks
 
-Markdown inside an agent bundle may also carry target-conditional regions:
+Markdown inside an agent bundle may also carry target-conditional regions, in a one-target
+legacy form and a branching form:
 
 ```markdown
 <!-- target:cursor -->
@@ -163,6 +164,20 @@ Cursor-specific instructions.
 
 <!-- /target:cursor -->
 ```
+
+```markdown
+<!-- if target:codex, cursor -->
+
+Either host.
+<!-- else -->
+
+Everywhere else.
+<!-- endif -->
+```
+
+Like the TOC markers, and unlike snippet links, these need a code-block guard: markers inside a
+fenced block or an inline code span are inert, so a document explaining the syntax keeps its
+examples.
 
 That is a bundle-format concern rather than a workspace one; see
 [Agent bundle format](agent-bundle.md#conditional-blocks).

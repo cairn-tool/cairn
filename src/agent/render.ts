@@ -9,6 +9,7 @@ import type {
   MarkdownComponent,
 } from "./types.js";
 import { diagnostic } from "./types.js";
+import { applyConditionals } from "./conditionals.js";
 import type { ModelClass } from "./targets/index.js";
 import { HOOK_EVENT_ALIASES, nativeHookEvent, profileFor } from "./targets/index.js";
 import { applyOverlayManifest, mergeOverlay, overlayArtifacts } from "./overlays.js";
@@ -24,19 +25,18 @@ function yamlFrontmatter(metadata: Record<string, unknown>, body: string): strin
     : body;
 }
 
-export function processTargetBlocks(content: string, target: AgentTarget): string {
-  const pattern =
-    /<!--\s*(target|platform):([^\s]+)\s*-->\r?\n?([\s\S]*?)<!--\s*\/\1:\2\s*-->\r?\n?/g;
-  let previous: string;
-  do {
-    previous = content;
-    content = content.replace(
-      pattern,
-      (_all, _syntax: string, blockTarget: string, body: string) =>
-        blockTarget === target ? body : "",
-    );
-  } while (content !== previous);
-  return content;
+/**
+ * Resolves target-conditional regions. Kept as a named export because it is the
+ * seam the unit tests and `agent inspect` reach for; the grammar itself lives in
+ * `./conditionals.js`, shared with the parser's validator so the two cannot
+ * disagree about what a document means.
+ */
+export function processTargetBlocks(
+  content: string,
+  target: AgentTarget,
+  options: { markdown?: boolean } = {},
+): string {
+  return applyConditionals(content, target, options);
 }
 
 function targetOverride(
@@ -961,7 +961,9 @@ export function renderBundle(
           content: textual
             ? Buffer.from(
                 rewritePlaceholders(
-                  processTargetBlocks(asset.content.toString("utf8"), target),
+                  processTargetBlocks(asset.content.toString("utf8"), target, {
+                    markdown: /\.md$/i.test(asset.path),
+                  }),
                   target,
                   "other",
                   diagnostics,

@@ -82,7 +82,8 @@ equivalent:
 | `${ARGUMENTS}`   | `$ARGUMENTS`, substituted natively                  |
 | `${SKILL_DIR}`   | `${CLAUDE_SKILL_DIR}`                               |
 
-For genuinely host-specific prose, use a conditional block rather than forking the file:
+For genuinely host-specific prose, use a conditional block rather than forking the file. The
+one-target form:
 
 ```markdown
 <!-- target:cursor -->
@@ -92,8 +93,28 @@ Cursor-specific instructions.
 <!-- /target:cursor -->
 ```
 
-An unmatched, misnested, or unclosed block is an error, and blocks are validated in **every**
-`.md` file in the bundle.
+The branching form, where a comma list is an OR and `not` negates the whole list:
+
+```markdown
+<!-- if target:claude-code -->
+
+!`git status --short`
+<!-- elif target:codex, cursor -->
+
+Run `git status --short` and read the output before continuing.
+<!-- else -->
+
+Check the working tree before continuing.
+<!-- endif -->
+```
+
+An unmatched, misnested, or unclosed block is an error (`AB121`), and so is a marker that
+_looks_ conditional but does not parse (`AB123`) — `<!-- target: cursor -->` with a space after
+the colon used to be silently inert. Blocks are validated in **every** file the renderer
+processes them in, which is every textual asset and not only Markdown.
+
+Markers inside a fenced code block or an inline code span are inert, so a skill may document
+this syntax without its own examples being stripped.
 
 Use `include:`/`exclude:` frontmatter to emit a component for some targets only.
 
