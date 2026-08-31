@@ -1,0 +1,72 @@
+# What this repository installs into itself, and what a verification asserts
+# about the result. Kept out of `.cairn.yml` deliberately: any config file sets
+# `config.root` and confines the workspace, which breaks `tests/e2e/contract.test.ts`
+# — it spawns the CLI with this repository as cwd while operating on temporary
+# workspaces. Both commands take `--config` for exactly this case.
+#
+#   cairn agent install --config cairn-verify.yml
+#   cairn agent verify  --config cairn-verify.yml
+#
+# The install writes `.claude/`, `.codex/`, `.agents/`, `.mcp.json` and `assets/`
+# at the repository root; all five are gitignored. Undo it with
+# `cairn agent uninstall <name> --target <target> --scope project --into .`.
+agent:
+  install:
+    targets: [claude-code, codex]
+    scope: project
+    into: .
+    bundles:
+      - path: plugins/cairn-markdown
+      - path: plugins/cairn-scripts
+      - path: plugins/cairn-usage
+      - path: plugins/cairn-archive
+      - path: plugins/cairn-agent
+  verify:
+    defaults:
+      scope: project
+      profile: project
+      layout: merge
+      # `orphaned` reads the install inventory; `strict` would also walk the
+      # repository root's generated directories, which is more than this needs.
+      unmanaged: orphaned
+    entries:
+      - name: cairn-markdown-claude-code
+        bundle: plugins/cairn-markdown
+        target: claude-code
+        destination: .
+      - name: cairn-scripts-claude-code
+        bundle: plugins/cairn-scripts
+        target: claude-code
+        destination: .
+      - name: cairn-usage-claude-code
+        bundle: plugins/cairn-usage
+        target: claude-code
+        destination: .
+      - name: cairn-archive-claude-code
+        bundle: plugins/cairn-archive
+        target: claude-code
+        destination: .
+      - name: cairn-agent-claude-code
+        bundle: plugins/cairn-agent
+        target: claude-code
+        destination: .
+      - name: cairn-markdown-codex
+        bundle: plugins/cairn-markdown
+        target: codex
+        destination: .
+      - name: cairn-scripts-codex
+        bundle: plugins/cairn-scripts
+        target: codex
+        destination: .
+      - name: cairn-usage-codex
+        bundle: plugins/cairn-usage
+        target: codex
+        destination: .
+      - name: cairn-archive-codex
+        bundle: plugins/cairn-archive
+        target: codex
+        destination: .
+      - name: cairn-agent-codex
+        bundle: plugins/cairn-agent
+        target: codex
+        destination: .

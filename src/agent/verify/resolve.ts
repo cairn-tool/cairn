@@ -46,7 +46,7 @@ function openForRead(file: string): number {
   return fs.openSync(file, O_RDONLY | (O_NONBLOCK ?? 0));
 }
 
-function readDocument(file: string): Record<string, unknown> {
+export function readAgentDocument(file: string): Record<string, unknown> {
   // The guards mirror `readRegistry` in `src/scripts/resolve.ts`: a
   // regular-file check so a FIFO cannot wedge the process, a size cap, and a
   // NUL probe. Unlike that one, all three are made against an open descriptor,
@@ -76,7 +76,7 @@ function readDocument(file: string): Record<string, unknown> {
 
 function parseAt(file: string): VerifyConfig | undefined {
   const directory = path.dirname(path.resolve(file));
-  const document = readDocument(file);
+  const document = readAgentDocument(file);
   if (document.agent === undefined) return undefined;
   return parseVerifyBlock(document.agent, { file: path.resolve(file), directory });
 }

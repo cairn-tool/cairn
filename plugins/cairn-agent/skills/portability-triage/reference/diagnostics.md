@@ -123,8 +123,24 @@ Cursor-specific instructions.
 <!-- /target:cursor -->
 ```
 
-Blocks are validated in **every** `.md` file in the bundle, and an unmatched, misnested, or
-unclosed one is an error (`AB120`, `AB121`) rather than being ignored.
+A comma list is an OR, `not` negates the whole list, and a block may branch:
+
+```markdown
+<!-- if target:codex, cursor -->
+
+Either host.
+<!-- else -->
+
+Everywhere else.
+<!-- endif -->
+```
+
+Blocks are validated in **every** file the renderer processes them in — every textual asset,
+not only Markdown. An unknown target is `AB120` and an unmatched, misnested, or unclosed block
+is `AB121`. A marker that looks conditional but does not parse is `AB123`: `<!-- target: cursor -->`,
+with a space after the colon, used to match nothing and so apply to no target at all, silently.
+
+Markers inside a fenced code block or an inline code span are inert.
 
 ### 5 — a native overlay
 

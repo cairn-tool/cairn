@@ -531,7 +531,7 @@ const CONTRACTS: CommandContract[] = [
       FINDINGS("Install finding, or --check found drift"),
     ],
     notes:
-      "Renders and packages in memory rather than trusting a dist tree, so an install is always derived from the bundle. Destinations come from the target profiles. --register is the only flag that edits host config, and only the marketplace layout needs it. Approximate render diagnostics do not fail install, unlike convert and validate.",
+      "Renders and packages in memory rather than trusting a dist tree, so an install is always derived from the bundle. Destinations come from the target profiles. --register is the only flag that edits host config, and only the marketplace layout needs it. Approximate render diagnostics do not fail install, unlike convert and validate. --target is repeatable and one destination may hold several installs, told apart by bundle, target, profile and scope in the manifest; occupancy is asked per path, so a destination is not occupied merely because a different bundle is recorded there. A run is planned in full before anything is written and a blocked plan writes nothing at all. --config installs the agent.install block a repository declares, and --target narrows that block rather than adding to it. Because a run may write to several destinations, artifacts[].path is not unique across the payload: two plans legitimately write the same relative path to different roots, and the artifact row shape is shared by every agent command rather than carrying a destination for this one caller.",
   }),
   agentCommand("uninstall", {
     writes: true,
@@ -542,7 +542,7 @@ const CONTRACTS: CommandContract[] = [
       FINDINGS("Manifest missing or malformed, or --check found the install still present"),
     ],
     notes:
-      "Removes exactly the inventory recorded in .cairn-install.json and nothing else. --scope is optional: both scopes are searched, and two matches is an error rather than a guess.",
+      "Removes exactly the inventory recorded in .cairn-install.json and nothing else. --scope is optional: both scopes are searched, and two matches is an error rather than a guess. A destination may record several installs; removal is matched on the bundle name and the target, leaves a sibling record and any path it also owns in place, and rewrites the manifest with the survivors rather than deleting it.",
   }),
   agentCommand("installed", {
     stability: "experimental",

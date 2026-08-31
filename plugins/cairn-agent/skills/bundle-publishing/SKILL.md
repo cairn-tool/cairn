@@ -71,6 +71,50 @@ cairn agent installed
 cairn agent uninstall my-bundle --target cursor
 ```
 
+### One destination may hold several installs
+
+`--target` is repeatable, and every target's project scope resolves to the same merge root, so
+a repository can install for two hosts — or install two bundles — into one directory:
+
+```bash
+cairn agent install ./my-bundle --target claude-code --target codex --scope project --into .
+```
+
+Installs are told apart by `(bundle, target, profile, scope)` in the one `.cairn-install.json`,
+so reinstalling one prunes only its own stale files and uninstalling one leaves the other.
+**A run is planned in full before anything is written**: if any plan is blocked, nothing is
+written for any of them.
+
+Two installs writing byte-identical content to one path — a bundle's assets, which every
+target places at the destination root — is co-ownership. Writing _different_ content there is
+`AB808`, which is reachable: Antigravity and Codex both declare `.agents/skills/<name>/`.
+
+### A repository can declare its own installs
+
+Put an `agent.install` block in `.cairn.yml`, beside the `agent.verify` block `agent verify`
+reads, and the whole in-repo install is one command:
+
+```yaml
+agent:
+  install:
+    targets: [claude-code, codex]
+    scope: project
+    into: .
+    bundles:
+      - path: plugins/cairn-markdown
+      - path: plugins/cairn-agent
+        exclude: [codex]
+```
+
+```bash
+cairn agent install                       # walks up for .cairn.yml
+cairn agent install --config other.yml    # names one explicitly
+```
+
+`--target` there **narrows** the block and may not name a target it omits, the same rule
+`agent marketplace` uses. Prefer this over `agent convert` plus a copy: a copied tree has no
+install manifest, so a file the bundle stops rendering is never flagged.
+
 **`--register` is the only flag that edits host config**, and only Claude Code's marketplace
 layout needs it. Without it the tree is still written and the exact required edit is reported as
 `AB805`.

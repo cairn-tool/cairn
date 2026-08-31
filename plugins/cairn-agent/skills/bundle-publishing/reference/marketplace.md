@@ -92,9 +92,21 @@ Codex **requires** an icon (`.png`/`.svg`, ≤ 1 MiB). Screenshots are `.png`/`.
 `--into` replaces the **root**, not the final directory: a plugin-dir or marketplace install still
 lands at `<into>/<name>`.
 
-Each destination gets a `.cairn-install.json` recording generator, the installed unit's identity,
-target, profile, scope, layout, mode, and a path/mode/sha256 inventory. `agent uninstall` removes
-exactly that inventory; `agent installed` lists what it finds.
+`--target` is repeatable and accepts `all`, which expands only to targets declaring a location
+for the requested scope. `--config <file>` installs an `agent.install` block instead of a single
+bundle, and `--name` narrows that to one bundle. `--profile` applies to a single `--target`.
+
+Each destination gets a `.cairn-install.json` recording the generator and one entry per install:
+the installed unit's identity, target, profile, scope, layout, mode, and a path/mode/sha256
+inventory. **A destination may hold several**, keyed by `(bundle, target, profile, scope)`.
+`agent uninstall` removes exactly one entry's inventory — matched on the bundle name _and_ the
+target — leaving any sibling and any path it also owns; `agent installed` reports one row per
+entry, so one directory can produce several.
+
+One entry is serialized flat, with its fields beside `generator`, which is also the shape every
+manifest written before multi-entry destinations has. Two or more are written under `installs`.
+An older cairn reads the `installs` shape as `malformed`, so it refuses to uninstall rather than
+mis-removing.
 
 ## Diagnostics
 
@@ -108,7 +120,9 @@ exactly that inventory; `agent installed` lists what it finds.
 | `AB507`         | The target has no catalog for the selected mode              |
 | `AB508`         | The `--from-dist` tree is not what this bundle produces      |
 | `AB800`         | No recorded install location for this target and scope       |
-| `AB801`         | Destination occupied by something else                       |
+| `AB801`         | A path exists that no install record accounts for            |
 | `AB805`         | Host activation edit required but `--register` was not given |
 | `AB807`         | `--link` in use; edits are live                              |
+| `AB808`         | Two installs claim one path with different content           |
+| `AB809`         | `--link` cannot share a destination with another install     |
 | `AB900`–`AB907` | Collection spec: schema, fields, bundle paths, selection     |

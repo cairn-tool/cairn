@@ -131,6 +131,9 @@ Approximate on Claude Code and Codex; **unsupported on Cursor**, which has no pe
 
 ## Conditional blocks
 
+The legacy form carries one literal target; the `platform:` spelling is still accepted, and
+the closer repeats the opener's keyword and name.
+
 ```markdown
 <!-- target:cursor -->
 
@@ -139,8 +142,29 @@ Cursor-specific instructions.
 <!-- /target:cursor -->
 ```
 
-Validated in **every** `.md` file in the bundle, not only in recognized components. The legacy
-`platform:` spelling is still accepted.
+The conditional form carries OR, negation, and branching.
+
+```markdown
+<!-- if target:claude-code -->
+
+!`git status --short`
+<!-- elif target:codex, cursor -->
+
+Run `git status --short` and read the output before continuing.
+<!-- else -->
+
+Check the working tree before continuing.
+<!-- endif -->
+```
+
+A comma list is an OR; `not` negates the whole list; blocks nest and take exactly one branch.
+Markers inside a fenced code block are inert, so an example like the ones above is safe to
+write in a skill.
+
+Validated in **every** file the renderer processes blocks in — every textual asset, not only
+recognized components. An unknown target is `AB120`, an unbalanced block `AB121`, and a marker
+that looks conditional but does not parse (`<!-- target: cursor -->`, with a space) is `AB123`
+rather than being silently ignored.
 
 ## Diagnostics
 

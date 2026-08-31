@@ -121,8 +121,17 @@ function existenceOnly(relative: string): boolean {
 export interface TreeDiffOptions {
   /** `off` skips both extra-file passes; `orphaned` reads only the inventory. */
   unmanaged: "off" | "orphaned" | "strict";
-  /** Paths recorded by a prior install, destination-relative. */
+  /**
+   * This entry's own prior record, destination-relative. The orphan source: a
+   * sibling install's files are not this bundle's orphans.
+   */
   priorInventory?: readonly string[];
+  /**
+   * Every record's paths at this destination. The `strict` walk's allowlist,
+   * which must be the union or a co-resident install's files all report as
+   * unmanaged. Defaults to `priorInventory`.
+   */
+  managedPaths?: readonly string[];
   /** Directory prefixes a `strict` walk may descend into. */
   walkRoots?: readonly string[];
 }
@@ -164,7 +173,7 @@ export function diffTree(
       if (!expected.has(recorded) && !existenceOnly(recorded)) diff.orphaned.push(recorded);
 
   if (options.unmanaged === "strict") {
-    const inventory = new Set(options.priorInventory ?? []);
+    const inventory = new Set(options.managedPaths ?? options.priorInventory ?? []);
     for (const root of options.walkRoots ?? []) {
       const absolute = path.join(destination, root);
       if (!fs.existsSync(absolute) || !fs.statSync(absolute).isDirectory()) continue;

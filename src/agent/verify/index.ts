@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { loadBundle } from "../parser.js";
 import { renderBundle } from "../render.js";
-import { readInstallManifest, planInstall } from "../install/index.js";
-import type { InstallManifest } from "../install/index.js";
+import { installKey, readInstallDocument, planInstall } from "../install/index.js";
+import type { InstallDocument, InstallRecord } from "../install/index.js";
 import { CONVERSION_REPORT, diffOutput } from "../output.js";
 import type { ConversionProvenance } from "../output.js";
 import { PROFILE_SCHEMA_VERSION, compareSemver } from "../targets/schema.js";
@@ -215,7 +215,7 @@ function readConversionProvenance(destination: string): VerifyProvenance | undef
   }
 }
 
-function provenanceOf(manifest: InstallManifest): VerifyProvenance {
+function provenanceOf(manifest: InstallDocument): VerifyProvenance {
   return {
     source: ".cairn-install.json",
     generator: manifest.generator,
@@ -316,7 +316,7 @@ function verifyEntry(entry: VerifyEntry): {
   });
   diagnostics.push(...plan.diagnostics.filter((item) => item.code !== "AB802"));
 
-  const prior = readInstallManifest(plan.destination || entry.destination);
+  const prior = readInstallDocument(plan.destination || entry.destination);
   if (prior === "malformed")
     diagnostics.push(
       error("AB806", `Install manifest at ${entry.destination} is malformed`, {
@@ -326,13 +326,31 @@ function verifyEntry(entry: VerifyEntry): {
       }),
     );
 
-  const inventory =
-    prior !== "missing" && prior !== "malformed" ? prior.files.map((file) => file.path) : undefined;
+  // A destination may record several installs. The orphan source is *this*
+  // entry's record alone — a sibling's files are not this bundle's orphans —
+  // while the strict walk's allowlist is the union of every record, or a
+  // sibling's files would all report as unmanaged.
+  const records: InstallRecord[] =
+    prior === "missing" || prior === "malformed" ? [] : prior.installs;
+  const record = records.find(
+    (item) =>
+      installKey(item) ===
+      installKey({
+        bundle: { name: bundle.name },
+        target: entry.target,
+        profile: plan.profile,
+        scope: entry.scope,
+      }),
+  );
+  const inventory = record?.files.map((file) => file.path);
+  const managedPaths = records.length
+    ? [...new Set(records.flatMap((item) => item.files.map((file) => file.path)))]
+    : undefined;
   if (!inventory && entry.unmanaged !== "off")
     diagnostics.push(
       notice(
         "AB426",
-        `No install manifest at ${entry.destination}; files this bundle no longer renders cannot be detected`,
+        `No install of '${bundle.name}' recorded at ${entry.destination}; files this bundle no longer renders cannot be detected`,
         {
           target: entry.target,
           path: entry.destination,
@@ -345,6 +363,7 @@ function verifyEntry(entry: VerifyEntry): {
   const diff = diffTree(plan.destination || entry.destination, plan.artifacts, {
     unmanaged: entry.unmanaged,
     priorInventory: inventory,
+    ...(managedPaths ? { managedPaths } : {}),
     walkRoots:
       entry.unmanaged === "strict"
         ? walkRootsFor(entry.target, plan.profile, expectedPaths)

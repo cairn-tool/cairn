@@ -9,6 +9,9 @@ cairn agent installed [options]
 Lists bundles this CLI has installed, by scanning the roots declared on the target profiles
 for `.cairn-install.json`. It reports observed state and never writes.
 
+One destination may record several installs, so one directory can produce several rows. Rows
+are sorted by target, scope, name, profile, and destination.
+
 **Stability: experimental.** The payload shape may change before it hardens.
 
 ## Options

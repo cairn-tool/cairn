@@ -18,7 +18,7 @@ const PROFILES = ["plugin", "project"] as const;
  * rather than a surprise in CI.
  */
 
-const ROOT_KEYS = new Set(["verify"]);
+const ROOT_KEYS = new Set(["verify", "install"]);
 const VERIFY_KEYS = new Set(["pins", "defaults", "entries"]);
 const PIN_KEYS = new Set(["cli", "profileSchemaVersion", "targets"]);
 const BOUND_KEYS = new Set(["exact", "min", "max"]);

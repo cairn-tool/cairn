@@ -1480,4 +1480,154 @@ describe("agent install", () => {
     expect(plugin.agents).toBeUndefined();
     expect(plugin.hooks).toBeUndefined();
   });
+
+  it("places two targets in one project root and keeps both", async () => {
+    const source = installBundle();
+    const project = fs.mkdtempSync(path.join(os.tmpdir(), "agent-install-both-"));
+    temporary.push(project);
+    const result = await run(
+      "agent",
+      "install",
+      source,
+      "--target",
+      "claude-code",
+      "--target",
+      "codex",
+      "--scope",
+      "project",
+      "--into",
+      project,
+      "-fj",
+    );
+    expect(result.exitCode).toBe(0);
+    const payload = JSON.parse(result.stdout) as {
+      install: { installs: Array<{ target: string; name: string }> };
+    };
+    expect(payload.install.installs.map((entry) => entry.target).sort()).toEqual([
+      "claude-code",
+      "codex",
+    ]);
+    // Claude Code's project skills root and Codex's are different directories,
+    // which is why the two coexist at all.
+    expect(fs.existsSync(path.join(project, ".claude", "skills", "greet"))).toBe(true);
+    expect(fs.existsSync(path.join(project, ".agents", "skills", "greet"))).toBe(true);
+
+    const listed = await run(
+      "agent",
+      "installed",
+      "--target",
+      "claude-code",
+      "--target",
+      "codex",
+      "--scope",
+      "project",
+      "--into",
+      project,
+      "-fj",
+    );
+    const listing = JSON.parse(listed.stdout) as { install: { installs: unknown[] } };
+    expect(listing.install.installs).toHaveLength(2);
+
+    // Removing one leaves the other's tree entirely alone.
+    const removed = await run(
+      "agent",
+      "uninstall",
+      "hello",
+      "--target",
+      "codex",
+      "--scope",
+      "project",
+      "--into",
+      project,
+    );
+    expect(removed.exitCode).toBe(0);
+    expect(fs.existsSync(path.join(project, ".claude", "skills", "greet"))).toBe(true);
+    expect(fs.existsSync(path.join(project, ".agents"))).toBe(false);
+  });
+
+  it("writes nothing when any plan in a run is blocked", async () => {
+    const source = installBundle();
+    // A conditional block makes the antigravity and codex renders of the one
+    // path they share differ, which is a genuine AB808.
+    fs.writeFileSync(
+      path.join(source, "skills", "greet", "SKILL.md"),
+      "---\nname: greet\ndescription: Say hello\n---\n\n<!-- target:codex -->\nCodex only.\n<!-- /target:codex -->\n",
+    );
+    const project = fs.mkdtempSync(path.join(os.tmpdir(), "agent-install-clash-"));
+    temporary.push(project);
+    const result = await run(
+      "agent",
+      "install",
+      source,
+      "--target",
+      "antigravity",
+      "--target",
+      "codex",
+      "--scope",
+      "project",
+      "--into",
+      project,
+      "-fj",
+    );
+    expect(result.exitCode).toBe(2);
+    const payload = JSON.parse(result.stderr || result.stdout) as {
+      diagnostics: Array<{ code: string }>;
+    };
+    expect(payload.diagnostics.map((item) => item.code)).toContain("AB808");
+    expect(fs.readdirSync(project)).toEqual([]);
+  });
+
+  it("installs the agent.install block a config file declares", async () => {
+    const source = installBundle();
+    const project = path.dirname(source);
+    fs.writeFileSync(
+      path.join(project, "cairn-verify.yml"),
+      "agent:\n  install:\n    targets: [claude-code, codex]\n    scope: project\n    into: .\n    bundles:\n      - path: hello\n",
+    );
+    const result = await run(
+      "agent",
+      "install",
+      "--config",
+      path.join(project, "cairn-verify.yml"),
+      "-fj",
+    );
+    expect(result.exitCode).toBe(0);
+    const payload = JSON.parse(result.stdout) as {
+      source: string;
+      install: { installs: Array<{ target: string }> };
+    };
+    expect(payload.source).toBe(path.join(project, "cairn-verify.yml"));
+    expect(payload.install.installs).toHaveLength(2);
+
+    // --target narrows the block; it may not name a target the block omits.
+    const widened = await run(
+      "agent",
+      "install",
+      "--config",
+      path.join(project, "cairn-verify.yml"),
+      "--target",
+      "cursor",
+    );
+    expect(widened.exitCode).toBe(1);
+    expect(widened.stderr).toContain("narrows");
+  });
+
+  it("rejects --profile with more than one target", async () => {
+    const source = installBundle();
+    const result = await run(
+      "agent",
+      "install",
+      source,
+      "--target",
+      "claude-code",
+      "--target",
+      "codex",
+      "--scope",
+      "project",
+      "--profile",
+      "project",
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("single --target");
+  });
 });

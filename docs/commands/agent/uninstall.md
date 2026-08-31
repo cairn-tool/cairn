@@ -10,6 +10,12 @@ Removes a bundle previously placed by [`agent install`](install.md). It reads
 `.cairn-install.json` at the destination and deletes **exactly that inventory** — never
 neighboring files the host or another tool may have added.
 
+A destination may record [several installs](../../formats/install-manifest.md#several-installs-at-one-destination).
+Removal is per record, matched on the bundle name **and** the target, so a sibling install is
+left in place: its files stay, including any path both records own, and the manifest is
+rewritten with the survivors rather than deleted. The file is deleted only when the last record
+goes.
+
 **Stability: experimental.** The payload shape may change before it hardens.
 
 ## Arguments
@@ -20,16 +26,16 @@ neighboring files the host or another tool may have added.
 
 ## Options
 
-| Option              | Default  | Description                                                                                            |
-| ------------------- | -------- | ------------------------------------------------------------------------------------------------------ |
-| `--target <target>` | Required | One target: `claude-code`, `codex`, `cursor`, `antigravity`, or `opencode`. Not repeatable, not `all`. |
-| `--scope <scope>`   | Search   | `user` or `project`. When omitted, both scopes are searched.                                           |
-| `--into <dir>`      | Profile  | Override the install root the profile declares.                                                        |
-| `--dry-run`         | Off      | Report the removal without writing.                                                                    |
-| `--check`           | Off      | Exit 2 when the named install is still present; exit 0 when already absent.                            |
-| `--format <fmt>`    | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                                         |
-| `--envelope`        | Off      | Wrap `--format json` output in the versioned result envelope.                                          |
-| `-h`, `--help`      | —        | Show help.                                                                                             |
+| Option              | Default  | Description                                                                                                                                |
+| ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--target <target>` | Required | One target: `claude-code`, `codex`, `cursor`, `antigravity`, or `opencode`. Not repeatable, not `all`. It selects which record is removed. |
+| `--scope <scope>`   | Search   | `user` or `project`. When omitted, both scopes are searched.                                                                               |
+| `--into <dir>`      | Profile  | Override the install root the profile declares.                                                                                            |
+| `--dry-run`         | Off      | Report the removal without writing.                                                                                                        |
+| `--check`           | Off      | Exit 2 when the named install is still present; exit 0 when already absent.                                                                |
+| `--format <fmt>`    | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.                                                                             |
+| `--envelope`        | Off      | Wrap `--format json` output in the versioned result envelope.                                                                              |
+| `-h`, `--help`      | —        | Show help.                                                                                                                                 |
 
 `--check` and `--dry-run` cannot be combined.
 

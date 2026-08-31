@@ -22,3 +22,11 @@ _PLAN.md
 # Plugin build output
 dist-plugins/
 plugins/*/.install/
+
+# In-repo dogfood install: `cairn agent install --config cairn-verify.yml`
+.cairn-install.json
+.claude/
+.codex/
+.agents/
+.mcp.json
+/assets/
