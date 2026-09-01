@@ -1,6 +1,7 @@
 import { antigravityProvider } from "./antigravity.js";
 import { claudeCodeProvider } from "./claude-code.js";
 import { codexProvider } from "./codex.js";
+import { cursorProvider } from "./cursor.js";
 import { geminiCliProvider } from "./gemini-cli.js";
 import { opencodeProvider } from "./opencode.js";
 import type { UsageProvider } from "./types.js";
@@ -21,6 +22,7 @@ export const PROVIDERS: readonly UsageProvider[] = [
   // the e2e suite pins the earlier entries by position.
   geminiCliProvider,
   opencodeProvider,
+  cursorProvider,
 ];
 
 export const DEFAULT_PROVIDER = claudeCodeProvider.name;

@@ -27,9 +27,12 @@ machine, and what its logs can answer.
 | `antigravity` | `~/.gemini/antigravity-cli`         | CLI only; the IDE store is encrypted. No cache detail, skills, or MCP.                               |
 | `gemini-cli`  | `~/.gemini`                         | No environment override. Slash commands come from a per-project `logs.json`; no MCP or hook records. |
 | `opencode`    | `$XDG_DATA_HOME/opencode`           | One SQLite store for every session. No skills, hooks, MCP, or slash commands.                        |
+| `cursor`      | The Cursor user-data directory      | One SQLite store for every conversation. **Stopped writing token counters in December 2025.**        |
 
-Cursor is not registered. It keeps its chat history in a SQLite store whose shape is undocumented,
-and adding it needs a machine with real data to write and verify a parser against.
+Cursor is the only source that reads from a platform-specific location and the only one whose
+files span two trees; see [its usage page](../../providers/cursor/usage-logs.md). It is also the
+only one whose tokens have an end date: the figures it wrote are real, and it stopped writing
+them, so a window after 2025 reports sessions and tools against no tokens.
 
 ## Capabilities are data
 

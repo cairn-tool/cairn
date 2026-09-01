@@ -279,7 +279,7 @@ const CONTRACTS: CommandContract[] = [
     ...usageCommand("summary"),
     outputSchema: "usage-summary",
     notes:
-      "Headline totals over the selection. Each provider is normalized onto one token model, which means undoing a different distortion in each: Claude Code writes one API response as several lines each carrying an identical copy of its usage; Codex reports a running total per thread rather than a per-request figure; Antigravity reports a per-request context size that is not a running total at all; Gemini CLI does all three at once, writing one turn several times under a single id while reporting a per-request context size that counts its cached prefix inside the input figure. `--provider all` merges every source that has logs on this machine. " +
+      "Headline totals over the selection. Each provider is normalized onto one token model, which means undoing a different distortion in each: Claude Code writes one API response as several lines each carrying an identical copy of its usage; Codex reports a running total per thread rather than a per-request figure; Antigravity reports a per-request context size that is not a running total at all; Gemini CLI does all three at once, writing one turn several times under a single id while reporting a per-request context size that counts its cached prefix inside the input figure; Cursor is the one source needing no correction at all, and the one whose counters stop, having written real per-request figures only until December 2025 and zeroes since. `--provider all` merges every source that has logs on this machine. " +
       STRICT_NOTE,
   },
   usageCommand("tokens", {

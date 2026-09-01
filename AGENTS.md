@@ -421,8 +421,49 @@ part.time_updated)` with the row counts as `size` — **not** the `.db` file's s
   `oauth_creds.json` out of reach. A `gemini-cli` prompt count taken over subagent transcripts is
   wrong by a factor of fourteen: a subagent's `user` record is the instruction its parent
   injected, so prompts are counted in main transcripts only.
-- **Cursor is deliberately unregistered.** There is no local corpus to write or verify a parser
-  against; `~/.cursor` on a machine without Cursor holds only third-party hook config.
+- **Cursor's tokens have an end date, and that is the host's doing.** `tokenCount.{inputTokens,
+outputTokens}` on a `bubbleId:` record is a real per-request figure with no distortion to undo —
+  the only provider needing none — but on a real corpus every nonzero one falls between
+  2025-06-17 and 2025-12-23. Newer conversations carry the field zeroed and settle usage
+  server-side behind `usageUuid`. So a turn whose counters are zero emits **no response event**
+  (counting them would report a request per turn against no tokens for the whole modern corpus),
+  and a window after 2025 correctly reports sessions and tools with no tokens. `contextTokensUsed`
+  is the only live figure and is deliberately unread: it is the last turn's context size,
+  overwritten each turn and excluding output, so it can be neither summed like Antigravity's nor
+  differenced like Codex's. `cacheTokens` is `false` because no cache counter has ever existed in
+  that schema. `tests/unit/usage-cursor.test.ts` pins each of these.
+- **Cursor's conversation index is incomplete, so discovery does not use it.** `composerHeaders`
+  is a recent table Cursor gated behind its own flag and never backfilled, and the legacy
+  `ItemTable['composer.composerHeaders'].allComposers` beside it does not make up the difference:
+  161 of the 229 token-bearing conversations on a real store are in neither, which is 61% of all
+  the tokens there are to report. `discover()` therefore enumerates `composerData:` keys and both
+  indexes are read only to **enrich** identity (workspace, subagent role), never to decide a
+  conversation exists. Every `cursorDiskKV` read is a **key range**, not a `LIKE`, so the UNIQUE
+  index on `key` is always used — that table is ~450k rows and 5 GB of values. Unlike
+  `opencode.ts` the store is not reduced up front: only the cheap index is memoized, `parse`
+  reads one conversation's range, and it projects its seven fields **in SQL** so a 9 KB turn body
+  never crosses into JavaScript.
+- **Cursor is the only provider whose files span two trees, and the only `ArchiveProfile` with a
+  second root.** The usage provider roots at the Electron user-data directory, because that is
+  where the store is; the plans, agent transcripts and produced files are under `~/.cursor`. On
+  macOS those share only `$HOME`, and rooting a set there is the home-directory sweep
+  `src/archive/sets.ts` exists to prevent — so `ArchiveProfile.altRoot` and `ArtifactSet.tree`
+  were added, both optional and absent on the other five profiles. A `tree: "alt"` set
+  contributes nothing when that tree is absent rather than falling back to the primary root, and
+  `--logs` does not redirect it. Cursor's `root()` tries platform candidates in order rather than
+  branching on `process.platform`, which is what keeps it hermetic under the `HOME`-swapping e2e
+  suite. Its `state.vscdb` set matches by **exact equality**: that excludes the `-wal`/`-shm`
+  sidecars and `state.vscdb.backup`, a stale 3.4 GB copy. Note that store holds
+  `cursorAuth/accessToken`, so `archive run --include logs` for Cursor produces an archive to
+  treat as a secret.
+- **A Cursor turn is not a response, and carries no timestamp.** 134,306 assistant turns against
+  3,553 prompts, because each tool step is its own turn — which is why requests come from the
+  token counters and not from turns. `timingInfo.clientRpcSendTime` exists on 953 of 137,895
+  turns and on 5 of the 748 that carry tokens, so it is used where present and every other event
+  is anchored on the conversation's `createdAt`. Day rollups are therefore per conversation, the
+  only provider where they are not per record. A spawn's role comes from joining the parent's
+  `task_v2` call to the child conversation's `subagentInfo.toolCallId` — by identifier, not by
+  guess — because the parent's call does not name it.
 - **Every pre-rename identifier is still a read path, and the `LEGACY_*` constants are why.**
   The tool was `claude-cli` through v1.11.0. Eight constants carry the old spelling —
   `LEGACY_CONFIG_FILENAME`, `LEGACY_TOC_START`/`_END`, `LEGACY_SNIPPET_ATTRIBUTE`,

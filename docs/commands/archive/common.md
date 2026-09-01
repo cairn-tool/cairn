@@ -41,13 +41,23 @@ because they are three orders of magnitude larger.
 
 ### Per provider
 
-| Provider      | Plans                                       | Artifacts                                         | Transcripts                             | Logs                                               |
-| ------------- | ------------------------------------------- | ------------------------------------------------- | --------------------------------------- | -------------------------------------------------- |
-| `claude-code` | `plans/*.md`                                | `projects/**/tool-results/**`, `**/memory/*.md`   | `projects/**/*.jsonl` and subagent meta | `history.jsonl`, `daemon.log`, shell snapshots     |
-| `codex`       | — (Codex writes none)                       | `computer-use/**`                                 | `sessions/**/rollout-*.jsonl`           | `history.jsonl`, `*.sqlite`                        |
-| `antigravity` | `brain/*/**.md` outside `.system_generated` | other `brain/` output outside `.system_generated` | `**/logs/transcript.jsonl`              | `log/*.log`, `history.jsonl`, `conversations/*.db` |
-| `gemini-cli`  | `tmp/*/*/plans/*.md`                        | `tmp/*/tool-outputs/**`                           | `tmp/*/chats/**/*.jsonl`                | `tmp/*/logs.json`                                  |
-| `opencode`    | — (OpenCode writes none)                    | `storage/**/*.json`                               | — (they are rows in `opencode.db`)      | `log/*.log`, `snapshot/**`, `opencode.db`          |
+| Provider      | Plans                                       | Artifacts                                         | Transcripts                                | Logs                                                                                 |
+| ------------- | ------------------------------------------- | ------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `claude-code` | `plans/*.md`                                | `projects/**/tool-results/**`, `**/memory/*.md`   | `projects/**/*.jsonl` and subagent meta    | `history.jsonl`, `daemon.log`, shell snapshots                                       |
+| `codex`       | — (Codex writes none)                       | `computer-use/**`                                 | `sessions/**/rollout-*.jsonl`              | `history.jsonl`, `*.sqlite`                                                          |
+| `antigravity` | `brain/*/**.md` outside `.system_generated` | other `brain/` output outside `.system_generated` | `**/logs/transcript.jsonl`                 | `log/*.log`, `history.jsonl`, `conversations/*.db`                                   |
+| `gemini-cli`  | `tmp/*/*/plans/*.md`                        | `tmp/*/tool-outputs/**`                           | `tmp/*/chats/**/*.jsonl`                   | `tmp/*/logs.json`                                                                    |
+| `opencode`    | — (OpenCode writes none)                    | `storage/**/*.json`                               | — (they are rows in `opencode.db`)         | `log/*.log`, `snapshot/**`, `opencode.db`                                            |
+| `cursor`      | `plans/*.plan.md`                           | `projects/**/{canvases,uploads,assets}/**`        | `projects/**/agent-transcripts/**/*.jsonl` | `state.vscdb`, `workspaceStorage/*/state.vscdb`, `ai-code-tracking.db`, `hooks.json` |
+
+**Cursor's sets span two trees**, and it is the only provider where they do. Its plans,
+transcripts and produced files are under `~/.cursor`, while the conversation store is in the
+Electron user-data directory the usage provider roots at. On macOS those share only `$HOME`, and
+rooting a set there is the home-directory sweep this design forbids, so the profile declares the
+second tree explicitly and each set says which one it belongs to. The mechanism and the
+exclusions are on the [Cursor archiving page](../../providers/cursor/archiving.md) — note that
+its `state.vscdb` is 5.65 GB and holds live auth tokens, so `--include logs` for that provider
+produces an archive that should be treated as a secret.
 
 Antigravity's plans and artifacts are told apart from its machinery by one directory name,
 `.system_generated`, rather than by a list of filenames. Its `transcript_full.jsonl` is
@@ -56,8 +66,8 @@ strings are truncated, so archiving both would store the same conversation twice
 
 ### Live databases
 
-Every Codex `.sqlite` and all of Antigravity's conversation `.db` files carry live `-wal`
-sidecars. Copying the main file alone can capture a page image torn mid-write, and a `.db`
+Every Codex `.sqlite`, all of Antigravity's conversation `.db` files, OpenCode's `opencode.db`,
+and all of Cursor's `.vscdb` and `.db` files carry live `-wal` sidecars. Copying the main file alone can capture a page image torn mid-write, and a `.db`
 without its `-wal` may be missing recent writes entirely. Those sets are marked for a **SQLite
 online backup**, which produces one consistent file. The sidecars are never archived beside the
 database; their contents are folded into the snapshot.

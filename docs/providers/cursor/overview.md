@@ -1,17 +1,18 @@
 # Cursor
 
-An editor rather than a CLI, and the only provider here that fills exactly one role: it is a
-conversion target, and nothing else.
+An editor rather than a CLI, and the only provider whose files live in two unrelated trees:
+a small configuration directory at `~/.cursor`, and the Electron user-data directory holding
+the conversation store.
 
-| Role              | Supported | Identifier | Declared in                   |
-| ----------------- | --------- | ---------- | ----------------------------- |
-| Conversion target | yes       | `cursor`   | `src/agent/targets/cursor.ts` |
-| Usage log source  | **no**    | —          | deliberately unregistered     |
-| Archive source    | **no**    | —          | follows from the above        |
+| Role              | Supported | Identifier | Declared in                     |
+| ----------------- | --------- | ---------- | ------------------------------- |
+| Conversion target | yes       | `cursor`   | `src/agent/targets/cursor.ts`   |
+| Usage log source  | yes       | `cursor`   | `src/usage/providers/cursor.ts` |
+| Archive source    | yes       | `cursor`   | `src/archive/sets.ts`           |
 
 ## Where things live
 
-Cairn writes to two Cursor surfaces and reads from neither.
+Cairn **writes** to two Cursor surfaces:
 
 ```text
 ~/.cursor/plugins/local/<bundle>/      user-scope plugin install
@@ -27,6 +28,24 @@ Cairn writes to two Cursor surfaces and reads from neither.
 A plugin-profile render also emits `.cursor/rules/<name>.mdc` **inside the plugin tree**, which
 is the one place a rule reaches a Cursor plugin at all.
 
+And **reads** from two trees, which is what makes this provider unusual:
+
+```text
+<user data>/                       ~/Library/Application Support/Cursor on macOS,
+                                   %APPDATA%/Cursor on Windows, ~/.config/Cursor on Linux
+  User/globalStorage/state.vscdb   conversations, turns, tokens, models  (usage + archive)
+  User/workspaceStorage/*/state.vscdb  legacy inline-edit prompt history (archive)
+
+~/.cursor/
+  plans/*.plan.md                             plan documents            (archive)
+  projects/<slug>/agent-transcripts/**/*.jsonl agent transcripts        (archive)
+  projects/<slug>/{canvases,uploads,assets}/  files a session produced  (archive)
+  ai-tracking/ai-code-tracking.db             per-model line attribution (archive)
+```
+
+The token counters are in the first tree and the session output is in the second, and on macOS
+the two share only `$HOME`. That is why the archive profile is the only one with a second root.
+
 ## Host profile
 
 | Field                   | Value              |
@@ -41,8 +60,8 @@ is the one place a rule reaches a Cursor plugin at all.
 ## Pages
 
 - [Agent bundles](agent-bundles.md) — the conversion target profile in full
-- [Usage logs](usage-logs.md) — why there is no usage provider
-- [Archiving](archiving.md) — why there are no artifact sets
+- [Usage logs](usage-logs.md) — the editor store, and the token cutoff
+- [Archiving](archiving.md) — the artifact sets, across both trees
 
 ## Caveats worth knowing up front
 
@@ -54,5 +73,12 @@ is the one place a rule reaches a Cursor plugin at all.
   nesting.
 - **Command policies are unsupported.** Cursor has no permission surface; a policy converts
   only through an explicit hook override, and is otherwise reported and dropped.
-- **`~/.cursor` on a machine without Cursor holds only third-party hook configuration**, which
-  is the reason there is no usage provider — see [Usage logs](usage-logs.md).
+- **Cursor stopped writing token counters.** The figures it did write are real per-request
+  input and output, but every nonzero one on a real corpus predates 2025-12-23; newer
+  conversations settle usage server-side. A window after that reports sessions and tools with no
+  tokens, which is correct — see [Usage logs](usage-logs.md).
+- **The conversation index is incomplete, so it is not what discovery uses.** `composerHeaders`
+  was never backfilled, and on a real store 161 of the 229 token-bearing conversations appear in
+  neither it nor the legacy index it replaced.
+- **The two trees are why the archive profile needs a second root.** It is the only one that
+  does; see [Archiving](archiving.md).

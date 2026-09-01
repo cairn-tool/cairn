@@ -21,14 +21,14 @@ how it was established.
 
 A provider is present in a role or it is not; there is no partial registration. When a role is
 missing, the provider's page says why, because "unsupported" and "not yet attempted" are
-different answers and only one of them is a bug. Antigravity and OpenCode are the two assistants
-currently in all three.
+different answers and only one of them is a bug. Antigravity, OpenCode and Cursor are the
+three assistants currently in all three.
 
 | Provider                                         | Conversion target | Usage log source | Archive source |
 | ------------------------------------------------ | ----------------- | ---------------- | -------------- |
 | [Claude Code](providers/claude-code/overview.md) | yes               | yes              | yes            |
 | [Codex](providers/codex/overview.md)             | yes               | yes              | yes            |
-| [Cursor](providers/cursor/overview.md)           | yes               | no               | no             |
+| [Cursor](providers/cursor/overview.md)           | yes               | yes              | yes            |
 | [Antigravity](providers/antigravity/overview.md) | yes               | yes              | yes            |
 | [Gemini CLI](providers/gemini-cli/overview.md)   | no                | yes              | yes            |
 | [OpenCode](providers/opencode/overview.md)       | yes               | yes              | yes            |

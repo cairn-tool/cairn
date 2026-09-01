@@ -9,6 +9,7 @@ import { SCHEMA_BY_ID } from "../../src/contract/schemas/index.js";
 import { ANTIGRAVITY_FIXTURE, buildAntigravityLogs } from "../helpers/antigravity-fixture.js";
 import { GEMINI_FIXTURE, buildGeminiLogs } from "../helpers/gemini-cli-fixture.js";
 import { OPENCODE_FIXTURE, buildOpencodeStore } from "../helpers/opencode-fixture.js";
+import { CURSOR_FIXTURE, buildCursorStore } from "../helpers/cursor-fixture.js";
 
 const exec = promisify(execFile);
 const cli = path.resolve("dist/cli.js");
@@ -35,6 +36,10 @@ const GEMINI = (): string[] => ["--provider", "gemini-cli", "--logs", geminiRoot
 let opencodeRoot = "";
 const OPENCODE = (): string[] => ["--provider", "opencode", "--logs", opencodeRoot];
 
+/** Likewise one store, and the only one whose root is a user-data directory. */
+let cursorRoot = "";
+const CURSOR = (): string[] => ["--provider", "cursor", "--logs", cursorRoot];
+
 beforeAll(() => {
   antigravityRoot = fs.mkdtempSync(path.join(os.tmpdir(), "usage-e2e-antigravity-"));
   buildAntigravityLogs(antigravityRoot, ANTIGRAVITY_FIXTURE);
@@ -42,12 +47,15 @@ beforeAll(() => {
   buildGeminiLogs(geminiRoot, GEMINI_FIXTURE);
   opencodeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "usage-e2e-opencode-"));
   buildOpencodeStore(opencodeRoot, OPENCODE_FIXTURE);
+  cursorRoot = fs.mkdtempSync(path.join(os.tmpdir(), "usage-e2e-cursor-"));
+  buildCursorStore(cursorRoot, CURSOR_FIXTURE);
 });
 
 afterAll(() => {
   fs.rmSync(antigravityRoot, { recursive: true, force: true });
   fs.rmSync(geminiRoot, { recursive: true, force: true });
   fs.rmSync(opencodeRoot, { recursive: true, force: true });
+  fs.rmSync(cursorRoot, { recursive: true, force: true });
 });
 
 /** The CSI introducer, so the styling assertions do not embed a raw control byte. */
@@ -643,6 +651,90 @@ describe("the opencode provider", () => {
   });
 });
 
+describe("the cursor provider", () => {
+  it("reports the tokens Cursor still wrote, and no request for the turns it zeroed", async () => {
+    const payload = json(
+      await run("usage", "tokens", "--by", "model", ...CURSOR(), "--no-index", "-fj"),
+    );
+    validate("usage-rollup", payload);
+    const rows = payload.rows as Array<{ key: string; tokens: Record<string, number> }>;
+    const byModel = Object.fromEntries(rows.map((row) => [row.key, row.tokens]));
+    // The conversation from the token era, whose model comes from the legacy
+    // usage map because `modelConfig` postdates it.
+    expect(byModel["claude-4-sonnet-thinking"].input).toBe(1500);
+    expect(byModel["claude-4-sonnet-thinking"].requests).toBe(2);
+    // The current conversation's turns carry the counters zeroed, so it is
+    // absent here entirely rather than contributing four empty requests.
+    expect(byModel["claude-sonnet-5"]).toBeUndefined();
+  });
+
+  it("records no cache breakdown, because that has never been in the schema", async () => {
+    const summary = json(await run("usage", "summary", ...CURSOR(), "--no-index", "-fj"))
+      .summary as { tokens: Record<string, number> };
+    expect(summary.tokens.input).toBe(2500);
+    expect(summary.tokens.cacheRead).toBe(0);
+    expect(summary.tokens.cacheWrite).toBe(0);
+  });
+
+  it("splits one store into a conversation per row, including the unindexed ones", async () => {
+    const all = json(await run("usage", "summary", ...CURSOR(), "--no-index", "-fj")).summary as {
+      sessions: number;
+      transcripts: number;
+    };
+    // Five conversations, one of which neither index knows about.
+    expect(all.transcripts).toBe(5);
+    expect(all.sessions).toBe(5);
+    const main = json(
+      await run("usage", "summary", ...CURSOR(), "--no-subagents", "--no-index", "-fj"),
+    ).summary as { transcripts: number };
+    expect(main.transcripts).toBe(4);
+  });
+
+  it("tells an MCP call apart from a builtin, which its tool names just allow", async () => {
+    const payload = json(
+      await run("usage", "tools", "--by", "kind", ...CURSOR(), "--no-index", "-fj"),
+    );
+    const rows = payload.rows as Array<{ key: string; count: number }>;
+    expect(Object.fromEntries(rows.map((row) => [row.key, row.count]))).toEqual({
+      builtin: 5,
+      mcp: 1,
+    });
+  });
+
+  it("names a spawned agent by joining the parent's call to the conversation", async () => {
+    const payload = json(await run("usage", "agents", ...CURSOR(), "--no-index", "-fj"));
+    const rows = payload.rows as Array<{ key: string; count: number; sessions: number }>;
+    const explore = rows.find((row) => row.key === "explore")!;
+    expect(explore.count).toBe(1);
+    expect(explore.sessions).toBe(1);
+  });
+
+  it("reports no skills, because the store records none", async () => {
+    const skills = await run("usage", "skills", ...CURSOR(), "--no-index");
+    expect(skills.exitCode).toBe(0);
+    expect(skills.stdout).toContain("does not record skill invocations");
+  });
+
+  it("keeps stderr clean, which the sqlite experimental warning would not", async () => {
+    // The third provider to open somebody else's database, and the reason the
+    // loader that suppresses that warning is shared rather than copied.
+    const result = await run("usage", "summary", ...CURSOR(), "--no-index", "-fj");
+    expect(result.stderr).toBe("");
+  });
+
+  it("round-trips a synthetic transcript key through the usage store", async () => {
+    const cache = cacheHome();
+    const warm = json(await runWith(cache, "usage", "summary", ...CURSOR(), "-fj"));
+    const cached = json(await runWith(cache, "usage", "summary", ...CURSOR(), "-fj"));
+    // A conversation has no file of its own, so its `relative` and freshness key
+    // are synthesized from its own rows. They have to survive a write and a read
+    // or every scan re-parses the whole store.
+    expect((cached.scan as { cached: number }).cached).toBe(5);
+    expect((cached.scan as { parsed: number }).parsed).toBe(0);
+    expect(cached.summary).toEqual(warm.summary);
+  });
+});
+
 describe("--provider all", () => {
   /**
    * A home directory of its own holding all three layouts.
@@ -762,7 +854,9 @@ describe("--provider all", () => {
     // not quietly turn this case into a success.
     const result = await run("usage", "summary", "--provider", "nonesuch", ...FIXTURE);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("claude-code, codex, antigravity, gemini-cli, opencode, all");
+    expect(result.stderr).toContain(
+      "claude-code, codex, antigravity, gemini-cli, opencode, cursor, all",
+    );
   });
 
   it("reports every registered provider and what each can answer", async () => {
@@ -778,6 +872,7 @@ describe("--provider all", () => {
       "antigravity",
       "gemini-cli",
       "opencode",
+      "cursor",
     ]);
     // Positional, and it stays valid only because the registry is appended to.
     expect(providers[1].capabilities.hooks).toBe(false);
@@ -786,6 +881,10 @@ describe("--provider all", () => {
     expect(providers[3].capabilities.mcp).toBe(false);
     expect(providers[4].capabilities.cacheTokens).toBe(true);
     expect(providers[4].capabilities.skills).toBe(false);
+    // Cursor is the only source that can tell an MCP call apart while recording
+    // no cache breakdown at all, so this pair is what distinguishes its row.
+    expect(providers[5].capabilities.mcp).toBe(true);
+    expect(providers[5].capabilities.cacheTokens).toBe(false);
   });
 
   it("reports a cache per provider", async () => {
@@ -799,6 +898,7 @@ describe("--provider all", () => {
       "antigravity",
       "gemini-cli",
       "opencode",
+      "cursor",
     ]);
   });
 });

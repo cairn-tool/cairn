@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 import { SCHEMA_BY_ID } from "../../src/contract/schemas/index.js";
+import { CURSOR_FIXTURE, buildCursorStore } from "../helpers/cursor-fixture.js";
 
 const exec = promisify(execFile);
 const cli = path.resolve("dist/cli.js");
@@ -315,6 +316,89 @@ describe("archive migrate", () => {
     const result = await run("migrate");
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("4242");
+  });
+});
+
+/**
+ * The only profile whose sets span two trees.
+ *
+ * Cursor keeps its conversation store in the Electron user-data directory and
+ * its plans and session output under `~/.cursor`. Both are built here, because
+ * the thing worth testing end to end is that one `archive run` reaches both.
+ */
+describe("archive run over two trees", () => {
+  function cursorHome(): string {
+    return path.join(home, "Library", "Application Support", "Cursor");
+  }
+
+  function writeCursor(relative: string, content: string): void {
+    const target = path.join(home, ".cursor", relative);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content);
+  }
+
+  beforeEach(() => {
+    buildCursorStore(cursorHome(), CURSOR_FIXTURE);
+    writeCursor("plans/feature.plan.md", "# A plan\n");
+    writeCursor("projects/slug/agent-transcripts/uuid/uuid.jsonl", '{"role":"user"}\n');
+    writeCursor("projects/slug/canvases/board.json", "{}\n");
+    writeCursor("hooks.json", "{}\n");
+    // Never archived: no set names either of these, and the first is the tree
+    // that dominates `~/.cursor` on a real machine.
+    writeCursor("extensions/some.ext/out/extension.js", "z".repeat(4096));
+    writeCursor("projects/slug/terminals/123.txt", "z".repeat(4096));
+    // Never archived: a stale copy of the store, months out of date and as
+    // large as the store itself.
+    fs.writeFileSync(path.join(cursorHome(), "User", "globalStorage", "state.vscdb.backup"), "old");
+  });
+
+  async function runCursor(...args: string[]): Promise<Run> {
+    return run(...args, "--provider", "cursor");
+  }
+
+  it("reaches the alternate tree a default run selects from", async () => {
+    const payload = JSON.parse((await runCursor("run", "--format", "json")).stdout) as {
+      archive: { byClass: Record<string, { artifacts: number }> };
+      sources: Array<{ root: string }>;
+    };
+    // The plan and the canvas live under `~/.cursor`, which is not the root the
+    // run reports: that one is the user-data directory holding the store.
+    expect(payload.sources[0].root).toBe(cursorHome());
+    expect(payload.archive.byClass.plan.artifacts).toBe(1);
+    expect(payload.archive.byClass.artifact.artifacts).toBe(1);
+    // Transcripts and logs are opt-in for every provider.
+    expect(payload.archive.byClass.transcript).toBeUndefined();
+    expect(payload.archive.byClass.log).toBeUndefined();
+  });
+
+  it("takes the store from the log root and the transcripts from the other tree", async () => {
+    await runCursor("run", "--include", "plans,artifacts,transcripts,logs");
+    const listing = JSON.parse((await runCursor("list", "--format", "json")).stdout) as {
+      files: Array<{ path: string; set: string }>;
+    };
+    const bySet = new Map(listing.files.map((entry) => [entry.set, entry.path]));
+
+    expect(bySet.get("transcripts")).toContain(path.join(".cursor", "projects"));
+    expect(bySet.get("conversations")).toContain(path.join("globalStorage", "state.vscdb"));
+    expect(bySet.get("hooks")).toContain(path.join(".cursor", "hooks.json"));
+
+    const paths = listing.files.map((entry) => entry.path);
+    // The allowlist is what keeps these out, not a blocklist that could miss one.
+    expect(paths.some((entry) => entry.includes("extensions"))).toBe(false);
+    expect(paths.some((entry) => entry.includes("terminals"))).toBe(false);
+    expect(paths.some((entry) => entry.endsWith("state.vscdb.backup"))).toBe(false);
+  });
+
+  it("snapshots the live store rather than copying its bytes", async () => {
+    // The store carries `-wal` sidecars, so a byte copy can catch a torn page.
+    // A snapshot is a valid database on its own, which is what makes it worth
+    // archiving at all.
+    const first = await runCursor("run", "--include", "logs");
+    expect(first.exitCode).toBe(0);
+    // `verify` reads the archive, so it takes no --provider.
+    const verified = await run("verify", "--deep");
+    expect(verified.exitCode).toBe(0);
+    expect(verified.stdout).toContain("segments verified");
   });
 });
 

@@ -7,11 +7,13 @@ import { codexProvider } from "../../src/usage/providers/codex.js";
 import { antigravityProvider } from "../../src/usage/providers/antigravity.js";
 import { geminiCliProvider } from "../../src/usage/providers/gemini-cli.js";
 import { opencodeProvider } from "../../src/usage/providers/opencode.js";
+import { cursorProvider } from "../../src/usage/providers/cursor.js";
 import type { TranscriptFile, UsageProvider } from "../../src/usage/providers/types.js";
 import { foldDays } from "../../src/usage/events.js";
 import { ANTIGRAVITY_FIXTURE, buildAntigravityLogs } from "../helpers/antigravity-fixture.js";
 import { GEMINI_FIXTURE, buildGeminiLogs } from "../helpers/gemini-cli-fixture.js";
 import { OPENCODE_FIXTURE, buildOpencodeStore } from "../helpers/opencode-fixture.js";
+import { CURSOR_FIXTURE, buildCursorStore } from "../helpers/cursor-fixture.js";
 
 /**
  * The contract that makes the event stream trustworthy.
@@ -305,6 +307,25 @@ describe("the event stream folds back into the day buckets", () => {
       const found = opencodeProvider.discover(root, { subagents: true });
       expect(found.length).toBeGreaterThan(0);
       for (const file of found) await expectFoldMatches(opencodeProvider, file);
+    });
+  });
+
+  describe("cursor", () => {
+    let root = "";
+    beforeAll(() => {
+      root = fs.mkdtempSync(path.join(os.tmpdir(), "usage-events-cursor-"));
+      buildCursorStore(root, CURSOR_FIXTURE);
+    });
+    afterAll(() => {
+      fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it("reproduces every counter it writes, including the days a turn never dated", async () => {
+      // Cursor anchors most turns on the conversation rather than on the turn,
+      // so the seeded day and the event day have to agree or the fold drifts.
+      const found = cursorProvider.discover(root, { subagents: true });
+      expect(found.length).toBeGreaterThan(0);
+      for (const file of found) await expectFoldMatches(cursorProvider, file);
     });
   });
 });

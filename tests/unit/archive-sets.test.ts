@@ -181,6 +181,67 @@ describe("artifact sets", () => {
       expect(matcher("opencode", "session-diffs").match("session_diff/notes.txt")).toBe(false);
     });
   });
+
+  describe("cursor", () => {
+    it("is the only profile that walks a second tree", () => {
+      // Cursor keeps its conversation store in the Electron user-data directory
+      // and its session output in `~/.cursor`. On macOS those share only $HOME,
+      // and rooting a set there is the home-directory sweep sets.ts forbids.
+      for (const profile of ARCHIVE_PROFILES) {
+        const alt = profile.sets.some((set) => set.tree === "alt");
+        expect(alt, profile.provider).toBe(profile.provider === "cursor");
+        expect(profile.altRoot === undefined, profile.provider).toBe(profile.provider !== "cursor");
+      }
+    });
+
+    it("snapshots the editor store and leaves its sidecars and stale copy alone", () => {
+      const set = matcher("cursor", "conversations");
+      expect(set.snapshot).toBe("sqlite");
+      expect(set.match("state.vscdb")).toBe(true);
+      expect(set.match("state.vscdb-wal")).toBe(false);
+      expect(set.match("state.vscdb-shm")).toBe(false);
+      // On a real machine this is a 3.4 GB copy months out of date.
+      expect(set.match("state.vscdb.backup")).toBe(false);
+    });
+
+    it("takes a workspace store but nothing deeper under it", () => {
+      const set = matcher("cursor", "workspace-state");
+      expect(set.match("a1b2c3/state.vscdb")).toBe(true);
+      expect(set.match("a1b2c3/anysphere.cursor-retrieval/state.vscdb")).toBe(false);
+      expect(set.match("a1b2c3/workspace.json")).toBe(false);
+    });
+
+    it("tells a plan from a transcript from a produced file", () => {
+      expect(matcher("cursor", "plans").match("my-feature.plan.md")).toBe(true);
+      expect(matcher("cursor", "plans").match("notes.md")).toBe(false);
+      expect(matcher("cursor", "transcripts").match("slug/agent-transcripts/uuid/uuid.jsonl")).toBe(
+        true,
+      );
+      expect(matcher("cursor", "project-assets").match("slug/canvases/board.json")).toBe(true);
+      expect(matcher("cursor", "project-assets").match("slug/uploads/shot.png")).toBe(true);
+    });
+
+    it("never sweeps the tree that dominates either root", () => {
+      // ~/.cursor/extensions is 3.8 GB and the user-data directory holds another
+      // 600 MB of caches; `User/History` is VS Code's file history, the same
+      // category as Claude Code's excluded file-history.
+      for (const set of profileFor("cursor")!.sets) {
+        expect(set.match("extensions/some.ext/out/extension.js")).toBe(false);
+        expect(set.match("terminals/12345.txt")).toBe(false);
+        expect(set.match("History/1a2b3c/entries.json")).toBe(false);
+      }
+      const roots = profileFor("cursor")!.sets.map((set) => set.root);
+      for (const excluded of ["extensions", "worktrees", "browser-logs"]) {
+        expect(roots).not.toContain(excluded);
+      }
+    });
+
+    it("keeps the editor store out of a default run", () => {
+      // It is 5.65 GB, so it must never land in a run that did not ask for logs.
+      expect(matcher("cursor", "conversations").class).toBe("log");
+      expect(DEFAULT_CLASSES).not.toContain("log");
+    });
+  });
 });
 
 describe("parseClasses", () => {

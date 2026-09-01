@@ -7,8 +7,8 @@ those transcripts and reports on them — tokens, tools, skills, subagents, hook
 so "where is my context actually going" is a question with an answer. Nothing is sent anywhere,
 and nothing outside the usage store is written.
 
-Five log sources are registered: **Claude Code**, **Codex CLI**, **Antigravity CLI**,
-**Gemini CLI**, and **OpenCode**.
+Six log sources are registered: **Claude Code**, **Codex CLI**, **Antigravity CLI**,
+**Gemini CLI**, **OpenCode**, and **Cursor**.
 
 ```bash
 cairn usage summary                        # headline totals across every project
@@ -69,9 +69,10 @@ time-window and project-selection rules, and what the totals do and do not cover
 transcript format and counting caveats are documented separately:
 [Claude Code](../providers/claude-code/usage-logs.md),
 [Codex](../providers/codex/usage-logs.md),
-[Antigravity](../providers/antigravity/usage-logs.md), and
-[Gemini CLI](../providers/gemini-cli/usage-logs.md), and
-[OpenCode](../providers/opencode/usage-logs.md).
+[Antigravity](../providers/antigravity/usage-logs.md),
+[Gemini CLI](../providers/gemini-cli/usage-logs.md),
+[OpenCode](../providers/opencode/usage-logs.md), and
+[Cursor](../providers/cursor/usage-logs.md).
 
 ## Related
 
