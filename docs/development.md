@@ -38,4 +38,5 @@ first. Removing that script makes the e2e suite test whatever `dist/` happened t
 
 - [Releasing](releasing.md) — what happens after a merge to `main`.
 - [Machine-readable result contract](contract.md) — what counts as a breaking change.
-- [Cairn's own plugins](plugins.md) — building the bundles locally.
+- [Cairn's own plugins](plugins.md) — building the bundles locally, and the per-host
+  install scripts under `scripts/`.
