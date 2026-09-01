@@ -244,4 +244,5 @@ that command's page rather than quietly fixed, because changing them is breaking
   [Codex](../providers/codex/usage-logs.md),
   [Antigravity](../providers/antigravity/usage-logs.md),
   [Gemini CLI](../providers/gemini-cli/usage-logs.md),
-  [OpenCode](../providers/opencode/usage-logs.md)
+  [OpenCode](../providers/opencode/usage-logs.md),
+  [Cursor](../providers/cursor/usage-logs.md)

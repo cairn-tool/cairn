@@ -128,9 +128,23 @@ export function collectSet(root: string, provider: string, set: ArtifactSet): Ca
   return found;
 }
 
+/**
+ * One provider present on this machine, with the trees its sets are relative to.
+ *
+ * `altRoot` is resolved by the caller alongside `root` and is null for every
+ * provider but Cursor; a set marked `tree: "alt"` contributes nothing when it is
+ * absent rather than falling back to the primary root, which would walk the
+ * wrong tree.
+ */
+export interface ArchiveSource {
+  provider: UsageProvider;
+  root: string;
+  altRoot?: string | null;
+}
+
 /** Everything the selected classes match, across the selected providers. */
 export function collect(
-  sources: ReadonlyArray<{ provider: UsageProvider; root: string }>,
+  sources: ReadonlyArray<ArchiveSource>,
   classes: readonly ArtifactClass[],
 ): Candidate[] {
   const wanted = new Set(classes);
@@ -140,7 +154,9 @@ export function collect(
     if (!profile) continue;
     for (const set of profile.sets) {
       if (!wanted.has(set.class)) continue;
-      found.push(...collectSet(source.root, source.provider.name, set));
+      const base = set.tree === "alt" ? (source.altRoot ?? null) : source.root;
+      if (!base) continue;
+      found.push(...collectSet(base, source.provider.name, set));
     }
   }
   return found;
@@ -222,7 +238,7 @@ function indexedArtifacts(db: SqliteDatabase): Map<string, IndexedArtifact> {
 
 export interface RunOptions {
   archiveRoot: string;
-  sources: ReadonlyArray<{ provider: UsageProvider; root: string }>;
+  sources: ReadonlyArray<ArchiveSource>;
   classes: readonly ArtifactClass[];
   /** Report what would be taken in, storing nothing. */
   dryRun?: boolean;

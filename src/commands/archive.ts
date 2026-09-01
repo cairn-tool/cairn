@@ -9,10 +9,10 @@ import { LATEST_VERSION, getArchiveRoot, openArchive, segmentsDirectory } from "
 import { archiveStatus, extract, listArtifacts, resolve, verify } from "../archive/query.js";
 import { createReporter, progressAllowed } from "../archive/progress.js";
 import { DEFAULT_SEGMENT_BYTES } from "../archive/segments.js";
-import { ARTIFACT_CLASSES, parseClasses } from "../archive/sets.js";
+import { ARTIFACT_CLASSES, parseClasses, profileFor } from "../archive/sets.js";
 import { runArchive } from "../archive/run.js";
+import type { ArchiveSource } from "../archive/run.js";
 import { DEFAULT_PROVIDER, resolveProviders } from "../usage/providers/index.js";
-import type { UsageProvider } from "../usage/providers/types.js";
 
 /**
  * The `archive` toolset.
@@ -73,19 +73,25 @@ function archiveRoot(opts: ArchiveOptions): string {
 }
 
 /** Providers that actually have logs on this machine, with their roots. */
-function sourcesFor(opts: ArchiveOptions): Array<{ provider: UsageProvider; root: string }> {
+function sourcesFor(opts: ArchiveOptions): ArchiveSource[] {
   const providers = resolveProviders(opts.provider);
   if (opts.logs && providers.length > 1) {
     throw new Error("--logs applies to a single provider; name one with --provider");
   }
-  const sources: Array<{ provider: UsageProvider; root: string }> = [];
+  const sources: ArchiveSource[] = [];
   for (const provider of providers) {
-    const root = provider.root({
+    const context = {
       env: process.env,
       home: os.homedir(),
       ...(opts.logs ? { override: opts.logs } : {}),
-    });
-    if (root) sources.push({ provider, root });
+    };
+    const root = provider.root(context);
+    if (!root) continue;
+    // The second tree a host keeps session output in, for the one profile that
+    // declares it. `--logs` deliberately does not redirect it: it names the log
+    // root, and a single directory cannot be both trees.
+    const altRoot = profileFor(provider.name)?.altRoot?.(context) ?? null;
+    sources.push({ provider, root, altRoot });
   }
   return sources;
 }

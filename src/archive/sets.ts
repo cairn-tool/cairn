@@ -15,6 +15,10 @@
  * named here cannot pick them up by accident.
  */
 
+import fs from "node:fs";
+import path from "node:path";
+import type { ProviderEnvironment } from "../usage/providers/types.js";
+
 /**
  * What an artifact is, which is what `--include` selects on.
  *
@@ -35,7 +39,16 @@ export interface ArtifactSet {
   id: string;
   class: ArtifactClass;
   description: string;
-  /** Directory under the provider's log root to walk; "" is the root itself. */
+  /**
+   * Which of the provider's trees {@link root} is relative to.
+   *
+   * Absent means the provider's own log root, which is every set but Cursor's.
+   * `"alt"` means the profile's {@link ArchiveProfile.altRoot}, for a host that
+   * genuinely keeps its conversation data and its session output in two
+   * different places; see the note on {@link CURSOR}.
+   */
+  tree?: "alt";
+  /** Directory under the selected tree to walk; "" is the tree root itself. */
   root: string;
   /** Whether to descend into subdirectories. */
   recursive: boolean;
@@ -56,6 +69,21 @@ export interface ArchiveProfile {
   /** Matches a `UsageProvider.name`, which is what resolves the log root. */
   provider: string;
   sets: readonly ArtifactSet[];
+  /**
+   * A second tree this host keeps things in, for sets marked `tree: "alt"`.
+   *
+   * Every other provider needs exactly one root, because the usage provider's
+   * log root already contains everything worth archiving. Cursor does not: it is
+   * an editor, so its conversation store sits in the Electron user-data
+   * directory while its plans and per-session output sit in `~/.cursor`. On
+   * macOS those two share only `$HOME`, and rooting a set at `$HOME` is the
+   * home-directory sweep this module exists to avoid, so the profile names the
+   * second tree explicitly instead.
+   *
+   * Returns null when the tree is absent, in which case its sets contribute
+   * nothing rather than falling back to the primary root.
+   */
+  altRoot?(context: ProviderEnvironment): string | null;
 }
 
 const isMarkdown = (relative: string): boolean => relative.endsWith(".md");
@@ -348,12 +376,120 @@ const OPENCODE: ArchiveProfile = {
   ],
 };
 
+/**
+ * Cursor, whose data is in two trees.
+ *
+ * The usage provider roots at the Electron user-data directory, because that is
+ * where the conversation store is. But Cursor writes its plans, its agent
+ * transcripts and its per-session output under `~/.cursor` instead, so those
+ * sets are marked `tree: "alt"`. This is the only profile that needs a second
+ * anchor, and the reason is on `ArchiveProfile.altRoot`.
+ *
+ * What is *not* here is most of both trees, and the exclusions carry more weight
+ * than usual because this is an editor rather than a CLI: `extensions/` alone is
+ * 3.8 GB, and `CachedData/`, `Partitions/`, `WebStorage/`, `Cache/`, `GPUCache/`
+ * and `blob_storage/` are another 600 MB of derived state. `User/History/` is
+ * excluded too -- it is VS Code's local file history, which mirrors the working
+ * tree rather than recording a session, the same category as Claude Code's
+ * `file-history/`. Every matcher below names a directory or a filename, so none
+ * of that is reachable.
+ */
+const CURSOR: ArchiveProfile = {
+  provider: "cursor",
+  altRoot: (context) => {
+    const candidate = path.join(context.home, ".cursor");
+    try {
+      return fs.statSync(candidate).isDirectory() ? candidate : null;
+    } catch {
+      return null;
+    }
+  },
+  sets: [
+    {
+      id: "plans",
+      class: "plan",
+      description: "Plan documents written in plan mode",
+      tree: "alt",
+      root: "plans",
+      recursive: false,
+      match: (relative) => relative.endsWith(".plan.md"),
+    },
+    {
+      id: "project-assets",
+      class: "artifact",
+      description: "Files a session produced: canvases, uploads, and assets",
+      tree: "alt",
+      root: "projects",
+      recursive: true,
+      // Three named directory segments rather than a catch-all: `projects/`
+      // also holds `terminals/`, `mcps/` and the transcripts, and a sweep here
+      // would take the whole 64 MB tree twice over.
+      match: (relative) =>
+        under(relative, "canvases") || under(relative, "uploads") || under(relative, "assets"),
+    },
+    {
+      id: "transcripts",
+      class: "transcript",
+      description: "Agent transcripts",
+      tree: "alt",
+      root: "projects",
+      recursive: true,
+      match: (relative) => under(relative, "agent-transcripts") && relative.endsWith(".jsonl"),
+    },
+    {
+      id: "ai-tracking",
+      class: "log",
+      description: "The AI code-attribution database: per-model line counts and scored commits",
+      tree: "alt",
+      root: "ai-tracking",
+      recursive: false,
+      match: (relative) => relative === "ai-code-tracking.db",
+      snapshot: "sqlite",
+    },
+    {
+      id: "hooks",
+      class: "log",
+      description: "Hook configuration",
+      tree: "alt",
+      root: "",
+      recursive: false,
+      match: (relative) => relative === "hooks.json",
+    },
+    {
+      id: "conversations",
+      class: "log",
+      description: "The editor store: conversations, turns, and the session index",
+      root: path.join("User", "globalStorage"),
+      recursive: false,
+      // Exact equality, three times load-bearing. It keeps out the live `-wal`
+      // and `-shm` sidecars, whose contents the backup API folds into the
+      // snapshot; and it keeps out `state.vscdb.backup`, which on a real machine
+      // is a stale 3.4 GB copy months out of date.
+      match: (relative) => relative === "state.vscdb",
+      snapshot: "sqlite",
+    },
+    {
+      id: "workspace-state",
+      class: "log",
+      description: "Per-workspace state, holding the legacy inline-edit prompt history",
+      root: path.join("User", "workspaceStorage"),
+      recursive: true,
+      // Depth-checked, so only the store directly under a workspace directory
+      // matches and nothing deeper can be swept in.
+      match: (relative) =>
+        segments(relative).length === 2 && segments(relative)[1] === "state.vscdb",
+      snapshot: "sqlite",
+    },
+  ],
+};
+
 export const ARCHIVE_PROFILES: readonly ArchiveProfile[] = [
   CLAUDE_CODE,
   CODEX,
   ANTIGRAVITY,
   GEMINI_CLI,
   OPENCODE,
+  CURSOR,
 ];
 
 export function profileFor(provider: string): ArchiveProfile | undefined {

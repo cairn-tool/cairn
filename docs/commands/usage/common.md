@@ -84,16 +84,32 @@ opencode.db            sessions, messages, and parts
 opencode.db-wal, -shm  live write sidecars
 ```
 
+### `cursor`
+
+The Electron user-data directory: `~/Library/Application Support/Cursor` on macOS,
+`%APPDATA%/Cursor` on Windows, `~/.config/Cursor` on Linux. There is no environment override;
+only `--logs`. One SQLite store holds every conversation, so a transcript here is a _composer_
+rather than a file.
+
+```text
+User/globalStorage/state.vscdb            conversations, turns, tokens, models
+User/globalStorage/state.vscdb-wal, -shm  live write sidecars
+```
+
+Cursor also writes plans, agent transcripts and session output under `~/.cursor`, which carries
+no counters and is not read by `usage`. It is [archived](../archive/common.md), which is why the
+Cursor archive profile is the only one with two roots.
+
 ### Subagents
 
 Subagent transcripts are included by default. On a real corpus they routinely outnumber main
 transcripts several times over and account for a large share of all tokens, so excluding them
 with `--no-subagents` makes the headline numbers a main-thread figure rather than a total.
 
-`claude-code` and `gemini-cli` record a subagent in the transcript's _path_ and `opencode`
-records it on the session row, so those three can drop them before opening anything. `codex` and
-`antigravity` record it inside the file, so `--no-subagents` filters them after reading rather
-than before — the answer is the same, the saving is not.
+`claude-code` and `gemini-cli` record a subagent in the transcript's _path_, and `opencode` and
+`cursor` record it on the session row, so those four can drop them before opening anything.
+`codex` and `antigravity` record it inside the file, so `--no-subagents` filters them after
+reading rather than before — the answer is the same, the saving is not.
 
 ## Counting
 
@@ -101,13 +117,14 @@ Every provider is normalized onto one token model, which means undoing a differe
 each. These are not cosmetic differences: getting any of them wrong changes the answer by a
 factor, not a rounding.
 
-| Provider      | What the log records                                                                                                           | What is done with it                                                                            |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `claude-code` | One API response written as several lines, each carrying an identical full copy of its usage                                   | Deduplicated by response; summing the lines over-counts output roughly two and a half fold      |
-| `codex`       | A **running total** per thread, alongside a per-request field that is re-emitted unchanged on duplicates                       | Consecutive totals are differenced; summing the per-request field inflates by about 4%          |
-| `antigravity` | A **per-request** context size that is not a running total — it falls whenever context is trimmed                              | Summed; differencing it would produce nonsense                                                  |
-| `gemini-cli`  | All three at once: a per-request context size, with the cached part inside it, written two to five times under one response id | Deduplicated by response id, summed rather than differenced, and the cached part subtracted out |
-| `opencode`    | The same usage three times: on the message, on its step-finish part, and rolled up on the session row                          | Only the message grain is read; summing message and part tokens doubles every figure exactly    |
+| Provider      | What the log records                                                                                                              | What is done with it                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `claude-code` | One API response written as several lines, each carrying an identical full copy of its usage                                      | Deduplicated by response; summing the lines over-counts output roughly two and a half fold      |
+| `codex`       | A **running total** per thread, alongside a per-request field that is re-emitted unchanged on duplicates                          | Consecutive totals are differenced; summing the per-request field inflates by about 4%          |
+| `antigravity` | A **per-request** context size that is not a running total — it falls whenever context is trimmed                                 | Summed; differencing it would produce nonsense                                                  |
+| `gemini-cli`  | All three at once: a per-request context size, with the cached part inside it, written two to five times under one response id    | Deduplicated by response id, summed rather than differenced, and the cached part subtracted out |
+| `opencode`    | The same usage three times: on the message, on its step-finish part, and rolled up on the session row                             | Only the message grain is read; summing message and part tokens doubles every figure exactly    |
+| `cursor`      | Per-request input and output, with **no distortion at all** — but written only until December 2025 and zeroed on every turn since | Summed as-is; a turn whose counters are zero is not counted as a request                        |
 
 Codex and Gemini CLI count cache reads _inside_ their input figure, unlike the others, so the
 cached part is subtracted out and reported as a cache read. Left merged, their input reads
@@ -128,23 +145,30 @@ the reports read rather than branching on its name — so a command whose subjec
 not record says so and exits `0`, rather than printing an empty table that would read as "you
 never did this".
 
-|                           | `claude-code` | `codex` | `antigravity` | `gemini-cli` | `opencode` |
-| ------------------------- | ------------- | ------- | ------------- | ------------ | ---------- |
-| tokens                    | yes           | yes     | yes           | yes          | yes        |
-| cache read / write detail | yes           | yes     | no            | read only    | yes        |
-| tools                     | yes           | yes     | yes           | yes          | yes        |
-| MCP                       | yes           | yes     | no            | no           | no         |
-| skills                    | yes           | yes     | no            | yes          | no         |
-| subagents                 | yes           | yes     | yes           | yes          | yes        |
-| hooks                     | yes           | no      | no            | no           | no         |
-| slash commands            | yes           | yes     | yes           | yes          | no         |
+|                           | `claude-code` | `codex` | `antigravity` | `gemini-cli` | `opencode` | `cursor`      |
+| ------------------------- | ------------- | ------- | ------------- | ------------ | ---------- | ------------- |
+| tokens                    | yes           | yes     | yes           | yes          | yes        | until 2025-12 |
+| cache read / write detail | yes           | yes     | no            | read only    | yes        | no            |
+| tools                     | yes           | yes     | yes           | yes          | yes        | yes           |
+| MCP                       | yes           | yes     | no            | no           | no         | yes           |
+| skills                    | yes           | yes     | no            | yes          | no         | no            |
+| subagents                 | yes           | yes     | yes           | yes          | yes        | yes           |
+| hooks                     | yes           | no      | no            | no           | no         | no            |
+| slash commands            | yes           | yes     | yes           | yes          | no         | no            |
 
 Codex and Gemini CLI configure hooks but record no execution of one; Antigravity's only hook
 appears as prose inside a system message, and counting a substring of free text is a guess rather
 than a measurement. A Gemini CLI tool call records a bare name with no server, so an MCP tool
 cannot be told from a builtin, and its slash commands come from a per-project `logs.json` rather
 than from the transcript, which keeps only the expanded prompt. Antigravity records no cache breakdown at all, so its input figure is context
-processed — a prompt prefix counted once per turn — rather than unique input.
+processed — a prompt prefix counted once per turn — rather than unique input. Cursor configures
+five hook events and records no execution of one either; its tool names carry an `mcp-` prefix,
+so an MCP call can be told from a builtin even though the server within that name cannot be
+recovered; and no cache counter has ever existed in its schema.
+
+Cursor's `tokens` row is qualified because the capability is real and the coverage is not: the
+per-request figures it wrote are exact, and it stopped writing them, so any window after
+December 2025 reports sessions and tools against no tokens at all.
 
 `usage providers` prints this table for the providers actually present on your machine.
 
