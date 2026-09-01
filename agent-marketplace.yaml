@@ -1,18 +1,22 @@
-# The collection published to the `claude-plugins` branch. Build it with:
+# The collection published by `.github/workflows/plugins.yml`, one branch per
+# target: claude-code -> `claude-plugins`, codex -> `codex-plugins`, cursor ->
+# `cursor-plugins`. Build it with:
 #   cairn agent marketplace agent-marketplace.yaml --output ./dist-plugins
 # Install it locally with:
 #   cairn agent marketplace agent-marketplace.yaml --install --register
 schemaVersion: "1"
 name: cairn
-version: 1.0.0
+version: 1.1.0
 description: Cairn's own toolsets, as plugins.
 owner:
   name: Bryan Stockus
   url: https://github.com/cairn-tool
 
-# Claude Code only for now. The bundles stay portable, but this is the only
-# host we publish a marketplace to.
-targets: [claude-code]
+# The three hosts that declare a marketplace catalog. Antigravity and OpenCode
+# are deliberately absent: neither has a marketplace concept, so a plugin there
+# is a directory drop, which `agent install` does and a catalog cannot describe.
+# `scripts/check-bundles.sh` still renders every bundle for all five.
+targets: [claude-code, codex, cursor]
 
 bundles:
   - path: plugins/cairn-markdown

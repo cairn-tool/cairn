@@ -15,9 +15,9 @@ on:
     types: [completed]
   workflow_dispatch:
     inputs:
-      branch:
-        description: Branch to publish to
-        default: claude-plugins
+      targets:
+        description: Space-separated targets to publish
+        default: claude-code codex cursor
         required: false
 
 concurrency:
@@ -29,14 +29,14 @@ permissions: {}
 env:
   # `npm ci` runs `prepare: husky`, which has no purpose in CI.
   HUSKY: 0
-  MARKETPLACE_BRANCH: ${{ inputs.branch || 'claude-plugins' }}
+  PUBLISH_TARGETS: ${{ inputs.targets || 'claude-code codex cursor' }}
 
 jobs:
   publish:
-    name: Publish the plugin marketplace
+    name: Publish the plugin marketplaces
     runs-on: ubuntu-latest
     permissions:
-      contents: write # force-push the marketplace branch
+      contents: write # force-push the marketplace branches
     # No `workflow_run.event == 'push'` clause here, unlike release.yml. The
     # triggering run is Release, which is itself workflow_run-triggered by CI, so
     # its event is `workflow_run` and never `push` -- copying release.yml's guard
@@ -61,58 +61,125 @@ jobs:
       - run: npm run build
 
       # No validate/test/audit here: the `plugins` job in CI already ran them
-      # across the matrix, and Release only fires on a green CI. Same reasoning
+      # across every target, and Release only fires on a green CI. Same reasoning
       # as release.yml's missing test step.
+      #
+      # Deliberately not --strict. The spec covers three targets now, and Codex
+      # and Cursor inherently carry `approximate` diagnostics (AB302, AB310,
+      # AB332, AB340, AB370) that are properties of the host. `agent marketplace`
+      # still blocks on errors without the flag, and CI holds the published
+      # Claude Code tree to the zero-warning bar separately.
       - name: Build the collection
         run: >-
           node dist/cli.js agent marketplace agent-marketplace.yaml
-          --output "$RUNNER_TEMP/marketplace" --strict
+          --output "$RUNNER_TEMP/marketplace"
 
-      # The catalog's entry sources are relative, so nothing in the published
-      # tree names an owner, a repo, or a branch. Repo identity reaches only
-      # this generated README and the job summary.
-      - name: Generate the branch README
-        run: |
-          set -euo pipefail
-          cat > "$RUNNER_TEMP/marketplace/claude-code/README.md" <<EOF
-          # Cairn plugins
-
-          Generated from [\`${GITHUB_REPOSITORY}\`](https://github.com/${GITHUB_REPOSITORY}) at
-          \`${GITHUB_SHA}\`. Do not edit this branch: it is force-pushed on every release.
-
-          \`\`\`text
-          /plugin marketplace add ${GITHUB_REPOSITORY}@${MARKETPLACE_BRANCH}
-          \`\`\`
-
-          Every plugin wraps the \`cairn\` CLI, which is installed separately.
-          EOF
-
-      # A fresh repo in a temp directory rather than `git checkout --orphan` in
-      # the working tree: it cannot carry a source file by accident, and a
-      # force-pushed single commit is the smallest thing `/plugin marketplace
-      # add` has to clone. No tags — semantic-release owns those. CI listens
-      # only on pushes to main, so this cannot loop.
-      - name: Publish to the marketplace branch
-        working-directory: ${{ runner.temp }}/marketplace/claude-code
+      # One branch per target. The catalog sits at each tree's root, so a tree
+      # cannot be a subdirectory of a shared branch without moving the catalog
+      # and breaking the URL people have already added.
+      #
+      # claude-code's branch is PINNED to `claude-plugins`, not the
+      # `<target>-plugins` the others derive: that name predates the other two,
+      # is published in README.md and docs/plugins.md, and is already added in
+      # users' clients. Renaming it to `claude-code-plugins` would silently
+      # orphan every existing install.
+      #
+      # The catalog's entry sources are relative, so nothing in a published tree
+      # names an owner, a repo, or a branch. Repo identity reaches only the
+      # generated README and the job summary.
+      - name: Publish each target to its own branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          git init -q -b "$MARKETPLACE_BRANCH"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "chore(plugins): publish from ${GITHUB_SHA::7}"
-          git push -f \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            "$MARKETPLACE_BRANCH"
+
+          branch_for() {
+            case "$1" in
+              claude-code) echo claude-plugins ;;
+              codex)       echo codex-plugins ;;
+              cursor)      echo cursor-plugins ;;
+              *) echo "::error::unknown target '$1'" >&2; return 1 ;;
+            esac
+          }
+
+          # Only Claude Code's marketplace syntax is documented in this
+          # repository, so the other branches state where the catalog is rather
+          # than inventing a command for a host whose syntax we have not
+          # verified.
+          write_readme() {
+            local target="$1" branch="$2" dir="$3" catalog
+            catalog=$(cd "$dir" && ls -d .*-plugin/marketplace.json)
+            {
+              echo "# Cairn plugins — ${target}"
+              echo
+              echo "Generated from [\`${GITHUB_REPOSITORY}\`](https://github.com/${GITHUB_REPOSITORY}) at"
+              echo "\`${GITHUB_SHA}\`. Do not edit this branch: it is force-pushed on every release."
+              echo
+              echo "The catalog is \`${catalog}\`, at this branch's root."
+              echo
+              if [ "$target" = "claude-code" ]; then
+                echo '```text'
+                echo "/plugin marketplace add ${GITHUB_REPOSITORY}@${branch}"
+                echo '```'
+              else
+                echo "Point ${target} at this branch as a plugin marketplace, or install a bundle"
+                echo "directly from a checkout of the source repository:"
+                echo
+                echo '```bash'
+                echo "cairn agent install plugins/<bundle> --target ${target} --scope project"
+                echo '```'
+              fi
+              echo
+              echo "Every plugin wraps the \`cairn\` CLI, which is installed separately."
+            } > "$dir/README.md"
+          }
+
+          # A fresh repo in a temp directory rather than `git checkout --orphan`
+          # in the working tree: it cannot carry a source file by accident, and a
+          # force-pushed single commit is the smallest thing a client has to
+          # clone. No tags — semantic-release owns those. CI listens only on
+          # pushes to main, so this cannot loop.
+          published=""
+          for target in $PUBLISH_TARGETS; do
+            branch=$(branch_for "$target")
+            dir="$RUNNER_TEMP/marketplace/$target"
+            if [ ! -d "$dir" ]; then
+              echo "::error::no tree built for '$target'; is it declared in agent-marketplace.yaml?"
+              exit 1
+            fi
+
+            write_readme "$target" "$branch" "$dir"
+
+            echo "::group::publish $target -> $branch"
+            git -C "$dir" init -q -b "$branch"
+            git -C "$dir" config user.name "github-actions[bot]"
+            git -C "$dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$dir" add -A
+            git -C "$dir" commit -q -m "chore(plugins): publish ${target} from ${GITHUB_SHA::7}"
+            git -C "$dir" push -f \
+              "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+              "$branch"
+            echo "::endgroup::"
+
+            published="${published}${target} ${branch}"$'\n'
+          done
+
+          printf '%s' "$published" > "$RUNNER_TEMP/published.txt"
 
       - name: Summary
         run: |
+          set -euo pipefail
           {
-            echo "Published to \`${MARKETPLACE_BRANCH}\` from \`${GITHUB_SHA::7}\`."
+            echo "Published from \`${GITHUB_SHA::7}\`."
+            echo
+            echo "| Target | Branch |"
+            echo "| ------ | ------ |"
+            while read -r target branch; do
+              [ -n "$target" ] || continue
+              echo "| \`${target}\` | \`${branch}\` |"
+            done < "$RUNNER_TEMP/published.txt"
             echo
             echo '```text'
-            echo "/plugin marketplace add ${GITHUB_REPOSITORY}@${MARKETPLACE_BRANCH}"
+            echo "/plugin marketplace add ${GITHUB_REPOSITORY}@claude-plugins"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

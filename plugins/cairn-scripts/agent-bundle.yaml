@@ -2,7 +2,7 @@
 #   cairn agent marketplace ../../agent-marketplace.yaml --output ../../dist-plugins
 schemaVersion: "2"
 name: cairn-scripts
-version: 1.0.0
+version: 1.1.0
 description: Resolve and run named scripts declared in .cairn.yml.
 
 marketplace:
@@ -19,3 +19,4 @@ marketplace:
     name: Bryan Stockus
     url: https://github.com/cairn-tool
   license: MIT
+  icon: assets/icon.svg

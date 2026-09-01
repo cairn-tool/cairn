@@ -129,33 +129,39 @@ jobs:
 
       - run: npm run build
 
-      # Each bundle on its own, so a failure names the bundle rather than the
-      # collection. `agent validate` takes no --profile; `agent doctor --output`
-      # takes a *conversion* root, never a package or collection root, or it
-      # reports the catalog and integrity files as unmanaged. `agent audit` runs
-      # without --strict: forwarded render warnings are expected, while audit's
-      # own AUDIT_CODES warnings block regardless.
-      - name: Validate, convert, doctor, test, and audit each bundle
-        run: |
-          set -euo pipefail
-          for bundle in plugins/*/; do
-            [ -f "$bundle/agent-bundle.yaml" ] || continue
-            name=$(basename "$bundle")
-            echo "::group::$name"
-            node dist/cli.js agent validate "$bundle" --target claude-code
-            node dist/cli.js agent convert  "$bundle" --target claude-code \
-              --profile plugin --output "$RUNNER_TEMP/conv/$name"
-            node dist/cli.js agent doctor   "$bundle" --target claude-code \
-              --profile plugin --output "$RUNNER_TEMP/conv/$name"
-            node dist/cli.js agent test     "$bundle" --target claude-code
-            node dist/cli.js agent audit    "$bundle" --target claude-code --profile plugin
-            echo "::endgroup::"
-          done
+      # Every bundle against every target, one bundle at a time so a failure
+      # names the bundle rather than the collection. The gating rule is in
+      # scripts/check-bundles.sh, and the short version is that it cannot be the
+      # exit code: `agent validate` and `agent convert` route through
+      # `hasFindings`, which fails on any `approximate` diagnostic, and only
+      # claude-code renders these bundles with no findings at all. The other
+      # four carry warnings that are properties of the host (AB302, AB310,
+      # AB332, AB340, AB370), so they are gated on `error` diagnostics while
+      # claude-code keeps the exit-0 bar it has always had.
+      #
+      # Marketplace publishing stays claude-code-only; this is a rendering and
+      # portability check, and it needs no catalog. antigravity and opencode
+      # declare no marketplace concept at all.
+      - name: Validate, convert, doctor, test, and audit each bundle, on every target
+        run: scripts/check-bundles.sh --output "$RUNNER_TEMP/conv"
 
-      - name: Build the collection
+      # Two builds, because --strict is only meaningful for one of the three
+      # targets. Codex and Cursor carry `approximate` diagnostics inherently, so
+      # a --strict build covering them would be permanently red; without the flag
+      # `agent marketplace` still blocks on errors, which is what a missing
+      # catalog field (AB500) or icon (AB502) is. Claude Code renders these
+      # bundles with no findings at all, so it keeps the zero-warning bar it has
+      # always had -- narrowed with --target, which may narrow the spec but never
+      # widen it.
+      - name: Build the Claude Code collection under --strict
         run: >-
           node dist/cli.js agent marketplace agent-marketplace.yaml
-          --output "$RUNNER_TEMP/marketplace" --strict
+          --target claude-code --output "$RUNNER_TEMP/marketplace-strict" --strict
+
+      - name: Build the collection for every declared target
+        run: >-
+          node dist/cli.js agent marketplace agent-marketplace.yaml
+          --output "$RUNNER_TEMP/marketplace"
 
       # So a reviewer can `/plugin marketplace add` the built tree from a PR.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
