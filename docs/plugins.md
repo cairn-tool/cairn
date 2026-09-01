@@ -14,8 +14,24 @@ They are authored as [agent bundles](formats/agent-bundle.md) under `plugins/`, 
 /plugin install cairn-markdown@cairn
 ```
 
-The branch is force-pushed on every release. Nothing on it names an owner or a branch: catalog
-entry sources are relative, so the tree works however it was fetched.
+One branch per host, each holding that host's catalog at its root:
+
+| Target        | Branch           | Catalog                           |
+| ------------- | ---------------- | --------------------------------- |
+| `claude-code` | `claude-plugins` | `.claude-plugin/marketplace.json` |
+| `codex`       | `codex-plugins`  | `.codex-plugin/marketplace.json`  |
+| `cursor`      | `cursor-plugins` | `.cursor-plugin/marketplace.json` |
+
+`claude-code`'s branch is **not** `claude-code-plugins`. That name predates the other two and is
+already added in users' clients, so it stays pinned; only the two new branches derive their name
+from the target.
+
+Antigravity and OpenCode have no marketplace concept, so there is no branch for them — a plugin
+there is a directory drop. Use the [install scripts](https://github.com/cairn-tool/cairn/blob/main/scripts/README.md)
+or [`agent install`](commands/agent/install.md).
+
+Each branch is force-pushed on every release. Nothing on one names an owner or a branch: catalog
+entry sources are relative, so a tree works however it was fetched.
 
 **The `cairn` binary is a separate install.** These plugins document and invoke it; they do not
 carry it. See [the README](https://github.com/cairn-tool/cairn#install). A plugin whose hook
@@ -70,6 +86,27 @@ node dist/cli.js agent marketplace agent-marketplace.yaml --install --register
 `extraKnownMarketplaces` key plus one `enabledPlugins` entry per plugin. Reverse it with
 `cairn agent uninstall cairn --target claude-code`.
 
+The build emits one tree per declared target — `dist-plugins/claude-code/`,
+`dist-plugins/codex/`, `dist-plugins/cursor/` — and each is what its branch publishes.
+
+## Installing on your own machine
+
+One wrapper script per host lives in
+[`scripts/`](https://github.com/cairn-tool/cairn/blob/main/scripts/README.md), so a developer does
+not have to remember which scope each host supports:
+
+```bash
+scripts/install-claude-code.sh              # the whole collection, registered
+scripts/install-cursor.sh                   # ~/.cursor/plugins/local
+scripts/install-antigravity.sh              # ~/.gemini/config/plugins
+scripts/install-codex.sh   --into ~/src/app # project scope; Codex has no user scope
+scripts/install-opencode.sh --into ~/src/app
+```
+
+Each takes `--dry-run`, `--check`, `--uninstall`, and a list of bundle names. Codex and OpenCode
+declare no user-scope location, and those two scripts refuse `--scope user` rather than writing
+where the host will not look.
+
 For iterating on a single plugin's content, `claude --plugin-dir dist-plugins/claude-code/cairn-markdown`
 plus `/reload-plugins` avoids the marketplace and the plugin cache entirely.
 
@@ -92,8 +129,27 @@ mint a minor **CLI** release for a SKILL.md edit.
 ## How it is built and published
 
 `.github/workflows/ci.yml` runs `agent validate`, `convert`, `doctor`, `test`, and `audit` over
-every bundle, then builds the collection under `--strict` and uploads it as an artifact — so a
-reviewer can `/plugin marketplace add` a PR's tree.
+every bundle **for all five targets**, then builds the collection under `--strict` and uploads it
+as an artifact — so a reviewer can `/plugin marketplace add` a PR's tree.
+
+The per-target sweep is `scripts/check-bundles.sh`, which runs locally unchanged. It gates on
+`error` diagnostics rather than on the exit code for every target except `claude-code`, because
+`agent validate` and `agent convert` fail on any `approximate` diagnostic and the other four
+hosts carry those inherently. Only `claude-code` is held to an exit-0 bar.
+
+`.github/workflows/plugins.yml` publishes **one branch per target**: it builds the collection
+once and force-pushes each target tree to its own branch, because the catalog sits at a tree's
+root and so two trees cannot share one branch without moving it. `workflow_dispatch` takes a
+`targets` input to republish a subset.
+
+Publishing covers the three targets that declare a marketplace catalog. `antigravity` and
+`opencode` have no marketplace concept, so they are absent from `agent-marketplace.yaml` — while
+`scripts/check-bundles.sh` still renders every bundle for all five.
+
+Neither the CI build nor the publish build passes `--strict` any more, because Codex and Cursor
+carry `approximate` diagnostics inherently. `agent marketplace` still blocks on **errors**
+without it — a missing catalog field is `AB500` and a missing icon is `AB502`, both errors — and
+CI additionally builds the Claude Code tree alone under `--strict` to keep its zero-warning bar.
 
 `.github/workflows/plugins.yml` publishes. It is gated on the **Release** workflow rather than on
 CI, because semantic-release has committed the version bump by then. It builds into a temp

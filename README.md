@@ -101,6 +101,8 @@ available without rediscovering it from `--help`:
 /plugin install cairn-markdown@cairn
 ```
 
+Codex and Cursor get their own marketplace branches, `codex-plugins` and `cursor-plugins`.
+
 They are authored as agent bundles under `plugins/`, built with the same `agent` commands they
 document. **The `cairn` binary is a separate install** — the plugins invoke it, they do not
 carry it. See [Cairn's own plugins](docs/plugins.md) for what each one contains.
