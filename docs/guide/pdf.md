@@ -102,6 +102,34 @@ cairn md lint docs/reference/spec.md --style
 cairn md toc docs/reference/spec.md --write
 ```
 
+## Getting content out that is not the page
+
+Two commands read things that are inside the document but are not its text.
+
+[`pdf attachments`](../commands/pdf/attachments.md) lists the files embedded in a PDF, and writes
+them out unchanged under `--extract`. Without that flag it writes nothing at all — binary never goes
+to stdout under any format, so the inventory is always safe to run and the write is always explicit.
+An embedded file's stored name is chosen by whoever built the document and will eventually contain
+`../`, so extraction is planned in full before anything is written: one refused destination means no
+file is written, and a name that collides is resolved rather than overwriting.
+
+[`pdf forms`](../commands/pdf/forms.md) reports AcroForm field names, types, and current values,
+which are frequently the most useful thing in a filled form and a nuisance to reach any other way.
+It reads and never writes; there is no flag that sets a value. An XFA form reports `type: "xfa"`
+with no fields rather than an empty list, because its values live in an XML packet this does not
+read and silence there would look exactly like a document with no form.
+
+## Over MCP
+
+Six of these commands are also [MCP tools](../commands/serve.md#tools) — `inspect_pdf`,
+`read_pdf_text`, `convert_pdf_to_markdown`, `get_pdf_outline`, `list_pdf_attachments`, and
+`list_pdf_form_fields` — so a host can read a PDF without shelling out.
+
+Two constraints come with that surface. A PDF must live **under `--root`**, like every other path
+argument; that is a genuine narrowing, and it is preferred to introducing a second confinement
+boundary on a surface whose whole claim is that there is one. And nothing there writes: the
+attachment tool inventories, and `--extract` has no equivalent.
+
 ## There is no writer, and there will not be one
 
 Input is a PDF; output is Markdown, text, or JSON. No merge, split, page reorder, rotation, form

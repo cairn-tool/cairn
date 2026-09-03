@@ -145,11 +145,113 @@ const OUTLINE_ENTRY = {
   },
 };
 
+/**
+ * One embedded file.
+ *
+ * `bytes` and `sha256` are optional because decoding is bounded: past the
+ * budget, or when a file's stream could not be read, the entry is still listed
+ * with its names and a finding says why the rest is missing. Listing it without
+ * saying so would be indistinguishable from a zero-length file.
+ */
+const ATTACHMENT = {
+  type: "object",
+  required: ["id", "filename", "rawFilename"],
+  properties: {
+    id: {
+      type: "string",
+      description: "The name-tree key identifying this attachment inside the document.",
+    },
+    filename: {
+      type: "string",
+      description:
+        "The basename the parser derived. Sanitized again before it is ever used as a path.",
+    },
+    rawFilename: {
+      type: "string",
+      description:
+        "The stored name verbatim, including any directory traversal it carries. Reported so a rename is visible rather than silent.",
+    },
+    description: { type: "string" },
+    bytes: {
+      type: "integer",
+      minimum: 0,
+      description: "Decoded length. Absent when it was not decoded.",
+    },
+    sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+    binary: {
+      enum: ["elf", "pe", "macho"],
+      description:
+        "Executable format, identified from the magic number. Absent when it is not one.",
+    },
+    written: {
+      type: "string",
+      description: "Absolute path written, present only under --extract.",
+    },
+  },
+} as const;
+
+/** One AcroForm field, with its widgets folded into a count. */
+const FORM_FIELD = {
+  type: "object",
+  required: ["name", "type", "page", "readOnly", "hidden", "password", "widgets"],
+  properties: {
+    name: { type: "string", description: "Fully-qualified field name." },
+    type: {
+      type: "string",
+      description: "text, checkbox, radiobutton, choice, signature, button, or unknown.",
+    },
+    page: {
+      type: ["integer", "null"],
+      minimum: 1,
+      description:
+        "1-based, converted from the 0-based index the parser reports. Null when it does not resolve.",
+    },
+    value: { type: "string" },
+    defaultValue: { type: "string" },
+    readOnly: { type: "boolean" },
+    hidden: { type: "boolean" },
+    password: {
+      type: "boolean",
+      description:
+        "The field's password flag. The value is still reported: the same bytes are reachable through pdf text.",
+    },
+    charLimit: { type: "integer", minimum: 1 },
+    exportValues: { type: "string" },
+    widgets: {
+      type: "integer",
+      minimum: 1,
+      description: "Widgets this field renders as; one field can appear on several pages.",
+    },
+  },
+} as const;
+
+const FORM = {
+  type: "object",
+  required: ["type", "fieldCount", "fields"],
+  properties: {
+    type: {
+      enum: ["acroform", "xfa", "none"],
+      description:
+        "xfa means the field values live in an XML packet this does not read, so fields is empty for a reason rather than because there are none.",
+    },
+    fieldCount: { type: "integer", minimum: 0 },
+    fields: { type: "array", items: { $ref: "#/$defs/formField" } },
+  },
+} as const;
+
 export const pdfResultSchema: SchemaEntry = {
   id: "pdf-result",
   uri: schemaUri("v1", "pdf-result"),
   title: "cairn pdf result",
-  commands: ["pdf inspect", "pdf text", "pdf outline", "pdf validate", "pdf to-markdown"],
+  commands: [
+    "pdf inspect",
+    "pdf text",
+    "pdf outline",
+    "pdf validate",
+    "pdf to-markdown",
+    "pdf attachments",
+    "pdf forms",
+  ],
   schema: {
     $schema: DRAFT,
     $id: schemaUri("v1", "pdf-result"),
@@ -159,7 +261,9 @@ export const pdfResultSchema: SchemaEntry = {
     type: "object",
     required: ["command", "ok", "source", "diagnostics"],
     properties: {
-      command: { enum: ["inspect", "text", "outline", "validate", "to-markdown"] },
+      command: {
+        enum: ["inspect", "text", "outline", "validate", "to-markdown", "attachments", "forms"],
+      },
       ok: {
         type: "boolean",
         description:
@@ -189,6 +293,16 @@ export const pdfResultSchema: SchemaEntry = {
         items: { $ref: "#/$defs/outlineEntry" },
       },
       markdown: { type: "string", description: "Emitted by to-markdown." },
+      attachments: {
+        type: "array",
+        description:
+          "Emitted by attachments: the files embedded in the document, sorted by their name-tree key. An empty array means the document embeds none.",
+        items: { $ref: "#/$defs/attachment" },
+      },
+      form: {
+        description: "Emitted by forms.",
+        allOf: [{ $ref: "#/$defs/form" }],
+      },
       selectedPages: {
         type: "array",
         items: { type: "integer", minimum: 1 },
@@ -198,6 +312,14 @@ export const pdfResultSchema: SchemaEntry = {
       output: { type: "string", description: "Absolute path written, when --output was given." },
       diagnostics: { type: "array", items: DIAGNOSTIC },
     },
-    $defs: { document: DOCUMENT, page: PAGE, textPage: TEXT_PAGE, outlineEntry: OUTLINE_ENTRY },
+    $defs: {
+      document: DOCUMENT,
+      page: PAGE,
+      textPage: TEXT_PAGE,
+      outlineEntry: OUTLINE_ENTRY,
+      attachment: ATTACHMENT,
+      form: FORM,
+      formField: FORM_FIELD,
+    },
   },
 };

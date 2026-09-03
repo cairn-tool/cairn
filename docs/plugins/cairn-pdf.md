@@ -55,10 +55,18 @@ None. Nothing here should fire implicitly. `pdf text` and `pdf to-markdown` writ
 
 ## MCP servers
 
-None yet, and this is the one plugin where that is a near miss rather than a settled question: the
-`cairn serve mcp` tools are a workspace engine whose every path is confined to `--root`, while a PDF
-handed to the tool has nothing to do with the workspace. Read-only PDF tools on that surface are
-worth revisiting; anything that writes, or that would need OCR, is not.
+None registered **here**, but six read-only PDF tools now ship on the `cairn` server — `inspect_pdf`,
+`read_pdf_text`, `convert_pdf_to_markdown`, `get_pdf_outline`, `list_pdf_attachments`, and
+`list_pdf_form_fields`. That server is registered by [`cairn-markdown`](cairn-markdown.md) and
+nowhere else, because `cairn serve mcp` is one server carrying every toolset's tools: registering it
+again here would hand a host that installs both plugins the same seventeen tools twice.
+
+This resolves what was previously an open question. The tension was real — every path on that
+surface is confined to `--root`, while a PDF handed to the CLI has nothing to do with a workspace —
+and it is settled by accepting the confinement rather than adding a second boundary. A PDF must live
+under the served root to be readable there; anything outside it, and anything that writes, stays on
+the CLI. Extraction is deliberately unreachable over MCP: `list_pdf_attachments` inventories and
+there is no tool that writes a file.
 
 ## Assets
 

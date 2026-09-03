@@ -69,6 +69,15 @@ export const CODES = {
   inlineStyleInferred: "AP230",
   ligaturesExpanded: "AP231",
   controlCharactersStripped: "AP232",
+
+  // AP3xx  embedded files and form fields
+  attachmentUnreadable: "AP300",
+  attachmentNameSanitized: "AP301",
+  attachmentNameCollided: "AP302",
+  attachmentPathRefused: "AP303",
+  attachmentBudgetReached: "AP304",
+  formXfa: "AP311",
+  formFieldPageUnresolved: "AP312",
 } as const;
 
 export interface DiagnosticInput {

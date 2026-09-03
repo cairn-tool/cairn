@@ -66,6 +66,10 @@ cases:
             - "does not mean lossless"
             - "no OCR"
             - "never writes a PDF"
+            # The MCP tools are confined to the served root and none of them
+            # write, so the skill must not imply either is otherwise.
+            - "inside the served root"
+            - "the MCP surface writes nothing"
 
   - name: the-fidelity-reference-ships
     targets: [claude-code]

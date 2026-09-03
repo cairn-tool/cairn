@@ -132,6 +132,7 @@ See [contract](../../contract.md#experimental-commands).
 ## Related surfaces
 
 - [`pdf inspect`](inspect.md), [`pdf text`](text.md), [`pdf outline`](outline.md),
-  [`pdf validate`](validate.md), [`pdf to-markdown`](to-markdown.md)
+  [`pdf validate`](validate.md), [`pdf to-markdown`](to-markdown.md),
+  [`pdf attachments`](attachments.md), [`pdf forms`](forms.md)
 - [Reading PDF documents](../../guide/pdf.md)
 - [Diagnostic codes](../../formats/diagnostic-codes.md#pdf-invocation-and-input)

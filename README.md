@@ -60,15 +60,15 @@ failure to retry. The [complete command listing](docs/commands.md) has all of th
 
 Seven toolsets, plus `describe`, `schema`, `serve`, `completion`, and `check-update`.
 
-| Toolset   | Does                                                                      | Guide                                        |
-| --------- | ------------------------------------------------------------------------- | -------------------------------------------- |
-| `md`      | Lint, validate, query, and safely refactor a Markdown workspace.          | [Markdown](docs/guide/markdown.md)           |
-| `agent`   | Compile one portable bundle into every assistant's native format.         | [Agent bundles](docs/guide/agent-bundles.md) |
-| `scripts` | Resolve and run a repository's named commands from anywhere inside it.    | [Named scripts](docs/guide/scripts.md)       |
-| `usage`   | Report on local assistant transcripts: tokens, tools, sessions, and cost. | [Usage reporting](docs/guide/usage.md)       |
-| `archive` | Keep what a session produced before the logs are pruned, and get it back. | [Archiving](docs/guide/archiving.md)         |
-| `jira`    | Convert Jira and Confluence rich text between ADF and Markdown.           | [Jira rich text](docs/guide/jira.md)         |
-| `pdf`     | Read PDF documents: text, structure, and conversion to Markdown.          | [PDF documents](docs/guide/pdf.md)           |
+| Toolset   | Does                                                                             | Guide                                        |
+| --------- | -------------------------------------------------------------------------------- | -------------------------------------------- |
+| `md`      | Lint, validate, query, and safely refactor a Markdown workspace.                 | [Markdown](docs/guide/markdown.md)           |
+| `agent`   | Compile one portable bundle into every assistant's native format.                | [Agent bundles](docs/guide/agent-bundles.md) |
+| `scripts` | Resolve and run a repository's named commands from anywhere inside it.           | [Named scripts](docs/guide/scripts.md)       |
+| `usage`   | Report on local assistant transcripts: tokens, tools, sessions, and cost.        | [Usage reporting](docs/guide/usage.md)       |
+| `archive` | Keep what a session produced before the logs are pruned, and get it back.        | [Archiving](docs/guide/archiving.md)         |
+| `jira`    | Convert Jira and Confluence rich text between ADF and Markdown.                  | [Jira rich text](docs/guide/jira.md)         |
+| `pdf`     | Read PDF documents: text, structure, embedded files, and conversion to Markdown. | [PDF documents](docs/guide/pdf.md)           |
 
 Nothing calls a model, and nothing sends anything anywhere. `scripts run` is the only command
 that executes anything, and only what a tracked file in your repository names.

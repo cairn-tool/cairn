@@ -1,7 +1,4 @@
 import fs from "node:fs";
-import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-import type { ResolvedConfig } from "../config.js";
-import type { Workspace } from "../workspace.js";
 import { buildContextPack, selectSections, type ContextSeed } from "../context.js";
 import { documentSections } from "../sections.js";
 import { buildWorkspaceGraph, focusGraph, type WorkspaceGraph } from "../graph.js";
@@ -16,22 +13,10 @@ import { executePlan } from "../query/execute.js";
 import { ENTITY_KINDS } from "../query/entities.js";
 import type { Issue } from "../types.js";
 import { confine, PathRejected, relativeTo } from "./paths.js";
+import { PDF_SERVE_TOOLS } from "./pdf-tools.js";
+import type { ServeContext, ServeTool } from "./types.js";
 
-export interface ServeContext {
-  workspace: Workspace;
-  config: ResolvedConfig;
-  /** Confinement boundary, already resolved through symlinks. */
-  root: string;
-  /** Upper bound on parallel lints, so a large audit cannot starve the transport. */
-  concurrency: number;
-}
-
-export interface ServeTool {
-  name: string;
-  description: string;
-  inputSchema: Tool["inputSchema"];
-  handler: (args: Record<string, unknown>, context: ServeContext) => Promise<unknown> | unknown;
-}
+export type { ServeContext, ServeTool } from "./types.js";
 
 // --- argument readers -------------------------------------------------------
 // Arguments have already been validated against the tool's schema, so these
@@ -663,6 +648,9 @@ export const SERVE_TOOLS: readonly ServeTool[] = [
   listTasks,
   listCodeBlocks,
   findReferences,
+  // The PDF tools live in their own module: this file is uniformly the Markdown
+  // workspace engine, and registration is still one list.
+  ...PDF_SERVE_TOOLS,
 ];
 
 export const TOOL_BY_NAME: ReadonlyMap<string, ServeTool> = new Map(

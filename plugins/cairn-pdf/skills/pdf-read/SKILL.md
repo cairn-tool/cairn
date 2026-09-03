@@ -24,9 +24,16 @@ through `cairn describe` and `cairn schema pdf-result` rather than hardcoding th
 | `pdf to-markdown <file>` | The structure is wanted: headings, lists, tables.                 |
 | `pdf outline <file>`     | The bookmarks — a table of contents, or where a chapter starts.   |
 | `pdf validate <file>`    | Is this file structurally sound before trusting anything from it? |
+| `pdf attachments <file>` | What files are embedded inside it, and get them out.              |
+| `pdf forms <file>`       | The form's field names and the values already filled in.          |
 
-`-` reads stdin for all five. `text` and `to-markdown` take `--pages`, `--output`, and `--strict`.
-There is no MCP tool for any of these — stay on the CLI.
+`-` reads stdin for all of them. `text` and `to-markdown` take `--pages`, `--output`, and
+`--strict`.
+
+If the `cairn` MCP server is available, `inspect_pdf`, `read_pdf_text`, `convert_pdf_to_markdown`,
+`get_pdf_outline`, `list_pdf_attachments`, and `list_pdf_form_fields` do the same work for a PDF
+**inside the served root**, and are cheaper than shelling out. For a PDF anywhere else, or to
+extract an embedded file, use the CLI: the MCP surface writes nothing.
 
 ## It reads; it never writes a PDF
 

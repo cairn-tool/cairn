@@ -26,7 +26,7 @@ Each command page lives under `commands/<toolset>/`; the top-level commands are 
 | `cairn usage`                                        | Report on Claude Code usage from its own session logs.                 |
 | `cairn archive`                                      | Archive plans, artifacts, and logs into long-term storage.             |
 | `cairn jira`                                         | Work with Jira and Confluence content formats.                         |
-| `cairn pdf`                                          | Read PDF documents: text, structure, and conversion to Markdown.       |
+| `cairn pdf`                                          | Read PDF documents: text, structure, embedded files, and Markdown.     |
 
 ## Script commands
 
@@ -131,6 +131,8 @@ blocks only under `--strict`, so exit 0 does not mean lossless. Start with `pdf 
 | [`pdf outline`](commands/pdf/outline.md)         | Read the outline (bookmarks) as a heading tree.                    |
 | [`pdf validate`](commands/pdf/validate.md)       | Check structural integrity without converting.                     |
 | [`pdf to-markdown`](commands/pdf/to-markdown.md) | Convert content to Markdown, reporting what was inferred.          |
+| [`pdf attachments`](commands/pdf/attachments.md) | List the files embedded in a document, and write them out.         |
+| [`pdf forms`](commands/pdf/forms.md)             | List AcroForm fields and their current values.                     |
 
 ## Agent commands
 

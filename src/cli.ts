@@ -90,6 +90,8 @@ import {
 } from "./commands/jira.js";
 import {
   pdfActionBoundary,
+  pdfAttachmentsAction,
+  pdfFormsAction,
   pdfInspectAction,
   pdfOutlineAction,
   pdfTextAction,
@@ -699,7 +701,7 @@ adfCommon(adf.command("inspect"))
 
 const pdf = program
   .command("pdf")
-  .description("Read PDF documents: text, structure, and conversion to Markdown")
+  .description("Read PDF documents: text, structure, embedded files, and conversion to Markdown")
   .addHelpText(
     "after",
     "\nEvery subcommand is a local, deterministic read: no credentials, no network, and no model\ncall. Project configuration is not consulted.\n\nThis toolset never writes a PDF. There is no merge, split, page reorder, form fill, or\nredact: input is a PDF, output is Markdown, text, or JSON.\n\nInput is bounded before it is parsed, because a PDF is a container format that usually\narrives off a network. Symlinks are resolved, a non-regular file is refused on the open\ndescriptor, and --max-bytes, --timeout, and --max-pages cap the read, the parse, and the\npage count. Embedded JavaScript, launch, and submit actions are never executed.\n\nStart with `pdf inspect`: document.tagged and the per-page text layer decide what every\nother subcommand can tell you.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
@@ -769,6 +771,29 @@ pdfDocument(pdf.command("to-markdown"))
   )
   .action((file: string, opts: PdfOptions) =>
     pdfActionBoundary("to-markdown", file, opts, () => pdfToMarkdownAction(file, opts)),
+  );
+
+pdfCommon(pdf.command("attachments"))
+  .description("List the files embedded in a PDF, and optionally write them out")
+  .option("--extract <dir>", "Write the embedded files into this directory")
+  .option("--strict", "Treat a sanitized name or an unreadable file as a blocking finding")
+  .addHelpText(
+    "after",
+    "\nEmbedded files are files carried inside the document. Without --extract this only\ninventories them — name, size, SHA-256 — which is what makes it safe to reach for and\nsafe to expose over MCP; writing is the opt-in.\n\nBinary never goes to stdout under any format. --extract is the only way bytes leave this\ncommand.\n\nA stored file name is attacker-controlled and is sanitized before it is used as a path. The\npayload reports both the raw stored name and the name actually written, so a rename is\nvisible. Extraction is planned in full before anything is written: one refused destination\nmeans no file is written at all, and a name that collides is written under a resolved name\nrather than overwriting anything.\n\nNothing embedded is ever executed or opened.\n\nExamples:\n  cairn pdf attachments report.pdf\n  cairn pdf attachments report.pdf --extract ./out\n\nExit codes:\n  0  Listed, and written when --extract was given\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A destination was refused, an embedded file could not be decoded, or any\n     name had to be sanitized under --strict",
+  )
+  .action((file: string, opts: PdfOptions) =>
+    pdfActionBoundary("attachments", file, opts, () => pdfAttachmentsAction(file, opts)),
+  );
+
+pdfCommon(pdf.command("forms"))
+  .description("List AcroForm fields and their current values")
+  .option("--strict", "Treat a form this cannot fully read as a blocking finding")
+  .addHelpText(
+    "after",
+    "\nReads and never writes. Filling a form is manipulation, which this toolset does not do, so\nthere is no flag that sets a value.\n\nOne field can render as several widgets across pages; they are folded into one row carrying\na count. A field's page is reported 1-based, matching every other page number here.\n\nA field marked as a password field is reported with its value and the flag. The same bytes\nare already reachable through `pdf text`, so withholding them would be theatre.\n\nAn XFA-only document reports type:xfa with no fields and AP311, never a silently empty\nlist: its values live in an XML packet this does not read.\n\nExit codes:\n  0  Reported, including a document that carries no form\n  1  Invocation or I/O error, or the input is not a PDF\n  2  Under --strict, a form this cannot fully read — an XFA form, or a field\n     that resolves to no page",
+  )
+  .action((file: string, opts: PdfOptions) =>
+    pdfActionBoundary("forms", file, opts, () => pdfFormsAction(file, opts)),
   );
 
 const scripts = program

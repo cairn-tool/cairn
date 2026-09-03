@@ -7,6 +7,8 @@ import type { OutputFormat } from "../types.js";
 import { CODES, diagnostic } from "../pdf/diagnostics.js";
 import { classify, withDocument } from "../pdf/document.js";
 import type { OpenDocument } from "../pdf/document.js";
+import { formatAttachments, readAttachments } from "../pdf/attachments.js";
+import { formatForm, readForm } from "../pdf/forms.js";
 import { documentSummary, inspectDocument } from "../pdf/inspect.js";
 import { formatOutline, readOutline } from "../pdf/outline.js";
 import { MAX_INPUT_BYTES, MAX_INPUT_CEILING, parsePageRange, readInput } from "../pdf/read.js";
@@ -22,6 +24,8 @@ export interface PdfOptions {
   strict?: boolean;
   /** Commander hands these through as strings; nothing coerces them for us. */
   pages?: string;
+  /** `pdf attachments` only: the directory embedded files are written into. */
+  extract?: string;
   maxBytes?: string;
   maxPages?: string;
   timeout?: string;
@@ -363,5 +367,39 @@ export async function pdfToMarkdownAction(source: string, opts: PdfOptions): Pro
       diagnostics: [...notices, ...summary.diagnostics, ...converted.diagnostics],
     };
     output(result, opts, emit(result, opts, converted.markdown));
+  });
+}
+
+export async function pdfAttachmentsAction(source: string, opts: PdfOptions): Promise<void> {
+  await open(source, "attachments", opts, async (handle, notices) => {
+    const summary = await documentSummary(handle);
+    const read = await readAttachments(handle, {
+      ...(opts.extract ? { extract: opts.extract } : {}),
+    });
+    const result: PdfResult = {
+      command: "attachments",
+      ok: true,
+      source,
+      document: summary.document,
+      attachments: read.attachments,
+      diagnostics: [...notices, ...summary.diagnostics, ...read.diagnostics],
+    };
+    output(result, opts, formatAttachments(read.attachments));
+  });
+}
+
+export async function pdfFormsAction(source: string, opts: PdfOptions): Promise<void> {
+  await open(source, "forms", opts, async (handle, notices) => {
+    const summary = await documentSummary(handle);
+    const read = await readForm(handle);
+    const result: PdfResult = {
+      command: "forms",
+      ok: true,
+      source,
+      document: summary.document,
+      form: read.form,
+      diagnostics: [...notices, ...summary.diagnostics, ...read.diagnostics],
+    };
+    output(result, opts, formatForm(read.form));
   });
 }

@@ -465,6 +465,39 @@ indistinguishable from success.
 merged cells, wrapped cell text, and rules drawn as vector paths wrong, and produces a confidently
 wrong table a consumer cannot tell from a right one.
 
+## PDF embedded files and forms
+
+Emitted by `pdf attachments` and `pdf forms`. Both read content that is already inside the document;
+neither ever rewrites it.
+
+| Code    | Severity | Emitted by        | Meaning                                                                            |
+| ------- | -------- | ----------------- | ---------------------------------------------------------------------------------- |
+| `AP300` | warning  | `pdf attachments` | An embedded file's stream could not be decoded; it is listed without size or hash. |
+| `AP301` | warning  | `pdf attachments` | A stored file name carried a path and was sanitized before being written.          |
+| `AP302` | notice   | `pdf attachments` | The name was already taken; the file was written under a resolved name.            |
+| `AP303` | error    | `pdf attachments` | A destination escaped `--extract`, or the name was unusable; nothing was written.  |
+| `AP304` | warning  | `pdf attachments` | The decode budget was reached; later entries are listed without size or hash.      |
+| `AP311` | warning  | `pdf forms`       | An XFA form: field values live in an XML packet that is not read.                  |
+| `AP312` | notice   | `pdf forms`       | A field resolves to no page in this document; its `page` is null.                  |
+
+`AP301` reports rather than blocks, and blocks only under `--strict`. A document carrying an unusual
+file name is not a failed extraction: the traversal was contained and the file was written safely.
+`--strict` is what turns it into a CI signal.
+
+`AP303` is an error and stops the whole extraction, not just its own file. An embedded file's stored
+name is attacker-controlled, so extraction is planned in full before anything is written — one
+refused destination means no file is written at all, rather than a partially populated directory
+whose contents depend on iteration order.
+
+`AP302` exists because the alternative is silent data loss. Two embedded files can sanitize to one
+name, and a name can collide with a file that was already in the target directory; overwriting
+either would destroy something the user did not ask to lose.
+
+`AP311` is the `AP219` analogue for forms. An XFA document has no AcroForm field objects at all, so
+reporting an empty field list without saying why would be indistinguishable from a document that
+carries no form. There is deliberately no code for "declares a form with no fields": the parser
+reports that identically to "no form", so a separate code would be a claim this cannot support.
+
 ## Keeping this page honest
 
 `tests/unit/diagnostic-codes.test.ts` extracts every `AB###`, `AD###`, and `AP###` literal from `src/` and

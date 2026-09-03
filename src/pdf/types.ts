@@ -24,7 +24,8 @@ export interface PdfDiagnostic {
   remediation?: string;
 }
 
-export type PdfCommand = "inspect" | "text" | "outline" | "validate" | "to-markdown";
+export type PdfCommand =
+  "inspect" | "text" | "outline" | "validate" | "to-markdown" | "attachments" | "forms";
 
 /** How much text a page carries, relative to its area. */
 export type TextLayer = "present" | "sparse" | "absent";
@@ -100,6 +101,56 @@ export interface PdfOutlineEntry {
   children: PdfOutlineEntry[];
 }
 
+/** One embedded file. Emitted by `pdf attachments`. */
+export interface PdfAttachment {
+  /** The name-tree key: the identifier the content lookup takes. */
+  id: string;
+  /**
+   * The basename pdf.js derived. Never used as a path without re-checking —
+   * the sanitization this command applies is its own, not pdf.js's.
+   */
+  filename: string;
+  /** The stored name verbatim, including any traversal it carries. */
+  rawFilename: string;
+  description?: string;
+  /** Byte length of the decoded file. Absent when the content could not be read. */
+  bytes?: number;
+  sha256?: string;
+  /** Executable format, when the magic bytes say so. */
+  binary?: "elf" | "pe" | "macho";
+  /** Absolute path written. Present only under `--extract`. */
+  written?: string;
+}
+
+/** One AcroForm field. Emitted by `pdf forms`. */
+export interface PdfFormField {
+  /** Fully-qualified field name. */
+  name: string;
+  type: string;
+  /** 1-based, converted from the 0-based index pdf.js reports. */
+  page: number | null;
+  value?: string;
+  defaultValue?: string;
+  readOnly: boolean;
+  hidden: boolean;
+  /**
+   * The field's password flag. The value is still reported: the same bytes are
+   * reachable through `pdf text`, so withholding them would be theatre.
+   */
+  password: boolean;
+  charLimit?: number;
+  exportValues?: string;
+  /** Widgets this field renders as; one field can appear on several pages. */
+  widgets: number;
+}
+
+export interface PdfForm {
+  /** `xfa` means the values live in an XML packet this does not read. */
+  type: "acroform" | "xfa" | "none";
+  fieldCount: number;
+  fields: PdfFormField[];
+}
+
 export interface PdfResult {
   command: PdfCommand;
   ok: boolean;
@@ -114,6 +165,10 @@ export interface PdfResult {
   outline?: PdfOutlineEntry[];
   /** to-markdown */
   markdown?: string;
+  /** attachments */
+  attachments?: PdfAttachment[];
+  /** forms */
+  form?: PdfForm;
   /** text, to-markdown — present only when `--pages` narrowed the document. */
   selectedPages?: number[];
   /** Where `--output` wrote. */

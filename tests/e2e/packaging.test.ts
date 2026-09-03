@@ -80,6 +80,7 @@ describe("published package contents", () => {
     expect(packedFiles).toContain("dist/commands/serve.js");
     expect(packedFiles).toContain("dist/serve/server.js");
     expect(packedFiles).toContain("dist/serve/tools.js");
+    expect(packedFiles).toContain("dist/serve/pdf-tools.js");
   });
 
   // Same trap again: src/scripts/ only reaches dist while every file in it stays
@@ -123,6 +124,9 @@ describe("published package contents", () => {
       "dist/pdf/to-markdown.js",
       "dist/pdf/validate.js",
       "dist/pdf/diagnostics.js",
+      "dist/pdf/attachments.js",
+      "dist/pdf/forms.js",
+      "dist/binary-kind.js",
       "dist/atomic-write.js",
       "dist/markdown-stringify.js",
     ])

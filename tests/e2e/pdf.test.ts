@@ -72,7 +72,15 @@ function validate(id: string, payload: unknown, label: string): void {
     throw new Error(`${label} failed ${id}: ${JSON.stringify(check.errors?.slice(0, 3))}`);
 }
 
-const COMMANDS = ["inspect", "text", "outline", "validate", "to-markdown"] as const;
+const COMMANDS = [
+  "inspect",
+  "text",
+  "outline",
+  "validate",
+  "to-markdown",
+  "attachments",
+  "forms",
+] as const;
 
 describe("pdf, across every subcommand", () => {
   it("succeeds and validates against the published schema", async () => {
@@ -134,12 +142,14 @@ describe("pdf, across every subcommand", () => {
     expect(envelope.stderr).toMatch(/--envelope requires --format json/);
   });
 
-  it("is described with five experimental subcommands on one schema", async () => {
+  it("is described with seven experimental subcommands on one schema", async () => {
     const described = JSON.parse((await run("describe", "-fj")).stdout) as {
       commands: { id: string; stability: string; outputSchema: string }[];
     };
     const rows = described.commands.filter((row) => row.id.startsWith("pdf "));
     expect(rows.map((row) => row.id).sort()).toEqual([
+      "pdf attachments",
+      "pdf forms",
       "pdf inspect",
       "pdf outline",
       "pdf text",
@@ -412,5 +422,161 @@ describe("pdf to-markdown", () => {
     await run("pdf", "to-markdown", fixture("structured"), "--output", destination);
     const lint = await run("md", "lint", destination, "--style");
     expect(lint.exitCode, lint.stdout + lint.stderr).toBe(0);
+  });
+});
+
+describe("pdf attachments", () => {
+  it("lists embedded files with their size and hash", async () => {
+    const file = fixture("attached");
+    const result = await run("pdf", "attachments", file, "-fj");
+    expect(result.exitCode).toBe(0);
+    // Validated here as well as in the cross-command loop, which only ever sees
+    // a document with no attachments: an empty array exercises none of the shape.
+    const payload = JSON.parse(result.stdout) as {
+      attachments: { id: string; filename: string; rawFilename: string; sha256?: string }[];
+    };
+    validate("pdf-result", payload, "pdf attachments (populated)");
+    expect(payload.attachments.map((item) => item.filename)).toEqual(["data.csv", "evil.csv"]);
+    for (const item of payload.attachments) expect(item.sha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("reports the raw stored name beside the one it would write", async () => {
+    // The whole point of carrying both: a rename has to be visible in the
+    // payload, or a caller cannot tell a sanitized name from an authored one.
+    const file = fixture("attached");
+    const payload = JSON.parse((await run("pdf", "attachments", file, "-fj")).stdout) as {
+      attachments: { filename: string; rawFilename: string }[];
+    };
+    const escaped = payload.attachments.find((item) => item.filename === "evil.csv");
+    expect(escaped?.rawFilename).toBe("../../etc/evil.csv");
+  });
+
+  it("writes nothing without --extract", async () => {
+    const file = fixture("attached");
+    const out = workspace();
+    await run("pdf", "attachments", file);
+    expect(fs.readdirSync(out)).toEqual([]);
+  });
+
+  it("extracts into a directory and never outside it", async () => {
+    const file = fixture("attached");
+    const out = path.join(workspace(), "out");
+    // A sanitized name is reported, not fatal: the extraction succeeded and the
+    // traversal was contained. --strict is what turns it into a CI signal.
+    const result = await run("pdf", "attachments", file, "--extract", out, "-fj");
+    expect(result.exitCode).toBe(0);
+
+    const payload = JSON.parse(result.stdout) as {
+      attachments: { filename: string; written?: string }[];
+      diagnostics: { code: string }[];
+    };
+    expect(fs.readdirSync(out).sort()).toEqual(["data.csv", "evil.csv"]);
+    for (const item of payload.attachments) expect(item.written).toContain(out);
+    expect(payload.diagnostics.map((item) => item.code)).toContain("AP301");
+
+    // The traversal never escaped: nothing was written above the target.
+    expect(fs.existsSync(path.join(out, "..", "..", "etc", "evil.csv"))).toBe(false);
+  });
+
+  it("blocks on a sanitized name under --strict", async () => {
+    const out = path.join(workspace(), "out");
+    const result = await run(
+      "pdf",
+      "attachments",
+      fixture("attached"),
+      "--extract",
+      out,
+      "--strict",
+      "-fj",
+    );
+    expect(result.exitCode).toBe(2);
+  });
+
+  it("writes the embedded bytes unchanged", async () => {
+    const file = fixture("attached");
+    const out = path.join(workspace(), "out");
+    await run("pdf", "attachments", file, "--extract", out);
+    expect(fs.readFileSync(path.join(out, "data.csv"), "utf8")).toBe("hello,world\n1,2\n");
+  });
+
+  it("never overwrites an existing file, and says what it wrote instead", async () => {
+    const file = fixture("attached");
+    const out = path.join(workspace(), "out");
+    fs.mkdirSync(out, { recursive: true });
+    fs.writeFileSync(path.join(out, "data.csv"), "do not clobber me");
+
+    const result = await run("pdf", "attachments", file, "--extract", out, "-fj");
+    expect(fs.readFileSync(path.join(out, "data.csv"), "utf8")).toBe("do not clobber me");
+    expect(fs.existsSync(path.join(out, "data-2.csv"))).toBe(true);
+
+    const payload = JSON.parse(result.stdout) as { diagnostics: { code: string }[] };
+    expect(payload.diagnostics.map((item) => item.code)).toContain("AP302");
+  });
+
+  it("reports no embedded files as an answer, not a failure", async () => {
+    const result = await run("pdf", "attachments", fixture("minimal"), "-fj");
+    expect(result.exitCode).toBe(0);
+    const payload = JSON.parse(result.stdout) as { attachments: unknown[] };
+    expect(payload.attachments).toEqual([]);
+  });
+});
+
+describe("pdf forms", () => {
+  it("reads field names, types, and current values", async () => {
+    const result = await run("pdf", "forms", fixture("formFilled"), "-fj");
+    expect(result.exitCode).toBe(0);
+    const payload = JSON.parse(result.stdout) as {
+      form: { type: string; fieldCount: number; fields: Record<string, unknown>[] };
+    };
+    validate("pdf-result", payload, "pdf forms (populated)");
+    expect(payload.form.type).toBe("acroform");
+    expect(payload.form.fields.map((field) => field.name)).toEqual([
+      "agree",
+      "fullName",
+      "internal",
+      "reference",
+    ]);
+    const name = payload.form.fields.find((field) => field.name === "fullName");
+    expect(name).toMatchObject({ type: "text", value: "Ada Lovelace", page: 1, charLimit: 64 });
+  });
+
+  it("reports a field's page 1-based, matching every other page number here", async () => {
+    // pdf.js reports it 0-based; getting this wrong reads correctly in every
+    // test written against the wrong value, so it is asserted on its own.
+    const payload = JSON.parse(
+      (await run("pdf", "forms", fixture("formFilled"), "-fj")).stdout,
+    ) as {
+      form: { fields: { page: number }[] };
+    };
+    for (const field of payload.form.fields) expect(field.page).toBe(1);
+  });
+
+  it("carries the read-only and hidden flags", async () => {
+    const payload = JSON.parse(
+      (await run("pdf", "forms", fixture("formFilled"), "-fj")).stdout,
+    ) as {
+      form: { fields: Record<string, unknown>[] };
+    };
+    expect(payload.form.fields.find((f) => f.name === "reference")).toMatchObject({
+      readOnly: true,
+    });
+    expect(payload.form.fields.find((f) => f.name === "internal")).toMatchObject({ hidden: true });
+  });
+
+  it("keeps a field that resolves to no page, and says so", async () => {
+    const result = await run("pdf", "forms", fixture("formOrphan"), "-fj");
+    const payload = JSON.parse(result.stdout) as {
+      form: { fields: { name: string; page: number | null }[] };
+      diagnostics: { code: string }[];
+    };
+    expect(payload.form.fields[0]).toMatchObject({ name: "orphan", page: null });
+    expect(payload.diagnostics.map((item) => item.code)).toContain("AP312");
+  });
+
+  it("reports a document with no form as an answer, not a failure", async () => {
+    const result = await run("pdf", "forms", fixture("minimal"), "-fj");
+    expect(result.exitCode).toBe(0);
+    const payload = JSON.parse(result.stdout) as { form: { type: string; fieldCount: number } };
+    expect(payload.form).toMatchObject({ type: "none", fieldCount: 0 });
   });
 });

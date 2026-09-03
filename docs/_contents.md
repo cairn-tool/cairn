@@ -190,6 +190,8 @@ subagent, hook, MCP server, asset, and contract test.
 - [`pdf outline`](commands/pdf/outline.md)
 - [`pdf validate`](commands/pdf/validate.md)
 - [`pdf to-markdown`](commands/pdf/to-markdown.md)
+- [`pdf attachments`](commands/pdf/attachments.md)
+- [`pdf forms`](commands/pdf/forms.md)
 
 ## Other top-level commands
 

@@ -222,6 +222,21 @@ export interface PdfSpec {
   mediaBox?: [number, number, number, number];
   /** Make /Pages point at itself, for the page-tree cycle case. */
   cyclicPageTree?: boolean;
+  /**
+   * Extra objects, built with the same numbering as the rest of the document.
+   * The callback reserves and adds, and whatever it returns is spread into the
+   * catalog — which is how /Names, /AcroForm and anything else catalog-level
+   * gets in without this builder growing a field per feature.
+   */
+  extend?: (helpers: {
+    reserve: () => number;
+    add: (num: number, value: PdfValue, stream?: Buffer) => void;
+    ref: (num: number) => PdfRef;
+    name: (text: string) => PdfName;
+    pageRef: (index: number) => PdfRef;
+  }) => { catalog?: PdfDict; annots?: Record<number, PdfValue[]> };
+  /** Annotations per page index, for widget annotations and links. */
+  annots?: Record<number, PdfValue[]>;
 }
 
 const DEFAULT_FONTS: Record<string, string> = { F1: "Helvetica", F2: "Helvetica-Bold" };
@@ -249,6 +264,14 @@ export function buildPdf(spec: PdfSpec): Buffer {
 
   const pageNums = spec.pages.map(() => reserve());
   const contentNums = spec.pages.map(() => reserve());
+
+  // Run before the page dictionaries are built, because a widget annotation has
+  // to appear in its page's /Annots as well as in /AcroForm /Fields — pdf.js
+  // takes a field's page from the annotation, not from the field.
+  const extended = spec.extend
+    ? spec.extend({ reserve, add, ref, name, pageRef: (index: number) => ref(pageNums[index]) })
+    : {};
+  const annots: Record<number, PdfValue[]> = { ...spec.annots, ...extended.annots };
 
   // Reserved before the elements so /P can point back at the root, and so the
   // catalog can reference the tree it has not been built yet.
@@ -286,6 +309,7 @@ export function buildPdf(spec: PdfSpec): Buffer {
         ) as PdfDict,
       },
       Contents: ref(contentNums[index]),
+      ...(annots[index]?.length ? { Annots: annots[index] } : {}),
       ...(spec.tagged ? { StructParents: index } : {}),
     });
     add(contentNums[index], {}, contentStream(runs, spec.extras?.[index]));
@@ -377,6 +401,7 @@ export function buildPdf(spec: PdfSpec): Buffer {
     Pages: ref(pagesNum),
     ...(spec.outline ? { Outlines: ref(outlineRootNum) } : {}),
     ...(spec.tagged ? { StructTreeRoot: ref(structRootNum), MarkInfo: { Marked: true } } : {}),
+    ...extended.catalog,
   });
 
   const infoNum = spec.info ? reserve() : 0;
@@ -513,6 +538,131 @@ export const PDF_FIXTURES: Record<string, PdfSpec> = {
   pageTreeCycle: {
     pages: [[{ x: 72, y: 700, size: BODY, font: "F1", text: "Unreachable." }]],
     cyclicPageTree: true,
+  },
+
+  /**
+   * Two embedded files, one of which stores a traversing name.
+   *
+   * `evil` is the case the extractor exists to refuse: `/F` is
+   * `../../etc/evil.csv`, which pdf.js already reports as a stripped
+   * `filename` with `rawFilename` intact — and which this repo re-sanitizes
+   * anyway rather than trusting.
+   */
+  attached: {
+    pages: [[{ x: 72, y: 700, size: BODY, font: "F1", text: "See the attachments." }]],
+    extend: ({ reserve, add, ref, name }) => {
+      const plain = Buffer.from("hello,world\n1,2\n", "utf8");
+      const evil = Buffer.from("owned\n", "utf8");
+      const plainStream = reserve();
+      const plainSpec = reserve();
+      const evilStream = reserve();
+      const evilSpec = reserve();
+      add(plainStream, { Type: name("EmbeddedFile"), Length: plain.length }, plain);
+      add(plainSpec, {
+        Type: name("Filespec"),
+        F: "data.csv",
+        UF: "data.csv",
+        Desc: "A sample table",
+        EF: { F: ref(plainStream) },
+      });
+      add(evilStream, { Type: name("EmbeddedFile"), Length: evil.length }, evil);
+      add(evilSpec, {
+        Type: name("Filespec"),
+        F: "../../etc/evil.csv",
+        UF: "../../etc/evil.csv",
+        EF: { F: ref(evilStream) },
+      });
+      return {
+        catalog: {
+          Names: {
+            EmbeddedFiles: {
+              Names: ["data.csv", ref(plainSpec), "escape.csv", ref(evilSpec)],
+            },
+          },
+        },
+      };
+    },
+  },
+  /** A filled AcroForm: a text field with a value, a checkbox, a read-only and a hidden field. */
+  formFilled: {
+    pages: [[{ x: 72, y: 760, size: BODY, font: "F1", text: "Application form" }]],
+    extend: ({ reserve, add, ref, name, pageRef }) => {
+      const fields = [
+        {
+          dict: {
+            FT: name("Tx"),
+            T: "fullName",
+            TU: "Your full name",
+            V: "Ada Lovelace",
+            MaxLen: 64,
+            Rect: [72, 700, 300, 720],
+          } as PdfDict,
+        },
+        {
+          dict: {
+            FT: name("Btn"),
+            T: "agree",
+            V: name("Off"),
+            AS: name("Off"),
+            Rect: [72, 660, 90, 678],
+          } as PdfDict,
+        },
+        {
+          // Ff bit 1 is ReadOnly.
+          dict: {
+            FT: name("Tx"),
+            T: "reference",
+            V: "REF-001",
+            Ff: 1,
+            Rect: [72, 620, 300, 640],
+          } as PdfDict,
+        },
+        {
+          // /F bit 2 is Hidden.
+          dict: {
+            FT: name("Tx"),
+            T: "internal",
+            V: "secret",
+            F: 2,
+            Rect: [72, 580, 300, 600],
+          } as PdfDict,
+        },
+      ];
+      const nums = fields.map(() => reserve());
+      fields.forEach((field, index) => {
+        add(nums[index], {
+          Type: name("Annot"),
+          Subtype: name("Widget"),
+          P: pageRef(0),
+          ...field.dict,
+        });
+      });
+      return {
+        catalog: { AcroForm: { Fields: nums.map(ref), DA: "/Helv 0 Tf 0 g" } },
+        annots: { 0: nums.map(ref) },
+      };
+    },
+  },
+  /**
+   * A field listed in /AcroForm /Fields but attached to no page's /Annots.
+   *
+   * The AP312 case: the field is real and carries a value, but there is no page
+   * to report it on, so `page` is null rather than a guess.
+   */
+  formOrphan: {
+    pages: [[{ x: 72, y: 700, size: BODY, font: "F1", text: "Detached field." }]],
+    extend: ({ reserve, add, ref, name }) => {
+      const num = reserve();
+      add(num, {
+        Type: name("Annot"),
+        Subtype: name("Widget"),
+        FT: name("Tx"),
+        T: "orphan",
+        V: "detached",
+        Rect: [0, 0, 10, 10],
+      });
+      return { catalog: { AcroForm: { Fields: [ref(num)], DA: "/Helv 0 Tf 0 g" } } };
+    },
   },
 };
 

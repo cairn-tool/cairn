@@ -615,6 +615,43 @@ outputTokens}` on a `bubbleId:` record is a real per-request figure with no dist
   `pdf validate` its only signal for a rebuilt xref, a substituted font, or an unsupported filter,
   so raising verbosity to ERRORS would keep the stream clean and delete four checks. pdf.js fires
   callbacks during teardown, so restoring early lets a late warning escape.
+- **Four pdf.js lookups return a `Map`, and the reflex to reach for `Object.entries` is wrong on all
+  of them.** `getMarkInfo`, `getAttachments`, `getFieldObjects`, and `getJSActions` are all Maps;
+  `Object.entries()` on any of them yields `[]` silently, reporting a document as untagged, with no
+  attachments, or with no form. Only `getMarkInfo`'s published `.d.ts` actually lies about it, which
+  is why the other three are easy to get wrong a second time.
+- **`getAttachments()` carries no bytes.** Its `content` is always `undefined`; the bytes come from a
+  separate `getAttachmentContent(key)` keyed by the _name-tree key_, which is a third string distinct
+  from both `filename` and `rawFilename`. That split is what makes `pdf attachments`' inventory cheap
+  and its extraction genuinely opt-in, so do not "simplify" it into one eager call.
+- **A form field's `page` is 0-based, and `-1` when the field is attached to no page.** Every other
+  page number in the toolset is 1-based. `src/pdf/forms.ts` converts once, at the boundary; the
+  sentinel becomes `page: null` plus `AP312` rather than page 0. Getting this wrong reads correctly
+  in every test written against the wrong value.
+- **`writeAtomically`'s `wx` guards the staging file, not the destination** — the `rename` still
+  replaces whatever is there. That is right for `--output`, which names one file the user asked to
+  write, and wrong for extracting many attacker-named files, so `src/pdf/attachments.ts` resolves
+  collisions while planning. Extraction is planned over the whole set before any write, so one
+  refused destination means nothing is written at all; `archive extract` sanitizes with
+  `path.basename` alone and is not the model.
+- **`pdf audit` and `pdf images` are deferred, and the reason is a measurement rather than a
+  preference.** pdf.js's public API cannot see `/Launch`, `/SubmitForm`, `/ImportData`, or a
+  non-JavaScript `/OpenAction`: `collectActions` filters on `isName(entry.get("S"), "JavaScript")`
+  and `parseDestDictionary` drops `SubmitForm` through its `default:` branch, so a document that
+  launches a process on open and exfiltrates form data audits _clean_. Images likewise arrive already
+  decoded to RGBA, so neither the original bytes nor the filter name is reachable. Both commands need
+  an object-layer reader (a lexer, a brute-force `N G obj` index, and `/ObjStm` inflation — modern
+  producers use object streams heavily, 876 in one real manual). Do not ship either on the public API
+  alone; a security command with silent blind spots is the indistinguishable-from-success failure in
+  the worst possible place.
+- **The PDF MCP tools live in `src/serve/pdf-tools.ts` and register through `SERVE_TOOLS`.** They are
+  confined to `--root` exactly like the Markdown tools, which is a real narrowing accepted on purpose
+  rather than adding a second boundary. Nothing there writes — `list_pdf_attachments` inventories and
+  `--extract` has no equivalent — and no handler may call a command action, because those
+  `terminate()` and would kill a long-lived stdio server. `src/serve/types.ts` exists so that module
+  can implement `ServeTool` without importing the array it registers into. `cairn serve mcp` is
+  registered by `plugins/cairn-markdown` **and no other plugin**: one server carries every toolset's
+  tools, so a second registration hands a host that installs both the same seventeen tools twice.
 
 ## Commits
 

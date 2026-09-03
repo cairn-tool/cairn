@@ -920,6 +920,20 @@ describe("declared output schemas match real output", () => {
       outcome: "success",
       exitCode: 2,
     },
+    {
+      label: "pdf attachments",
+      schema: "pdf-result",
+      args: (context) => ["pdf", "attachments", context.pdf, "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "pdf forms",
+      schema: "pdf-result",
+      args: (context) => ["pdf", "forms", context.pdf, "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
   ];
 
   /**

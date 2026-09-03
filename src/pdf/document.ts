@@ -62,7 +62,29 @@ export interface PdfPageHandle {
     includeMarkedContent?: boolean;
   }): Promise<{ items: PdfTextItem[]; styles: Record<string, PdfTextStyle> }>;
   getStructTree(): Promise<PdfStructNode | null>;
+  getXfa(): Promise<unknown>;
   cleanup(): boolean;
+}
+
+/**
+ * One embedded file, as `getAttachments()` describes it.
+ *
+ * `content` is declared optional because pdf.js does not populate it: the
+ * lookup is metadata only and the bytes come from `getAttachmentContent`. That
+ * is what makes `pdf attachments`'s inventory cheap and its extraction the
+ * opt-in.
+ */
+export interface PdfAttachmentEntry {
+  /** Basename pdf.js derived from the file spec. Already path-stripped. */
+  filename?: string;
+  /** The stored name verbatim, traversal and all. */
+  rawFilename?: string;
+  description?: string;
+  content?: Uint8Array;
+}
+
+export interface PdfPageHandleExtras {
+  getXfa(): Promise<unknown>;
 }
 
 export interface PdfDocumentHandle {
@@ -74,6 +96,17 @@ export interface PdfDocumentHandle {
   getPageIndex(ref: unknown): Promise<number>;
   getMarkInfo(): Promise<unknown>;
   getPermissions(): Promise<Set<number> | null>;
+  /**
+   * A `Map`, like `getMarkInfo`, `getFieldObjects`, and `getJSActions` — never a
+   * plain object. `Object.entries()` on any of the four silently yields nothing.
+   */
+  getAttachments(): Promise<Map<string, PdfAttachmentEntry> | null>;
+  /** Bytes for one attachment, keyed by its `getAttachments()` map key. */
+  getAttachmentContent(id: string): Promise<Uint8Array | null>;
+  /** A `Map` keyed by fully-qualified field name; each value is one array of widgets. */
+  getFieldObjects(): Promise<Map<string, unknown[]> | null>;
+  /** True when the form is XFA-only, so `getFieldObjects` has nothing to report. */
+  isPureXfa: boolean;
   cleanup(): Promise<unknown>;
 }
 

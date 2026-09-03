@@ -15,6 +15,7 @@ import { policyEntries } from "../render.js";
 import { COMPONENT_KEYS } from "../manifest.js";
 import { TARGET_PROFILES } from "../targets/index.js";
 import type { AuditBaseline } from "./baseline.js";
+import { binaryKind } from "../../binary-kind.js";
 
 /** A single file larger than this is worth a reviewer's attention. */
 export const MAX_FILE_BYTES = 1024 * 1024;
@@ -236,20 +237,12 @@ export function tokenize(command: string): string[] {
 }
 
 /**
- * Executable-format magic number.
- *
- * Header parsing only, mirroring `imageKind` in the packager: pulling in a
- * binary-format library to answer "is this an executable" would be a dependency
- * for a review nicety.
+ * Re-exported so `agent audit`'s consumers keep one import site. The
+ * implementation moved to `src/binary-kind.ts` when `pdf attachments` needed
+ * the same magic-number test; see that module for why it is shared rather than
+ * imported across toolsets.
  */
-export function binaryKind(content: Buffer): "elf" | "pe" | "macho" | null {
-  if (content.length < 4) return null;
-  if (content.subarray(0, 4).toString("hex") === "7f454c46") return "elf";
-  if (content[0] === 0x4d && content[1] === 0x5a) return "pe";
-  const magic = content.subarray(0, 4).toString("hex");
-  if (["feedface", "feedfacf", "cefaedfe", "cffaedfe", "cafebabe"].includes(magic)) return "macho";
-  return null;
-}
+export { binaryKind };
 
 /** Shannon entropy per character, used only to grade a candidate secret. */
 export function entropy(value: string): number {

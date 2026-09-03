@@ -134,6 +134,49 @@ describe("the generated fixtures parse", () => {
     });
   });
 
+  it("attached carries two embedded files, one storing a traversing name", async () => {
+    await open("attached", async (handle) => {
+      const entries = await handle.doc.getAttachments();
+      // A Map, like getMarkInfo, getFieldObjects and getJSActions. Object.entries
+      // on any of the four silently yields nothing.
+      expect(entries).toBeInstanceOf(Map);
+      expect([...entries!.keys()].sort()).toEqual(["data.csv", "escape.csv"]);
+
+      // pdf.js strips the path itself and keeps the raw name beside it. The
+      // extractor does not rely on that, but the fixture has to exercise it.
+      const escaped = entries!.get("escape.csv")!;
+      expect(escaped.filename).toBe("evil.csv");
+      expect(escaped.rawFilename).toBe("../../etc/evil.csv");
+
+      // Content is a separate lazy call: the lookup above carries no bytes.
+      expect(escaped.content).toBeUndefined();
+      const bytes = await handle.doc.getAttachmentContent("data.csv");
+      expect(Buffer.from(bytes!).toString()).toBe("hello,world\n1,2\n");
+    });
+  });
+
+  it("formFilled carries four AcroForm fields with values", async () => {
+    await open("formFilled", async (handle) => {
+      const fields = await handle.doc.getFieldObjects();
+      expect(fields).toBeInstanceOf(Map);
+      expect([...fields!.keys()].sort()).toEqual(["agree", "fullName", "internal", "reference"]);
+      // The value is an array, one entry per widget, and `page` is 0-based.
+      const [name] = fields!.get("fullName") as { value: string; page: number }[];
+      expect(name.value).toBe("Ada Lovelace");
+      expect(name.page).toBe(0);
+    });
+  });
+
+  it("formOrphan carries a field attached to no page", async () => {
+    await open("formOrphan", async (handle) => {
+      const fields = await handle.doc.getFieldObjects();
+      // -1, not undefined and not a valid index: the sentinel `readForm` turns
+      // into `page: null` plus AP312 rather than into page 0.
+      const [orphan] = fields!.get("orphan") as { page?: number }[];
+      expect(orphan.page).toBe(-1);
+    });
+  });
+
   it("notAPdf is refused by the parser", async () => {
     await expect(open("notAPdf", async () => undefined)).rejects.toThrow();
   });

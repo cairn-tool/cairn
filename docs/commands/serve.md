@@ -6,10 +6,10 @@
 cairn serve <protocol> [options]
 ```
 
-Serves the Markdown workspace engine over a machine protocol. The only protocol today is
-`mcp`, which speaks the [Model Context Protocol](https://modelcontextprotocol.io) over stdio
-so a compatible host can call the engine directly instead of spawning the CLI and parsing its
-output.
+Serves the Markdown workspace engine, and a read-only view of PDF documents, over a machine
+protocol. The only protocol today is `mcp`, which speaks the
+[Model Context Protocol](https://modelcontextprotocol.io) over stdio so a compatible host can call
+them directly instead of spawning the CLI and parsing its output.
 
 Every tool is read-only, and every path argument is confined to `--root`.
 
@@ -58,14 +58,38 @@ It exits `0` when the client disconnects.
 | `list_code_blocks` | `md code-blocks`   | Fenced code blocks, optionally with contents.                  |
 | `find_references`  | `md refs-to`       | Every local reference resolving to a file — its backlinks.     |
 
+PDF tools, which read a document rather than the workspace:
+
+| Tool                      | Equivalent command | Purpose                                                      |
+| ------------------------- | ------------------ | ------------------------------------------------------------ |
+| `inspect_pdf`             | `pdf inspect`      | Page count, metadata, tagging, per-page text-layer forecast. |
+| `read_pdf_text`           | `pdf text`         | The text layer a document already carries, page by page.     |
+| `convert_pdf_to_markdown` | `pdf to-markdown`  | Content as Markdown, reporting what was inferred.            |
+| `get_pdf_outline`         | `pdf outline`      | The declared bookmarks as a heading tree.                    |
+| `list_pdf_attachments`    | `pdf attachments`  | Embedded files, with size and SHA-256. Inventory only.       |
+| `list_pdf_form_fields`    | `pdf forms`        | AcroForm field names, types, and current values.             |
+
 Each tool's arguments are described by its own JSON Schema, retrieved through the protocol's
 `tools/list` rather than through [`schema`](schema.md). Results are JSON text matching the
 equivalent command's `--format json` payload, with paths rendered relative to `--root`.
 
-Configuration is discovered from `--root`, so a tool applies the same checks, includes, and
-excludes as the equivalent `md` command run in that workspace. Where a command has a
+Configuration is discovered from `--root`, so a **Markdown** tool applies the same checks,
+includes, and excludes as the equivalent `md` command run in that workspace. Where a command has a
 long-standing quirk, the tool reproduces it rather than quietly disagreeing — `get_outline`
 reports a document's frontmatter as a setext heading exactly as `md outline` does.
+
+The PDF tools consult no configuration at all, matching the `pdf` toolset on the CLI: a checked-in
+`.cairn.yml` has no say over how a document named in a tool call is parsed. Their input bounds — 64
+MiB, a 30-second parse budget, 5000 pages — are the CLI defaults, applied as fixed limits because a
+host has no way to pass `--max-bytes`.
+
+A PDF must live under `--root` to be readable. That is a real narrowing, since a PDF handed to the
+CLI has nothing to do with a workspace, and it is deliberate: the alternative is a second
+confinement boundary on a surface whose entire claim is that there is one.
+
+Neither `list_pdf_attachments` nor anything else here can extract an embedded file. The inventory is
+available and the write is not, which is the same line that keeps
+[`scripts run`](scripts/run.md) off this surface entirely.
 
 ## Read-only by construction
 

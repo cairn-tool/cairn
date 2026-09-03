@@ -9,6 +9,7 @@ import { SERVE_TOOLS, TOOL_BY_NAME, type ServeContext } from "../../src/serve/to
 import { callTool, compileValidators, toolManifest } from "../../src/serve/server.js";
 import { confine, PathRejected, resolveRoot } from "../../src/serve/paths.js";
 import { scrub } from "../../src/serve/errors.js";
+import { pdfFixture } from "../helpers/pdf-fixture.js";
 
 let tmpDir: string;
 let root: string;
@@ -39,6 +40,9 @@ async function failure(name: string, args: Record<string, unknown> = {}): Promis
 
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "serve-tools-"));
+  // A PDF inside the served root: the PDF tools are confined exactly like the
+  // Markdown ones, so a document outside it is unreachable by design.
+  fs.writeFileSync(path.join(tmpDir, "sample.pdf"), pdfFixture("outlined"));
   write(
     "index.md",
     [
@@ -137,6 +141,14 @@ describe("read-only guarantee", () => {
     await call("list_tasks", { file: "index.md" });
     await call("list_code_blocks", { file: "index.md" });
     await call("find_references", { file: "guide.md" });
+    // The PDF tools belong here too: this is what proves they write nothing,
+    // and `list_pdf_attachments` is the one with a writing sibling on the CLI.
+    await call("inspect_pdf", { file: "sample.pdf" });
+    await call("read_pdf_text", { file: "sample.pdf" });
+    await call("convert_pdf_to_markdown", { file: "sample.pdf" });
+    await call("get_pdf_outline", { file: "sample.pdf" });
+    await call("list_pdf_attachments", { file: "sample.pdf" });
+    await call("list_pdf_form_fields", { file: "sample.pdf" });
 
     const after = fs
       .readdirSync(tmpDir, { recursive: true, withFileTypes: true })
@@ -205,6 +217,26 @@ describe("path confinement", () => {
       expect(message).not.toContain(tmpDir);
       expect(message).not.toContain(root);
     }
+  });
+
+  it("refuses a PDF outside the served root, and does not echo its path", async () => {
+    // The narrowing this surface accepts: a PDF handed to the CLI has nothing to
+    // do with a workspace, but on MCP there is one boundary and PDFs are inside
+    // it like everything else.
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "serve-outside-"));
+    fs.writeFileSync(path.join(outside, "secret.pdf"), pdfFixture("minimal"));
+    const message = await failure("inspect_pdf", {
+      file: path.join(outside, "secret.pdf"),
+    });
+    expect(message).toContain("outside the served root");
+    expect(message).not.toContain(outside);
+    fs.rmSync(outside, { recursive: true, force: true });
+  });
+
+  it("refuses a PDF read from stdin, which is the JSON-RPC channel", async () => {
+    // `readInput` treats "-" as stdin. On a stdio server fd 0 carries the
+    // protocol, so reading it would deadlock the transport rather than fail.
+    expect(await failure("inspect_pdf", { file: "-" })).toContain('"-" is not available');
   });
 });
 
