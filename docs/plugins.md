@@ -9,11 +9,6 @@ They are authored as [agent bundles](formats/agent-bundle.md) under `plugins/`, 
 
 ## Installing
 
-```text
-/plugin marketplace add cairn-tool/cairn@claude-plugins
-/plugin install cairn-markdown@cairn
-```
-
 One branch per host, each holding that host's catalog at its root:
 
 | Target        | Branch           | Catalog                           |
@@ -21,6 +16,51 @@ One branch per host, each holding that host's catalog at its root:
 | `claude-code` | `claude-plugins` | `.claude-plugin/marketplace.json` |
 | `codex`       | `codex-plugins`  | `.codex-plugin/marketplace.json`  |
 | `cursor`      | `cursor-plugins` | `.cursor-plugin/marketplace.json` |
+
+All three catalogs carry the same document-level `name`, `cairn` — it comes from the collection
+spec, not from the target — so a plugin's install id is `<plugin>@cairn` on every host that uses
+one.
+
+### Claude Code
+
+```text
+/plugin marketplace add cairn-tool/cairn@claude-plugins
+/plugin install cairn-markdown@cairn
+```
+
+### Codex
+
+`--ref` is what pins the marketplace to the published branch; without it Codex fetches the
+repository's default branch, which carries the bundle sources rather than a catalog:
+
+```bash
+codex plugin marketplace add cairn-tool/cairn --ref codex-plugins
+codex plugin add cairn-markdown@cairn
+```
+
+Codex installs from a **local snapshot** of the catalog, under
+`$CODEX_HOME/marketplaces/cairn`, and only a configured marketplace is an install source — a
+`.codex-plugin/marketplace.json` sitting in the working directory is not. So a release does not
+reach an existing install by itself: `codex plugin marketplace upgrade cairn` re-fetches the
+branch, and `codex plugin list --marketplace cairn` shows what the snapshot currently offers.
+
+### Cursor
+
+Cursor has no CLI for adding a marketplace, and a repository-backed one is a **team
+marketplace** — a Teams or Enterprise feature. In the dashboard, go to **Plugins → Team
+Marketplaces → Add Marketplace → Import from Repo**, point it at
+`https://github.com/cairn-tool/cairn` and the `cursor-plugins` branch, and developers then
+install from **Customize** in the sidebar. **Auto Refresh** re-reads the whole catalog on every
+push to that branch, and needs the Cursor GitHub App installed on the repository.
+
+Without a team plan, install locally instead — the wrapper below writes to
+`~/.cursor/plugins/local`, which Cursor scans on startup and which needs no registration:
+
+```bash
+scripts/install-cursor.sh
+```
+
+### The rest
 
 `claude-code`'s branch is **not** `claude-code-plugins`. That name predates the other two and is
 already added in users' clients, so it stays pinned; only the two new branches derive their name

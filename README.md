@@ -91,20 +91,63 @@ Full documentation lives in
 | [Installing Cairn](docs/install.md)                  | Node versions, stable paths, and building from source. |
 | [Migrating from claude-cli](docs/migration.md)       | Every pre-rename identifier, and what still reads it.  |
 
-## Claude Code plugins
+## Plugins
 
 Cairn ships its own toolsets as installable plugins, so an assistant has the command surface
-available without rediscovering it from `--help`:
+available without rediscovering it from `--help`. Each host gets its own marketplace branch,
+holding that host's catalog at the branch root:
+
+| Host        | Branch           | Catalog                           |
+| ----------- | ---------------- | --------------------------------- |
+| Claude Code | `claude-plugins` | `.claude-plugin/marketplace.json` |
+| Codex       | `codex-plugins`  | `.codex-plugin/marketplace.json`  |
+| Cursor      | `cursor-plugins` | `.cursor-plugin/marketplace.json` |
+
+The marketplace is named `cairn`, and the plugins in it are `cairn-markdown`, `cairn-scripts`,
+`cairn-usage`, `cairn-archive`, `cairn-agent`, and `cairn-jira`.
+
+### Claude Code
 
 ```text
 /plugin marketplace add cairn-tool/cairn@claude-plugins
 /plugin install cairn-markdown@cairn
 ```
 
-Codex and Cursor get their own marketplace branches, `codex-plugins` and `cursor-plugins`.
+### Codex
 
-They are authored as agent bundles under `plugins/`, built with the same `agent` commands they
-document. **The `cairn` binary is a separate install** — the plugins invoke it, they do not
+Add the branch as a marketplace, then install from it by name. `--ref` is what pins the
+marketplace to the published branch rather than `main`:
+
+```bash
+codex plugin marketplace add cairn-tool/cairn --ref codex-plugins
+codex plugin add cairn-markdown@cairn
+```
+
+`codex plugin list --marketplace cairn` shows what the branch offers, and
+`codex plugin marketplace upgrade cairn` re-fetches it after a release — the snapshot Codex
+installs from is local, so it does not update on its own.
+
+### Cursor
+
+Cursor has no CLI for adding a marketplace; a repository-backed one is a **team marketplace**,
+which is a Teams or Enterprise feature. In the dashboard, go to **Plugins → Team Marketplaces →
+Add Marketplace → Import from Repo**, point it at `https://github.com/cairn-tool/cairn` and the
+`cursor-plugins` branch, then install from **Customize** in the sidebar. Turning on **Auto
+Refresh** re-reads the catalog whenever that branch is pushed.
+
+Without a team plan, install locally instead — this drops the plugins into
+`~/.cursor/plugins/local`, which Cursor scans on startup:
+
+```bash
+scripts/install-cursor.sh
+```
+
+Antigravity and OpenCode have no marketplace concept at all; there a plugin is a directory drop,
+so use [`agent install`](docs/commands/agent/install.md) or the
+[install scripts](scripts/README.md).
+
+The plugins are authored as agent bundles under `plugins/`, built with the same `agent` commands
+they document. **The `cairn` binary is a separate install** — the plugins invoke it, they do not
 carry it. See [Cairn's own plugins](docs/plugins.md) for what each one contains.
 
 ## Contributing
