@@ -18,6 +18,7 @@ import {
 } from "./markdown.js";
 import { archiveListingSchema, archiveResultSchema } from "./archive.js";
 import { adfResultSchema } from "./jira.js";
+import { pdfResultSchema } from "./pdf.js";
 import { checkUpdateSchema, describeSchema, envelopeSchema, schemaListSchema } from "./meta.js";
 import { scriptListSchema, scriptRunSchema, scriptWhichSchema } from "./scripts.js";
 import {
@@ -52,6 +53,7 @@ export const SCHEMAS: readonly SchemaEntry[] = [
   mdFixSchema,
   agentResultSchema,
   adfResultSchema,
+  pdfResultSchema,
   scriptRunSchema,
   scriptWhichSchema,
   scriptListSchema,

@@ -1,13 +1,14 @@
 # Diagnostics
 
-Three finding shapes exist in this project, for three different kinds of check, and they are not
+Four finding shapes exist in this project, for four different kinds of check, and they are not
 interchangeable.
 
-| Shape                  | Produced by              | Carries                                                |
-| ---------------------- | ------------------------ | ------------------------------------------------------ |
-| `Issue`                | every `md` checker       | file, line, checker, message                           |
-| `AgentDiagnostic`      | every `agent` command    | a stable `AB###` code, severity, quality, and location |
-| `ConversionDiagnostic` | every `jira adf` command | a stable `AD###` code, severity, quality, and location |
+| Shape                  | Produced by              | Carries                                                       |
+| ---------------------- | ------------------------ | ------------------------------------------------------------- |
+| `Issue`                | every `md` checker       | file, line, checker, message                                  |
+| `AgentDiagnostic`      | every `agent` command    | a stable `AB###` code, severity, quality, and location        |
+| `ConversionDiagnostic` | every `jira adf` command | a stable `AD###` code, severity, quality, and location        |
+| `PdfDiagnostic`        | every `pdf` command      | a stable `AP###` code, severity, quality, page, and construct |
 
 ## `Issue`
 
@@ -64,8 +65,8 @@ came from the renderer. Consumers that need one or the other normalize; the SARI
 
 ### Codes are stable identifiers
 
-`AB###` for an agent bundle and `AD###` for a conversion, and a code is never reused for a
-different condition. One condition keeps one ID
+`AB###` for an agent bundle, `AD###` for an ADF conversion, and `AP###` for PDF reading, and a code
+is never reused for a different condition. One condition keeps one ID
 whichever command surfaces it — which is why `agent audit` **re-emits** `AB504`, `AB505`, and
 `AB506` from the packager rather than minting its own. Doing otherwise breaks a consumer's
 suppression list.
@@ -102,6 +103,33 @@ Findings are deduplicated by code, node, and location. A table with two hundred 
 reports the condition once per cell position rather than burying every other finding under it.
 
 The published schema is `adf-result`.
+
+## `PdfDiagnostic`
+
+```ts
+interface PdfDiagnostic {
+  code: string; // AP###
+  severity: "notice" | "warning" | "error";
+  message: string;
+  quality: "exact" | "approximate" | "unsupported";
+  page?: number; // 1-based, when the finding concerns one page
+  construct?: string; // a structure role, a filter name, a font name
+  remediation?: string;
+}
+```
+
+Structurally a `ConversionDiagnostic` with `node` and `location` replaced by `page` and
+`construct`. A PDF finding is positioned by page rather than by a node ancestry trail, and putting a
+page number into a field documented as "slash-joined ancestor node types" would be worse than a
+fourth shape. `quality` and the quality-to-severity rule come from `src/mapping-quality.ts`, shared
+with the other two conversion families so the three cannot drift.
+
+Findings are deduplicated on code, construct, and page, and ordered by code, then **numerically** by
+page, then by byte comparison of the construct. The numeric page ordering is the one place this
+differs from the ADF sink: a bytewise sort puts page 10 before page 2, and a reader scanning a
+300-page document's findings would be reading them out of order.
+
+The published schema is `pdf-result`.
 
 ## Code ranges
 
@@ -140,10 +168,18 @@ identifier whichever command surfaces it, or a consumer's suppression list break
 | `AD200`–`AD211` | `jira adf to-markdown`        | ADF to Markdown mapping losses                                                       |
 | `AD300`–`AD311` | `jira adf from-markdown`      | Markdown to ADF mapping and degradation                                              |
 | `AD400`–        | —                             | reserved for a future round-trip fidelity mode                                       |
+| `AP000`–`AP019` | `pdf` reader and loader       | invocation, I/O, input bounds, encryption, resource budgets                          |
+| `AP020`–`AP049` | `pdf` page walker             | the page tree and per-page decoding                                                  |
+| `AP050`–`AP079` | `pdf text`, `pdf inspect`     | the text layer: absent, sparse, undecodable                                          |
+| `AP080`–`AP099` | `pdf outline`                 | unresolvable destinations, depth                                                     |
+| `AP100`–`AP130` | `pdf validate`                | structural integrity: xref recovery, fonts, filters, metadata, tagging claims        |
+| `AP200`–`AP240` | `pdf to-markdown`             | reading order, structure inference, and mapping losses                               |
+| `AP300`–        | —                             | reserved for content extraction and a future `pdf audit`                             |
 
 The `AD` range is chosen by where the condition is detected, not by which command the user typed:
 `AD100` and `AD101` are emitted by both `jira adf validate` and `jira adf to-markdown`, on the
-same one-condition-one-identifier rule the `AB` family follows.
+same one-condition-one-identifier rule the `AB` family follows. `AP` follows it too — `AP020` is
+emitted by `pdf inspect` and `pdf validate` alike, and `AP050` by three commands.
 
 ### The renderer range in detail
 

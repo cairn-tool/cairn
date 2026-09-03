@@ -30,3 +30,5 @@ plugins/*/.install/
 .agents/
 .mcp.json
 /assets/
+
+work/

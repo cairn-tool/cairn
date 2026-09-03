@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormatsImport from "ajv-formats";
+import { pdfFixture } from "../helpers/pdf-fixture.js";
 import { COMMAND_CONTRACTS } from "../../src/contract/registry.js";
 import { SCHEMA_BY_ID } from "../../src/contract/schemas/index.js";
 import { CONTRACT_VERSION } from "../../src/contract/version.js";
@@ -105,6 +106,15 @@ function bundle(manifest?: string): string {
  * Building an installed tree would mean running the CLI from a fixture helper,
  * and the missing-file path exercises the same schema.
  */
+/** A PDF with headings, a list, a running header, and a line-end hyphen. */
+function pdfDocument(): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "contract-pdf-"));
+  temporary.push(root);
+  const file = path.join(root, "document.pdf");
+  fs.writeFileSync(file, pdfFixture("structured"));
+  return file;
+}
+
 function verifyConfig(): string {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "contract-verify-")));
   temporary.push(root);
@@ -226,7 +236,16 @@ describe("describe", () => {
       commands: Array<{ id: string; stability: string }>;
     };
     // Leaf commands are the ones a contract applies to; groups are containers.
-    const groups = new Set(["md", "agent", "scripts", "usage", "archive", "jira", "jira adf"]);
+    const groups = new Set([
+      "md",
+      "agent",
+      "scripts",
+      "usage",
+      "archive",
+      "jira",
+      "jira adf",
+      "pdf",
+    ]);
     const walked = described.commands
       .map((command) => command.id)
       .filter((id) => !groups.has(id))
@@ -305,6 +324,7 @@ describe("declared output schemas match real output", () => {
       staleToc: string;
       auditBaseline: string;
       verifyConfig: string;
+      pdf: string;
     }) => string[];
     outcome: "success" | "findings";
     exitCode: number;
@@ -853,6 +873,53 @@ describe("declared output schemas match real output", () => {
       outcome: "success",
       exitCode: 0,
     },
+    // Every `pdf` case declares `outcome: "success"`, including the one that
+    // exits 2. The harness reads `outcome: "findings"` as "parse the *findings*
+    // stream as JSON", and for a stream-split toolset under `-fj` the payload is
+    // on stdout at every exit code — the same reason
+    // `agent validate (invocation failure)` above uses "success" with exit 1.
+    {
+      label: "pdf inspect",
+      schema: "pdf-result",
+      args: (context) => ["pdf", "inspect", context.pdf, "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "pdf text",
+      schema: "pdf-result",
+      args: (context) => ["pdf", "text", context.pdf, "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "pdf outline",
+      schema: "pdf-result",
+      args: (context) => ["pdf", "outline", context.pdf, "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "pdf validate",
+      schema: "pdf-result",
+      args: (context) => ["pdf", "validate", context.pdf, "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "pdf to-markdown",
+      schema: "pdf-result",
+      args: (context) => ["pdf", "to-markdown", context.pdf, "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "pdf to-markdown (findings)",
+      schema: "pdf-result",
+      args: (context) => ["pdf", "to-markdown", context.pdf, "--strict", "-fj"],
+      outcome: "success",
+      exitCode: 2,
+    },
   ];
 
   /**
@@ -879,6 +946,7 @@ describe("declared output schemas match real output", () => {
       workspace: workspace(),
       bundle: bundle(),
       verifyConfig: verifyConfig(),
+      pdf: pdfDocument(),
       publishedBundle: publishedBundle(),
       staleToc: staleToc(),
       auditBaseline: auditBaseline(),

@@ -182,8 +182,8 @@ cairn describe -fj | jq -r '.commands[] | select(.stability=="experimental") | .
 ```
 
 The agent ones share the `agent-result` schema with the stable agent commands; the `jira adf`
-subcommands, also experimental, publish `adf-result`. The stable commands' guarantees are
-unaffected.
+subcommands, also experimental, publish `adf-result`, and every `pdf` subcommand publishes
+`pdf-result`. The stable commands' guarantees are unaffected.
 
 ## Published schemas
 
@@ -204,6 +204,7 @@ unaffected.
 | `md-fix`            | `md fix`                                                                   |
 | `agent-result`      | Every `agent` subcommand, including the failure form.                      |
 | `adf-result`        | Every `jira adf` subcommand, including the failure form.                   |
+| `pdf-result`        | Every `pdf` subcommand, including the failure form.                        |
 | `check-update`      | `check-update`                                                             |
 | `describe`          | `describe --format json`                                                   |
 | `schema-list`       | `schema --format json` with no id                                          |

@@ -1,5 +1,5 @@
-import fs from "node:fs";
 import path from "node:path";
+import { writeAtomically } from "../atomic-write.js";
 import { CommandExit, terminate } from "../command-result.js";
 import { jsonPayload } from "../result.js";
 import { BASE_FORMATS } from "../formats.js";
@@ -87,26 +87,6 @@ function output(result: AdfResult, opts: AdfOptions, primary: string): void {
   if (primary) process.stdout.write(primary);
   if (result.diagnostics.length) process.stderr.write(formatDiagnostics(result.diagnostics));
   if (!result.ok) terminate(2);
-}
-
-/**
- * Writes one file atomically: staged beside the destination with `wx`, then
- * renamed. The same pattern as `src/edit-plan.ts`; `src/agent/writer.ts` stages
- * whole artifact trees and is the wrong tool for a single file.
- */
-function writeAtomically(destination: string, content: string): void {
-  const resolved = path.resolve(destination);
-  if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory())
-    throw new Error(`--output is a directory: ${destination}`);
-  const staged = `${resolved}.cairn-${process.pid}.tmp`;
-  fs.mkdirSync(path.dirname(resolved), { recursive: true });
-  fs.writeFileSync(staged, content, { encoding: "utf-8", flag: "wx" });
-  try {
-    fs.renameSync(staged, resolved);
-  } catch (error) {
-    fs.rmSync(staged, { force: true });
-    throw error;
-  }
 }
 
 /**

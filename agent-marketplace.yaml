@@ -25,3 +25,4 @@ bundles:
   - path: plugins/cairn-archive
   - path: plugins/cairn-agent
   - path: plugins/cairn-jira
+  - path: plugins/cairn-pdf

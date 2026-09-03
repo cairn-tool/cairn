@@ -1,6 +1,6 @@
 # Complete command listing
 
-`cairn` contains six toolsets plus update and contract commands. Angle brackets in usage
+`cairn` contains seven toolsets plus update and contract commands. Angle brackets in usage
 signatures are required arguments; square brackets are optional arguments.
 
 Each command page lives under `commands/<toolset>/`; the top-level commands are directly under
@@ -26,6 +26,7 @@ Each command page lives under `commands/<toolset>/`; the top-level commands are 
 | `cairn usage`                                        | Report on Claude Code usage from its own session logs.                 |
 | `cairn archive`                                      | Archive plans, artifacts, and logs into long-term storage.             |
 | `cairn jira`                                         | Work with Jira and Confluence content formats.                         |
+| `cairn pdf`                                          | Read PDF documents: text, structure, and conversion to Markdown.       |
 
 ## Script commands
 
@@ -110,6 +111,26 @@ exit 0 therefore does not mean lossless. See
 | [`jira adf from-markdown`](commands/jira/adf/from-markdown.md) | Convert a Markdown document to ADF.                   |
 | [`jira adf validate`](commands/jira/adf/validate.md)           | Check an ADF document's structure without converting. |
 | [`jira adf inspect`](commands/jira/adf/inspect.md)             | List node and mark types, with per-type fidelity.     |
+
+## PDF commands
+
+A PDF has no paragraphs, no headings, and no lists — only glyphs at coordinates — and an assistant
+cannot read one at all. The `pdf` toolset turns one into text, structure, or Markdown, locally and
+deterministically: no credentials, no network, no model call.
+
+**It reads; it never writes a PDF.** There is no merge, split, page reorder, form fill, or redact.
+Conversion is lossy on an untagged document and every loss reports an `AP###` code; approximation
+blocks only under `--strict`, so exit 0 does not mean lossless. Start with `pdf inspect`:
+`document.tagged` and the per-page text layer decide what the others can tell you. See
+[shared PDF behavior](commands/pdf/common.md).
+
+| Command                                          | Description                                                        |
+| ------------------------------------------------ | ------------------------------------------------------------------ |
+| [`pdf inspect`](commands/pdf/inspect.md)         | Page count, metadata, tagging, and a per-page text-layer forecast. |
+| [`pdf text`](commands/pdf/text.md)               | Extract the text layer, page by page.                              |
+| [`pdf outline`](commands/pdf/outline.md)         | Read the outline (bookmarks) as a heading tree.                    |
+| [`pdf validate`](commands/pdf/validate.md)       | Check structural integrity without converting.                     |
+| [`pdf to-markdown`](commands/pdf/to-markdown.md) | Convert content to Markdown, reporting what was inferred.          |
 
 ## Agent commands
 
