@@ -102,13 +102,17 @@ jobs:
             esac
           }
 
-          # Only Claude Code's marketplace syntax is documented in this
-          # repository, so the other branches state where the catalog is rather
-          # than inventing a command for a host whose syntax we have not
-          # verified.
+          # Each host's syntax is taken from that host's own documentation and
+          # is repeated in README.md and docs/plugins.md -- keep the three in
+          # step. Cursor genuinely has no CLI for adding a marketplace, so its
+          # branch states the dashboard import rather than inventing a command.
           write_readme() {
-            local target="$1" branch="$2" dir="$3" catalog
+            local target="$1" branch="$2" dir="$3" catalog name
             catalog=$(cd "$dir" && ls -d .*-plugin/marketplace.json)
+            # An install id is `<plugin>@<catalog name>`, and the name comes from
+            # the collection spec rather than the target, so read it back here
+            # instead of hardcoding a copy that can drift from the spec.
+            name=$(jq -r .name "$dir/$catalog")
             {
               echo "# Cairn plugins — ${target}"
               echo
@@ -117,18 +121,47 @@ jobs:
               echo
               echo "The catalog is \`${catalog}\`, at this branch's root."
               echo
-              if [ "$target" = "claude-code" ]; then
-                echo '```text'
-                echo "/plugin marketplace add ${GITHUB_REPOSITORY}@${branch}"
-                echo '```'
-              else
-                echo "Point ${target} at this branch as a plugin marketplace, or install a bundle"
-                echo "directly from a checkout of the source repository:"
-                echo
-                echo '```bash'
-                echo "cairn agent install plugins/<bundle> --target ${target} --scope project"
-                echo '```'
-              fi
+              case "$target" in
+                claude-code)
+                  echo '```text'
+                  echo "/plugin marketplace add ${GITHUB_REPOSITORY}@${branch}"
+                  echo "/plugin install <plugin>@${name}"
+                  echo '```'
+                  ;;
+                codex)
+                  echo "\`--ref\` is what pins the marketplace to this branch; without it Codex fetches"
+                  echo "the repository's default branch, which carries the bundle sources and no catalog"
+                  echo "at its root."
+                  echo
+                  echo '```bash'
+                  echo "codex plugin marketplace add ${GITHUB_REPOSITORY} --ref ${branch}"
+                  echo "codex plugin add <plugin>@${name}"
+                  echo '```'
+                  echo
+                  echo "Codex installs from a local snapshot of this catalog, so a later release reaches"
+                  echo "an existing install only through \`codex plugin marketplace upgrade ${name}\`."
+                  ;;
+                cursor)
+                  echo "Cursor has no CLI for adding a marketplace. In the dashboard, go to **Plugins ->"
+                  echo "Team Marketplaces -> Add Marketplace -> Import from Repo** and point it at this"
+                  echo "repository and the \`${branch}\` branch; a team marketplace is a Teams or"
+                  echo "Enterprise feature."
+                  echo
+                  echo "Without one, install from a checkout of the source repository instead:"
+                  echo
+                  echo '```bash'
+                  echo "cairn agent install plugins/<bundle> --target ${target} --scope user"
+                  echo '```'
+                  ;;
+                *)
+                  echo "Point ${target} at this branch as a plugin marketplace, or install a bundle"
+                  echo "directly from a checkout of the source repository:"
+                  echo
+                  echo '```bash'
+                  echo "cairn agent install plugins/<bundle> --target ${target} --scope project"
+                  echo '```'
+                  ;;
+              esac
               echo
               echo "Every plugin wraps the \`cairn\` CLI, which is installed separately."
             } > "$dir/README.md"
