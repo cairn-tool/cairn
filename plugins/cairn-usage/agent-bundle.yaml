@@ -2,7 +2,7 @@
 #   cairn agent marketplace ../../agent-marketplace.yaml --output ../../dist-plugins
 schemaVersion: "2"
 name: cairn-usage
-version: 1.1.0
+version: 1.2.0
 description: Report on LLM assistant usage from local session logs.
 
 marketplace:

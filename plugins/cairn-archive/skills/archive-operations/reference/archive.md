@@ -67,6 +67,26 @@ mismatch may not throw the file away: after `archive run --include transcripts` 
 of the source logs, the archive can be the only record of that usage left. An index from a newer
 build is refused, not opened.
 
+## Cursor's second tree
+
+Every other provider needs one root, because the usage provider's log root already contains
+everything worth archiving. Cursor does not: its conversation store is in the Electron user-data
+directory while its plans, agent transcripts and produced files are under `~/.cursor`. On macOS
+those share only `$HOME`, and rooting a set there would be exactly the home-directory sweep the
+per-provider declaration exists to prevent — so the profile names the second tree explicitly, and
+its sets contribute nothing when that tree is absent.
+
+Most of both trees is excluded, and the exclusions carry more weight here than elsewhere:
+`extensions/` alone is 3.8 GB, and `CachedData/`, `Partitions/`, `WebStorage/`, `Cache/`,
+`GPUCache/` and `blob_storage/` are another ~600 MB of derived state. `User/History/` is VS Code's
+local file history, excluded for the same reason as Claude Code's `file-history/`, and
+`~/.config/cursor/cli-config.json` holds a credential and is kept out of reach entirely.
+
+The editor-store set matches `state.vscdb` by **exact equality**, which keeps out the live `-wal`
+and `-shm` sidecars — the backup API folds those into the snapshot anyway — and keeps out
+`state.vscdb.backup`, a stale multi-gigabyte copy on a real machine. Databases are captured
+through SQLite's backup API rather than copied byte for byte.
+
 ## The store format
 
 Segments are ordinary `.tar.gz` files. Members are named `blobs/<aa>/<sha256>` — 73 characters,

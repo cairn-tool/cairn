@@ -40,9 +40,10 @@ These are recorded rather than quietly fixed, because changing them would break 
 `subagents/agent-*.jsonl` outnumbers main transcripts about 6:1 and holds more bytes, so subagent
 transcripts are scanned by default. `--no-subagents` prunes discovery.
 
-Only `claude-code`, `gemini-cli`, and `opencode` can prune subagents at discovery time — the first
-two record the thread source in the transcript's path and `opencode` on the session row. `codex`
-and `antigravity` record it inside the file, so those are filtered on the parsed kind instead.
+Only `claude-code`, `gemini-cli`, `opencode`, and `cursor` can prune subagents at discovery time —
+the first two record the thread source in the transcript's path, `opencode` on the session row, and
+`cursor` in its conversation index. `codex` and `antigravity` record it inside the file, so those
+are filtered on the parsed kind instead.
 
 ## Why a filtered import may not delete
 
@@ -68,6 +69,19 @@ Only a complete walk may delete. That is the `partial` flag.
 - **OpenCode** records the same usage at three grains — the assistant message, its `step-finish`
   part, and the session rollup. Only the message grain is read. Unlike Codex and Gemini CLI, its
   `tokens.cache.read` is disjoint from `input` and is **not** subtracted. `cost` is dropped.
+- **Cursor** is the only provider with no distortion to undo: `tokenCount.{inputTokens,
+outputTokens}` on a turn is a real per-request figure. What it has instead is an **end date** —
+  on a real corpus every nonzero counter falls between 2025-06-17 and 2025-12-23, after which
+  Cursor zeroes the field and settles usage server-side. A turn whose counters are zero emits no
+  response event, so a window after 2025 reports sessions and tools with no tokens.
+  `contextTokensUsed` is deliberately unread: it is the last turn's context size, overwritten every
+  turn and excluding output, so it can be neither summed like Antigravity's nor differenced like
+  Codex's. No cache counter has ever existed in that schema.
+- **A Cursor turn is not a response**, and carries no timestamp. Each tool step is its own turn, so
+  requests come from the token counters rather than the turns, and day rollups are per conversation
+  — the only provider where they are not per record. Discovery also enumerates the conversation
+  records themselves rather than Cursor's own index, which is incomplete: on a real store, 61% of
+  the tokens are in conversations neither index lists.
 - **`gemini-cli` and `antigravity` share `~/.gemini`** and are carefully kept from claiming each
   other's tree.
 

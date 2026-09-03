@@ -46,6 +46,22 @@ chose — possibly external storage — so it should never be implicit.
 `--archive` names a durable location the user picked. If they have one, use it consistently:
 a second archive in a different directory shares no content with the first.
 
+## Cursor is two trees, and its store holds credentials
+
+Cursor is an editor rather than a CLI, so its data is split in two: the conversation store sits in
+the Electron user-data directory, while its plans, agent transcripts, and produced files sit under
+`~/.cursor`. It is the only provider needing a second root, and a set whose tree is absent
+contributes nothing rather than falling back to the other one.
+
+That store is class `log` and 5.65 GB on its own — larger than every other provider's entire
+corpus put together — so a default run here takes the plans and the produced files, roughly 6 MB,
+and leaves it alone.
+
+> **`cairn archive run --include logs --provider cursor` archives live credentials.** `ItemTable`
+> holds `cursorAuth/accessToken` and `cursorAuth/refreshToken`. Other providers' databases hold
+> credentials incidentally; Cursor's is a known credential store. Say so before running it, and
+> treat any archive containing that set as a secret.
+
 ## `archive status` and `archive list`
 
 ```bash

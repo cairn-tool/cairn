@@ -61,14 +61,18 @@ own token log differently, and cairn undoes each one separately:
 | Antigravity | A per-request context size that is **not** cumulative                                   | Sum it — differencing produces nonsense, since it falls when context is trimmed |
 | Gemini CLI  | All three at once: repeated ids, per-request context size, cached prefix inside `input` | Dedupe, sum, subtract                                                           |
 | OpenCode    | The same usage recorded at three grains                                                 | Read only the message grain; reading two doubles it                             |
+| Cursor      | None — `tokenCount` on a turn is a genuine per-request figure                           | The only provider needing no correction; see the end date below                 |
 
-Two more that change what a number means:
+Three more that change what a number means:
 
 - **Subagent tokens come from the subagent's own transcript**, never the parent's summary of it.
   The parent's `toolUseResult.totalTokens` is the subagent's final message only, and understates
   real spend several-fold.
 - **A session id is unique only within its provider.** Counting or grouping sessions on the bare
   id merges two providers' sessions when they mint the same UUID, which they do.
+- **Cursor's tokens have an end date.** Cursor stopped writing counters in December 2025 and
+  settles usage server-side now, so a recent window reports sessions and tools against **zero
+  tokens**. That is the host, not a gap in the parser — never present it as missing data.
 
 If someone has hand-computed a figure from the raw logs and it disagrees with cairn, cairn is
 almost certainly right — say which correction explains the gap.
@@ -80,7 +84,11 @@ almost certainly right — say which correction explains the gap.
 because a subagent's `user` record is the instruction its parent injected — so prompts are counted
 in main transcripts only.
 
-Cursor is deliberately unregistered: there is no local corpus to write or verify a parser against.
+Cursor is registered, and two of its properties change how its numbers read. Its tokens have an
+**end date** — see above — so a window after 2025 legitimately reports activity with no tokens.
+And a Cursor _turn_ is not a response: each tool step is its own turn, so requests are counted
+from the token counters rather than from turns, and its day rollups are per conversation, the one
+provider where they are not per record.
 
 ## More
 

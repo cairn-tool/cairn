@@ -383,10 +383,11 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
 - **A session id is unique only within its provider.** `sessionKey()` in `src/usage/events.ts`
   qualifies it; counting or grouping sessions on the bare id merges two providers' sessions when
   they mint the same UUID, which they do.
-- **Only `claude-code`, `gemini-cli`, and `opencode` can prune subagents at discovery.** The
-  first two record the thread source in the transcript's path and `opencode` records it on the
-  session row; `codex` and `antigravity` record it inside the file, so `scan.ts` filters on the
-  parsed `kind` as well. Both filters must stay.
+- **Only `claude-code`, `gemini-cli`, `opencode`, and `cursor` can prune subagents at discovery.**
+  The first two record the thread source in the transcript's path, `opencode` records it on the
+  session row, and `cursor` has it in the conversation index it builds before any turn is read;
+  `codex` and `antigravity` record it inside the file, so `scan.ts` filters on the parsed `kind`
+  as well. Both filters must stay.
 
 - **OpenCode has no filesystem unit below its whole store, so both the transcript unit and its
   freshness key are synthesized.** `discover()` emits one `TranscriptFile` per `session` row with
