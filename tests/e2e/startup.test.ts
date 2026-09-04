@@ -1,52 +1,90 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const cli = path.join(repoRoot, "dist", "cli.js");
+const register = path.join(repoRoot, "tests", "helpers", "import-log-register.mjs");
 
-// CI is set so the update notifier stays silent and cannot spawn its detached
-// refresh child in the middle of a measurement (src/update-notifier.ts).
-const env = { ...process.env, CI: "1" };
+let logPath: string;
 
-function elapsed(args: string[]): number {
-  const started = performance.now();
-  spawnSync(process.execPath, args, { stdio: "ignore", env });
-  return performance.now() - started;
+beforeEach(() => {
+  logPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "cairn-imports-")), "log.txt");
+  fs.writeFileSync(logPath, "");
+});
+
+afterEach(() => {
+  fs.rmSync(path.dirname(logPath), { recursive: true, force: true });
+});
+
+/** Every module specifier the CLI resolved while running `args`. */
+function modulesLoadedBy(args: string[]): string[] {
+  // The hook appends, so each invocation starts from an empty log.
+  fs.writeFileSync(logPath, "");
+  const result = spawnSync(process.execPath, ["--import", register, cli, ...args], {
+    encoding: "utf-8",
+    // CI keeps the update notifier from spawning its detached refresh child,
+    // whose own resolutions would otherwise land in the same log.
+    env: { ...process.env, CI: "1", IMPORT_LOG: logPath },
+  });
+  expect(result.error).toBeUndefined();
+  return fs.readFileSync(logPath, "utf-8").split("\n").filter(Boolean);
 }
 
-const best = (args: string[], runs = 7): number =>
-  Math.min(...Array.from({ length: runs }, () => elapsed(args)));
+const commandModules = (urls: string[]): string[] =>
+  [...new Set(urls.filter((url) => url.includes("/dist/commands/")))].sort();
 
 /**
- * `src/cli.ts` loads each command module on demand, so starting the CLI costs
- * commander plus the config/runtime prelude rather than every command in the
- * tool. The budget is expressed against a bare `node -e ''` measured in the same
- * run, not in milliseconds: a slower CI runner moves both numbers together, and
- * an absolute threshold would flake there.
+ * `src/cli.ts` reaches each command module through `await import()` inside its
+ * action handler, so an invocation loads commander and the config/runtime
+ * prelude rather than all 52 command modules.
  *
- * Reference points, measured locally: eagerly importing all 52 command modules
- * cost 10.9x the baseline; loading them on demand costs 4.2x.
+ * This asserts the property directly — which modules were resolved — rather
+ * than how long the process took. An earlier version of this test compared
+ * startup against a bare `node -e ''` baseline on the assumption that a slower
+ * machine moves both numbers together. It does not: `node -e ''` is dominated
+ * by fixed V8 init while cairn's startup is dominated by reading and compiling
+ * several MB of JavaScript, so the ratio was 4.0x locally and 7.1-7.4x on CI.
+ * Module identity has no such spread.
+ *
+ * Reference points, same machine: before command actions were deferred,
+ * `cairn --help` resolved 1852 specifiers including 68 command modules; it now
+ * resolves 403 and none.
  */
 describe("cli startup", () => {
-  it("starts well inside the budget for the bare node baseline", () => {
-    const baseline = best(["-e", ""]);
-    const ratio = best([cli, "--help"]) / baseline;
-    expect(ratio).toBeLessThan(6);
-  }, 60_000);
+  it("registers the command tree without loading a single command module", () => {
+    expect(commandModules(modulesLoadedBy(["--help"]))).toEqual([]);
+  });
 
-  it("does not load a command's dependencies to print its help", () => {
+  it("prints a subcommand's help without loading that subcommand", () => {
     // `pdf` pulls pdf.js and `md lint` pulls markdownlint and katex when they
-    // run. Printing help must not, so neither may cost meaningfully more than
-    // the bare `--help` that registers the same tree.
-    const bare = best([cli, "--help"]);
+    // run. Printing their help must reach neither.
     for (const args of [
-      ["pdf", "inspect"],
-      ["md", "lint"],
-      ["usage", "tokens"],
+      ["pdf", "inspect", "--help"],
+      ["md", "lint", "--help"],
+      ["usage", "tokens", "--help"],
+      ["agent", "convert", "--help"],
     ]) {
-      expect(best([cli, ...args, "--help"])).toBeLessThan(bare * 1.5);
+      expect(commandModules(modulesLoadedBy(args))).toEqual([]);
     }
-  }, 60_000);
+  });
+
+  it("loads only the module the invoked command needs", () => {
+    expect(commandModules(modulesLoadedBy(["md", "outline", "README.md"]))).toEqual([
+      expect.stringContaining("/dist/commands/outline.js"),
+    ]);
+    expect(commandModules(modulesLoadedBy(["usage", "providers"]))).toEqual([
+      expect.stringContaining("/dist/commands/usage.js"),
+    ]);
+  });
+
+  it("keeps the startup graph far smaller than the whole tool", () => {
+    // A blunt ceiling on the prelude, well above the 403 it resolves today and
+    // well below the 1852 an eager cli.ts pulled in. This is a count, not a
+    // duration, so it does not vary with the machine.
+    expect(modulesLoadedBy(["--help"]).length).toBeLessThan(900);
+  });
 });

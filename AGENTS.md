@@ -68,8 +68,13 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   handlers annotate with are imported that way. `collect`, `TARGETS`, `formatsFor`, and the
   config/runtime/version/notifier imports are registration-time and stay static —
   **`collect` especially**, because `src/contract/describe.ts` compares `option.parseArg` against
-  it by identity. `tests/unit/cli-imports.test.ts` enforces all of this, and
-  `tests/e2e/startup.test.ts` holds the cost to a multiple of a bare `node -e ''`.
+  it by identity. `tests/unit/cli-imports.test.ts` enforces all of this against the source, and
+  `tests/e2e/startup.test.ts` enforces it against a real process: it runs the CLI under a
+  `module.register()` resolve hook (`tests/helpers/import-log-*.mjs`) and asserts `--help` loads
+  **no** command module and a command loads exactly one. Assert on which modules resolved, never
+  on elapsed time — the ratio against a bare `node -e ''` is 4.0x locally and 7.1-7.4x on a CI
+  runner, because `node -e ''` is dominated by fixed V8 init while cairn's startup is dominated
+  by reading and compiling several MB of JavaScript.
 - **Every action handler must `return` what it calls.** `parseAsync` is awaited at the bottom of
   `src/cli.ts`, and the `CommandExit` → `process.exitCode` mapping and
   `runtime().workspace.flush()` both run after it. A handler that drops the `return` resolves
