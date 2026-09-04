@@ -32,7 +32,8 @@ tests/{unit,integration,e2e}
 
 There are seven toolsets, `md`, `agent`, `scripts`, `usage`, `archive`, `jira`, and `pdf`, plus the top-level
 `check-update`, `describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
-`command(...)` registration in `src/cli.ts`, a `src/contract/registry.ts` entry, a
+`command(...)` registration in `src/cli.ts` whose action loads the module with `await import()`, a
+`src/contract/registry.ts` entry, a
 `docs/commands/<toolset>/<name>.md` page (top-level commands stay directly under
 `docs/commands/`) with entries in `docs/commands.md` and `docs/_contents.md`, a row in
 `docs/formats/diagnostic-codes.md` for any new `AB###`, `AD###`, or `AP###`, and e2e coverage. The README is a
@@ -58,6 +59,22 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
 
 ## Gotchas
 
+- **`src/cli.ts` must never statically import a command module.** Every `./commands/*.js` is
+  reached through `await import()` inside its `.action()` handler, so an invocation loads
+  commander and the config/runtime prelude rather than all 52 command modules. A static
+  `import { xAction } from "./commands/…"` drags that command's whole subgraph — markdownlint,
+  pdf.js, the agent renderer — into every invocation of every other command, which took startup
+  from ~100ms to 260ms. `import type` is erased and stays allowed; the option interfaces
+  handlers annotate with are imported that way. `collect`, `TARGETS`, `formatsFor`, and the
+  config/runtime/version/notifier imports are registration-time and stay static —
+  **`collect` especially**, because `src/contract/describe.ts` compares `option.parseArg` against
+  it by identity. `tests/unit/cli-imports.test.ts` enforces all of this, and
+  `tests/e2e/startup.test.ts` holds the cost to a multiple of a bare `node -e ''`.
+- **Every action handler must `return` what it calls.** `parseAsync` is awaited at the bottom of
+  `src/cli.ts`, and the `CommandExit` → `process.exitCode` mapping and
+  `runtime().workspace.flush()` both run after it. A handler that drops the `return` resolves
+  early: the exit code is silently lost, the workspace index is not flushed, and a later
+  `CommandExit` escapes as an unhandled rejection.
 - **The e2e suite spawns the compiled CLI** (`dist/cli.js`), not the source. `npm test`
   builds first via `pretest`; do not remove that script.
 - **`.markdownlintrc` must stay in `package.json` "files".** `src/checkers/markdown-lint.ts`

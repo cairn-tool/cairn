@@ -3,35 +3,6 @@
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { TARGETS } from "./agent/types.js";
-import { lintAction } from "./commands/lint.js";
-import { lintDirAction } from "./commands/lint-dir.js";
-import { refsAction } from "./commands/refs.js";
-import { refsToAction } from "./commands/refs-to.js";
-import { headersAction } from "./commands/headers.js";
-import { outlineAction } from "./commands/outline.js";
-import { tocAction } from "./commands/toc.js";
-import { statsAction } from "./commands/stats.js";
-import { codeBlocksAction } from "./commands/code-blocks.js";
-import { structureAction } from "./commands/structure.js";
-import { linksAction } from "./commands/links.js";
-import { sectionAction } from "./commands/section.js";
-import { frontmatterAction } from "./commands/frontmatter.js";
-import { tasksAction } from "./commands/tasks.js";
-import { tablesAction } from "./commands/tables.js";
-import { checkUrlsAction } from "./commands/check-urls.js";
-import { orphansAction } from "./commands/orphans.js";
-import { renameHeadingAction } from "./commands/rename-heading.js";
-import { renameFileAction } from "./commands/rename-file.js";
-import { graphAction } from "./commands/graph.js";
-import { validateFrontmatterAction } from "./commands/validate-frontmatter.js";
-import { auditAction } from "./commands/audit.js";
-import { queryAction } from "./commands/query.js";
-import { contextAction } from "./commands/context.js";
-import { diffAction } from "./commands/diff.js";
-import { fixAction } from "./commands/fix.js";
-import { checkSnippetsAction } from "./commands/check-snippets.js";
-import { indexAction } from "./commands/index.js";
-import { checkUpdateAction, refreshUpdateCacheAction } from "./commands/update-check.js";
 import { installUpdateNotifier, CHECK_COMMAND, REFRESH_COMMAND } from "./update-notifier.js";
 import { loadConfig, selectConfig, selectRoot, defaultLintConcurrency } from "./config.js";
 import type { ResolvedConfig } from "./config.js";
@@ -40,81 +11,26 @@ import { CommandExit } from "./command-result.js";
 import { collect } from "./option-utils.js";
 import { formatsFor } from "./formats.js";
 import { packageName, packageVersion as version } from "./version.js";
-import {
-  agentCompatAction,
-  agentConvertAction,
-  agentInspectAction,
-  agentValidateAction,
-  agentActionBoundary,
-} from "./commands/agent.js";
-import { agentSpecsAction } from "./commands/agent-specs.js";
-import type { AgentAddOptions } from "./commands/agent-scaffold.js";
-import { agentAddAction, agentInitAction } from "./commands/agent-scaffold.js";
-import { agentUpgradeAction } from "./commands/agent-upgrade.js";
-import { agentImportAction } from "./commands/agent-import.js";
-import { agentPackageAction } from "./commands/agent-package.js";
-import { agentMarketplaceAction } from "./commands/agent-marketplace.js";
-import { agentAuditAction } from "./commands/agent-audit.js";
-import { agentTestAction } from "./commands/agent-test.js";
-import { agentDoctorAction } from "./commands/agent-doctor.js";
-import { agentInstallAction } from "./commands/agent-install.js";
-import { agentUninstallAction } from "./commands/agent-uninstall.js";
-import { agentInstalledAction } from "./commands/agent-installed.js";
-import { agentVerifyAction } from "./commands/agent-verify.js";
-import { describeAction } from "./commands/describe.js";
-import { schemaAction } from "./commands/schema.js";
-import { completionAction } from "./commands/completion.js";
-import { serveAction, type ServeOptions } from "./commands/serve.js";
-import {
-  scriptsListAction,
-  scriptsRunAction,
-  scriptsWhichAction,
-  type ScriptsOptions,
-} from "./commands/scripts.js";
-import {
-  archiveExtractAction,
-  archiveListAction,
-  archiveMigrateAction,
-  archiveRunAction,
-  archiveStatusAction,
-  archiveVerifyAction,
-  type ArchiveOptions,
-} from "./commands/archive.js";
-import {
-  adfActionBoundary,
-  adfFromMarkdownAction,
-  adfInspectAction,
-  adfToMarkdownAction,
-  adfValidateAction,
-  type AdfOptions,
-} from "./commands/jira.js";
-import {
-  pdfActionBoundary,
-  pdfAttachmentsAction,
-  pdfFormsAction,
-  pdfInspectAction,
-  pdfOutlineAction,
-  pdfTextAction,
-  pdfToMarkdownAction,
-  pdfValidateAction,
-  type PdfOptions,
-} from "./commands/pdf.js";
-import {
-  usageAgentsAction,
-  usageCommandsAction,
-  usageHooksAction,
-  usageImportAction,
-  usageIndexAction,
-  usageMigrateAction,
-  usageProjectsAction,
-  usageProvidersAction,
-  usageSessionsAction,
-  usageSkillsAction,
-  usageSummaryAction,
-  usageTokensAction,
-  usageToolsAction,
-  type UsageOptions,
-} from "./commands/usage.js";
+import type { AgentAuditOptions } from "./commands/agent-audit.js";
+import type { ServeOptions } from "./commands/serve.js";
+import type { ScriptsOptions } from "./commands/scripts.js";
+import type { ArchiveOptions } from "./commands/archive.js";
+import type { AdfOptions } from "./commands/jira.js";
+import type { PdfOptions } from "./commands/pdf.js";
+import type { UsageOptions } from "./commands/usage.js";
+import type { AgentDoctorOptions } from "./commands/agent-doctor.js";
+import type { AgentImportOptions } from "./commands/agent-import.js";
+import type { AgentInstallOptions } from "./commands/agent-install.js";
+import type { AgentInstalledOptions } from "./commands/agent-installed.js";
+import type { AgentMarketplaceOptions } from "./commands/agent-marketplace.js";
+import type { AgentPackageOptions } from "./commands/agent-package.js";
+import type { AgentAddOptions, AgentInitOptions } from "./commands/agent-scaffold.js";
+import type { AgentSpecsOptions } from "./commands/agent-specs.js";
+import type { AgentTestOptions } from "./commands/agent-test.js";
+import type { AgentUninstallOptions } from "./commands/agent-uninstall.js";
+import type { AgentUpgradeOptions } from "./commands/agent-upgrade.js";
+import type { AgentVerifyOptions } from "./commands/agent-verify.js";
+import type { AgentOptions } from "./commands/agent.js";
 
 // Pre-process argv to expand -fh/-fj shorthands into --format values
 // before Commander sees them (Commander doesn't support multi-char short flags).
@@ -225,9 +141,10 @@ agent
     "after",
     "\n--report writes the same document as conversion-report.json, provenance included, to\nan arbitrary path, so CI can keep the report without keeping the rendered tree. It is\nwritten in every mode, including --dry-run, --check, and a strict failure, and is never\nlisted in the artifacts. It must not be inside the source tree or the output directory.\n\nExit codes:\n  0  Successful and lossless\n  1  Invocation or I/O error\n  2  Validation, compatibility, strict, or stale-output finding",
   )
-  .action((source: string, opts: Parameters<typeof agentConvertAction>[1]) =>
-    agentActionBoundary("convert", opts, () => agentConvertAction(source, opts)),
-  );
+  .action(async (source: string, opts: AgentOptions) => {
+    const { agentActionBoundary, agentConvertAction } = await import("./commands/agent.js");
+    return agentActionBoundary("convert", opts, () => agentConvertAction(source, opts));
+  });
 
 agent
   .command("validate")
@@ -237,9 +154,10 @@ agent
   .option("--strict", "Treat approximations as blocking findings")
   .option("--format <fmt>", "Output format: llm, human, json", "llm")
   .option("--envelope", "Wrap --format json output in the versioned result envelope")
-  .action((source: string, opts: Parameters<typeof agentValidateAction>[1]) =>
-    agentActionBoundary("validate", opts, () => agentValidateAction(source, opts)),
-  );
+  .action(async (source: string, opts: AgentOptions) => {
+    const { agentActionBoundary, agentValidateAction } = await import("./commands/agent.js");
+    return agentActionBoundary("validate", opts, () => agentValidateAction(source, opts));
+  });
 
 agent
   .command("inspect")
@@ -253,9 +171,10 @@ agent
     "after",
     "\n--target narrows a large bundle to the components that reach the selected targets,\nusing the same predicate the renderer uses, and reports what it excluded under\n`filter`. --profile drops the sections a profile never emits, such as hooks and MCP\noutside the plugin profile, and requires --target. Without either flag the output is\nunchanged.\n\nExit codes:\n  0  Bundle inspected\n  1  Invocation or I/O error\n  2  Bundle findings",
   )
-  .action((source: string, opts: Parameters<typeof agentInspectAction>[1]) =>
-    agentActionBoundary("inspect", opts, () => agentInspectAction(source, opts)),
-  );
+  .action(async (source: string, opts: AgentOptions) => {
+    const { agentActionBoundary, agentInspectAction } = await import("./commands/agent.js");
+    return agentActionBoundary("inspect", opts, () => agentInspectAction(source, opts));
+  });
 
 agent
   .command("compat")
@@ -265,9 +184,10 @@ agent
   .option("--strict", "Treat approximations as blocking findings")
   .option("--format <fmt>", "Output format: llm, human, json", "llm")
   .option("--envelope", "Wrap --format json output in the versioned result envelope")
-  .action((source: string | undefined, opts: Parameters<typeof agentCompatAction>[1]) =>
-    agentActionBoundary("compat", opts, () => agentCompatAction(source, opts)),
-  );
+  .action(async (source: string | undefined, opts: AgentOptions) => {
+    const { agentActionBoundary, agentCompatAction } = await import("./commands/agent.js");
+    return agentActionBoundary("compat", opts, () => agentCompatAction(source, opts));
+  });
 
 agent
   .command("doctor")
@@ -284,9 +204,13 @@ agent
     "after",
     "\nRuns without a bundle: profile self-checks and host version reporting still apply.\nNever executes a host's own tooling, so results do not depend on what is installed.\n\nExit codes:\n  0  No blocking conformance findings\n  1  Invocation or I/O error\n  2  Profile, drift, host, or strict finding",
   )
-  .action((source: string | undefined, opts: Parameters<typeof agentDoctorAction>[1]) =>
-    agentActionBoundary("doctor", opts, () => agentDoctorAction(source, opts)),
-  );
+  .action(async (source: string | undefined, opts: AgentDoctorOptions) => {
+    const [{ agentActionBoundary }, { agentDoctorAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-doctor.js"),
+    ]);
+    return agentActionBoundary("doctor", opts, () => agentDoctorAction(source, opts));
+  });
 
 agent
   .command("init")
@@ -309,9 +233,13 @@ agent
     "after",
     "\nNever prompts. Placeholder marketplace metadata is valid here; publish\nreadiness is checked by agent package.\n\nExit codes:\n  0  Bundle scaffolded, or dry run completed\n  1  Invocation or I/O error\n  2  --check found a missing or differing scaffold",
   )
-  .action((name: string, opts: Parameters<typeof agentInitAction>[1]) =>
-    agentActionBoundary("init", opts, () => agentInitAction(name, opts)),
-  );
+  .action(async (name: string, opts: AgentInitOptions) => {
+    const [{ agentActionBoundary }, { agentInitAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-scaffold.js"),
+    ]);
+    return agentActionBoundary("init", opts, () => agentInitAction(name, opts));
+  });
 
 agent
   .command("add")
@@ -335,9 +263,13 @@ agent
     "after",
     "\nagent-bundle.yaml is edited through a comment-preserving YAML document and is\nleft byte-untouched when no manifest change is needed.\n\nExit codes:\n  0  Component added, or dry run completed\n  1  Invocation or I/O error\n  2  --check found a missing or differing component",
   )
-  .action((kind: string, name: string, bundle: string | undefined, opts: AgentAddOptions) =>
-    agentActionBoundary("add", opts, () => agentAddAction(kind, name, bundle, opts)),
-  );
+  .action(async (kind: string, name: string, bundle: string | undefined, opts: AgentAddOptions) => {
+    const [{ agentActionBoundary }, { agentAddAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-scaffold.js"),
+    ]);
+    return agentActionBoundary("add", opts, () => agentAddAction(kind, name, bundle, opts));
+  });
 
 agent
   .command("import")
@@ -358,9 +290,13 @@ agent
     "after",
     "\nDetection is driven by the target conformance profiles, so it cannot drift\nfrom what agent convert emits. Untranslatable pieces are preserved under\nnative/<target>/ rather than dropped.\n\nExit codes:\n  0  Imported, or dry run completed\n  1  Invocation or I/O error\n  2  Blocking finding, or --check found drift",
   )
-  .action((source: string, opts: Parameters<typeof agentImportAction>[1]) =>
-    agentActionBoundary("import", opts, () => agentImportAction(source, opts)),
-  );
+  .action(async (source: string, opts: AgentImportOptions) => {
+    const [{ agentActionBoundary }, { agentImportAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-import.js"),
+    ]);
+    return agentActionBoundary("import", opts, () => agentImportAction(source, opts));
+  });
 
 agent
   .command("upgrade")
@@ -375,9 +311,13 @@ agent
     "after",
     "\nOnly agent-bundle.yaml is rewritten; no component file is touched. The\nmigration is verified in memory to produce byte-identical generated output\nbefore it writes.\n\nExit codes:\n  0  Migrated, already current, or dry run completed\n  1  Invocation or I/O error\n  2  --check found a bundle below the target schema, or a blocking finding",
   )
-  .action((source: string, opts: Parameters<typeof agentUpgradeAction>[1]) =>
-    agentActionBoundary("upgrade", opts, () => agentUpgradeAction(source, opts)),
-  );
+  .action(async (source: string, opts: AgentUpgradeOptions) => {
+    const [{ agentActionBoundary }, { agentUpgradeAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-upgrade.js"),
+    ]);
+    return agentActionBoundary("upgrade", opts, () => agentUpgradeAction(source, opts));
+  });
 
 agent
   .command("package")
@@ -399,9 +339,13 @@ agent
     "after",
     "\nRenders the bundle itself, so a package can never certify a stale tree.\nNever contacts the network and never publishes.\n\nExit codes:\n  0  Package written, or checks passed\n  1  Invocation or I/O error\n  2  Publish-readiness, integrity, or stale finding",
   )
-  .action((source: string, opts: Parameters<typeof agentPackageAction>[1]) =>
-    agentActionBoundary("package", opts, () => agentPackageAction(source, opts)),
-  );
+  .action(async (source: string, opts: AgentPackageOptions) => {
+    const [{ agentActionBoundary }, { agentPackageAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-package.js"),
+    ]);
+    return agentActionBoundary("package", opts, () => agentPackageAction(source, opts));
+  });
 
 agent
   .command("marketplace")
@@ -426,9 +370,13 @@ agent
     "after",
     "\nRenders every bundle itself, so a catalog can never certify a stale tree.\nOne aggregated catalog per target, not one per bundle. Never contacts the\nnetwork and never publishes.\n\n--install registers one marketplace offering every plugin, where installing\neach bundle separately would register one marketplace per bundle.\n\nExit codes:\n  0  Collection written or installed, or checks passed\n  1  Invocation or I/O error\n  2  Spec, publish-readiness, install, or stale finding",
   )
-  .action((spec: string, opts: Parameters<typeof agentMarketplaceAction>[1]) =>
-    agentActionBoundary("marketplace", opts, () => agentMarketplaceAction(spec, opts)),
-  );
+  .action(async (spec: string, opts: AgentMarketplaceOptions) => {
+    const [{ agentActionBoundary }, { agentMarketplaceAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-marketplace.js"),
+    ]);
+    return agentActionBoundary("marketplace", opts, () => agentMarketplaceAction(spec, opts));
+  });
 
 agent
   .command("audit")
@@ -444,9 +392,13 @@ agent
     "after",
     "\nExplainable static analysis: nothing is executed and no network request is\nmade. Exit 2 means findings to review, not proof that a bundle is malicious.\n\nExit codes:\n  0  No blocking review findings\n  1  Invocation or I/O error\n  2  Review findings",
   )
-  .action((source: string, opts: Parameters<typeof agentAuditAction>[1]) =>
-    agentActionBoundary("audit", opts, () => agentAuditAction(source, opts)),
-  );
+  .action(async (source: string, opts: AgentAuditOptions) => {
+    const [{ agentActionBoundary }, { agentAuditAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-audit.js"),
+    ]);
+    return agentActionBoundary("audit", opts, () => agentAuditAction(source, opts));
+  });
 
 agent
   .command("test")
@@ -463,9 +415,13 @@ agent
     "after",
     "\nEvery expectation is evaluated against the same in-memory render agent convert\nwould write. Nothing is executed, no model is called, and no file is written; a\nchanged golden digest is reported with both the expected and the actual value.\n--target and --profile narrow each case's own selection rather than widening it.\n\nExit codes:\n  0  Every selected case passed\n  1  Invocation or I/O error\n  2  A failing case, an invalid test file, or a warning under --strict",
   )
-  .action((source: string, opts: Parameters<typeof agentTestAction>[1]) =>
-    agentActionBoundary("test", opts, () => agentTestAction(source, opts)),
-  );
+  .action(async (source: string, opts: AgentTestOptions) => {
+    const [{ agentActionBoundary }, { agentTestAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-test.js"),
+    ]);
+    return agentActionBoundary("test", opts, () => agentTestAction(source, opts));
+  });
 
 agent
   .command("install")
@@ -489,9 +445,13 @@ agent
     "after",
     "\nRenders and packages in memory, so an install is always derived from the\nbundle rather than from a possibly-drifted dist tree. Destinations come from\nthe target profiles. --register is the only flag that edits host config.\n\n--target is repeatable, and one destination may hold several installs: they are\ntold apart by bundle, target, profile and scope. A run is planned in full before\nanything is written, so a blocked plan writes nothing at all. --target all covers\nevery target declaring a location for the scope.\n\n--config installs the agent.install block a repository declares, and --target\nthere narrows that block rather than adding to it.\n\nExit codes:\n  0  Installed, or checks passed\n  1  Invocation or I/O error\n  2  Install finding, or --check found drift",
   )
-  .action((source: string | undefined, opts: Parameters<typeof agentInstallAction>[1]) =>
-    agentActionBoundary("install", opts, () => agentInstallAction(source, opts)),
-  );
+  .action(async (source: string | undefined, opts: AgentInstallOptions) => {
+    const [{ agentActionBoundary }, { agentInstallAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-install.js"),
+    ]);
+    return agentActionBoundary("install", opts, () => agentInstallAction(source, opts));
+  });
 
 agent
   .command("uninstall")
@@ -508,9 +468,13 @@ agent
     "after",
     "\nRemoves exactly the inventory recorded in .cairn-install.json and\nnothing else. --scope is optional: both scopes are searched, and two matches\nis an error rather than a guess.\n\nExit codes:\n  0  Removed, already absent under --check, or dry run completed\n  1  Invocation or I/O error\n  2  Manifest missing or malformed, or --check found the install still present",
   )
-  .action((name: string, opts: Parameters<typeof agentUninstallAction>[1]) =>
-    agentActionBoundary("uninstall", opts, () => agentUninstallAction(name, opts)),
-  );
+  .action(async (name: string, opts: AgentUninstallOptions) => {
+    const [{ agentActionBoundary }, { agentUninstallAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-uninstall.js"),
+    ]);
+    return agentActionBoundary("uninstall", opts, () => agentUninstallAction(name, opts));
+  });
 
 agent
   .command("installed")
@@ -524,9 +488,13 @@ agent
     "after",
     "\nScans the install roots declared on the target profiles and lists every\n.cairn-install.json it finds.\n\nExit codes:\n  0  Listing written to stdout\n  1  Invocation error",
   )
-  .action((opts: Parameters<typeof agentInstalledAction>[0]) =>
-    agentActionBoundary("installed", opts, () => agentInstalledAction(opts)),
-  );
+  .action(async (opts: AgentInstalledOptions) => {
+    const [{ agentActionBoundary }, { agentInstalledAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-installed.js"),
+    ]);
+    return agentActionBoundary("installed", opts, () => agentInstalledAction(opts));
+  });
 
 agent
   .command("verify")
@@ -540,9 +508,13 @@ agent
     "after",
     "\nReads what to verify from the agent.verify block of a cairn configuration\ndocument, so a CI pipeline can run it with no arguments. Each declared bundle\nis rendered in memory and compared against the committed tree, and the pinned\nCLI and target profile versions are asserted against the running build.\n\nExit codes:\n  0  Every entry matches and every pin is satisfied\n  1  Invocation, configuration, or I/O error\n  2  Drift, an orphaned file, or a violated pin",
   )
-  .action((opts: Parameters<typeof agentVerifyAction>[0]) =>
-    agentActionBoundary("verify", opts, () => agentVerifyAction(opts)),
-  );
+  .action(async (opts: AgentVerifyOptions) => {
+    const [{ agentActionBoundary }, { agentVerifyAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-verify.js"),
+    ]);
+    return agentActionBoundary("verify", opts, () => agentVerifyAction(opts));
+  });
 
 agent
   .command("specs")
@@ -554,9 +526,13 @@ agent
     "after",
     "\nThe profiles are the source of truth for target behavior; --format json is the\nform to depend on.\n\nExit codes:\n  0  Profiles written to stdout\n  1  Invocation error",
   )
-  .action((opts: Parameters<typeof agentSpecsAction>[0]) =>
-    agentActionBoundary("specs", opts, () => agentSpecsAction(opts)),
-  );
+  .action(async (opts: AgentSpecsOptions) => {
+    const [{ agentActionBoundary }, { agentSpecsAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-specs.js"),
+    ]);
+    return agentActionBoundary("specs", opts, () => agentSpecsAction(opts));
+  });
 
 program
   .command(CHECK_COMMAND)
@@ -567,7 +543,10 @@ program
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nQueries the registry directly rather than using the 24h cache.\n\nExit codes:\n  0  Already on the latest version\n  1  Could not reach the registry\n  2  A newer version is available",
   )
-  .action((opts: { format: string }) => checkUpdateAction(packageName, version, opts));
+  .action(async (opts: { format: string }) => {
+    const { checkUpdateAction } = await import("./commands/update-check.js");
+    return checkUpdateAction(packageName, version, opts);
+  });
 
 program
   .command("describe")
@@ -578,13 +557,14 @@ program
     "after",
     "\nExamples:\n  cairn describe --format json\n  cairn describe md graph --format json\n\nReports the static contract; project configuration is not applied.\n\nExit codes:\n  0  Description written to stdout\n  1  Unknown command path or invalid format",
   )
-  .action((commandPath: string[], opts: { format: string }) =>
-    describeAction(program, commandPath, {
+  .action(async (commandPath: string[], opts: { format: string }) => {
+    const { describeAction } = await import("./commands/describe.js");
+    return describeAction(program, commandPath, {
       ...opts,
       toolName: packageName,
       toolVersion: version,
-    }),
-  );
+    });
+  });
 
 program
   .command("schema")
@@ -595,7 +575,10 @@ program
     "after",
     "\nWith an id, the schema document is written regardless of --format.\nSchema ids are identifiers, not fetchable URLs.\n\nExit codes:\n  0  Schema or index written to stdout\n  1  Unknown schema id or invalid format",
   )
-  .action((id: string | undefined, opts: { format: string }) => schemaAction(id, opts));
+  .action(async (id: string | undefined, opts: { format: string }) => {
+    const { schemaAction } = await import("./commands/schema.js");
+    return schemaAction(id, opts);
+  });
 
 program
   .command("completion")
@@ -606,13 +589,14 @@ program
     "after",
     "\nThe script is written to stdout regardless of --format, and is generated from the\nsame command tree `describe` walks, so it cannot drift from the real options.\n\nInstall:\n  cairn completion bash       >> ~/.bashrc          (or a bash-completion.d file)\n  cairn completion zsh        > ~/.zfunc/_cairn (a directory on $fpath)\n  cairn completion fish       > ~/.config/fish/completions/cairn.fish\n  cairn completion powershell >> $PROFILE\n\nRegenerate after upgrading; the script embeds the command tree rather than calling\nback into the CLI, so a shell never pays a process spawn per keystroke.\n\nExit codes:\n  0  Script written to stdout\n  1  Unknown shell or invalid format",
   )
-  .action((shell: string | undefined, opts: { format: string }) =>
-    completionAction(program, shell, {
+  .action(async (shell: string | undefined, opts: { format: string }) => {
+    const { completionAction } = await import("./commands/completion.js");
+    return completionAction(program, shell, {
       ...opts,
       toolName: packageName,
       toolVersion: version,
-    }),
-  );
+    });
+  });
 
 program
   .command("serve")
@@ -627,9 +611,10 @@ program
     "after",
     "\nSpeaks the Model Context Protocol over stdio, exposing the Markdown workspace\nengine as read-only tools. stdout carries JSON-RPC frames rather than a payload,\nso --format does not apply; diagnostics go to stderr.\n\nEvery tool is read-only and every path argument is confined to --root, resolved\nthrough symlinks. Configuration is discovered from --root, so a tool answers the\nsame as the equivalent md command in that workspace.\n\nRegister with a host:\n  claude mcp add markdown -- cairn serve mcp --root docs\n\nExit codes:\n  0  The client closed the connection\n  1  Unknown protocol, unreadable root, or invalid configuration",
   )
-  .action((protocol: string, opts: Record<string, unknown>) =>
-    serveAction(protocol, opts as unknown as ServeOptions),
-  );
+  .action(async (protocol: string, opts: Record<string, unknown>) => {
+    const { serveAction } = await import("./commands/serve.js");
+    return serveAction(protocol, opts as unknown as ServeOptions);
+  });
 
 const jira = program
   .command("jira")
@@ -664,9 +649,10 @@ adfConverter(adf.command("to-markdown"))
     "after",
     "\nEmits no frontmatter: an ADF document carries no title, key, status, or author, so\nthere is nothing to put there.\n\nExit codes:\n  0  Converted; read diagnostics to learn what was approximated\n  1  Invocation or I/O error, or the input is not an ADF document\n  2  An error, or any approximation under --strict",
   )
-  .action((source: string, opts: AdfOptions) =>
-    adfActionBoundary("to-markdown", opts, () => adfToMarkdownAction(source, opts)),
-  );
+  .action(async (source: string, opts: AdfOptions) => {
+    const { adfActionBoundary, adfToMarkdownAction } = await import("./commands/jira.js");
+    return adfActionBoundary("to-markdown", opts, () => adfToMarkdownAction(source, opts));
+  });
 
 adfConverter(adf.command("from-markdown"))
   .description("Convert a Markdown document to ADF")
@@ -674,9 +660,10 @@ adfConverter(adf.command("from-markdown"))
     "after",
     "\nThe default format already emits pure ADF JSON, so --format json wraps that document\nin the result envelope rather than changing its encoding. Frontmatter is dropped with\na finding rather than becoming body content.\n\nExit codes:\n  0  Converted; read diagnostics to learn what was approximated\n  1  Invocation or I/O error\n  2  An error, or any approximation under --strict",
   )
-  .action((source: string, opts: AdfOptions) =>
-    adfActionBoundary("from-markdown", opts, () => adfFromMarkdownAction(source, opts)),
-  );
+  .action(async (source: string, opts: AdfOptions) => {
+    const { adfActionBoundary, adfFromMarkdownAction } = await import("./commands/jira.js");
+    return adfActionBoundary("from-markdown", opts, () => adfFromMarkdownAction(source, opts));
+  });
 
 adfCommon(adf.command("validate"))
   .description("Check an ADF document's structure without converting it")
@@ -685,9 +672,10 @@ adfCommon(adf.command("validate"))
     "after",
     "\nChecks nesting, required content, and attribute constraints against this tool's own\ncontent model. It is not a wrapper around Atlassian's schema: a node type the model\ndoes not know reports AD100 rather than being judged.\n\nExit codes:\n  0  No structural errors\n  1  Invocation or I/O error, or the input is not an ADF document\n  2  Invalid structure, or an unknown node type under --strict",
   )
-  .action((source: string, opts: AdfOptions) =>
-    adfActionBoundary("validate", opts, () => adfValidateAction(source, opts)),
-  );
+  .action(async (source: string, opts: AdfOptions) => {
+    const { adfActionBoundary, adfValidateAction } = await import("./commands/jira.js");
+    return adfActionBoundary("validate", opts, () => adfValidateAction(source, opts));
+  });
 
 adfCommon(adf.command("inspect"))
   .description("List the node and mark types in an ADF document, with per-type fidelity")
@@ -695,9 +683,10 @@ adfCommon(adf.command("inspect"))
     "after",
     "\nAnswers what a conversion will cost before paying it. A type this tool does not model\nis listed as unsupported rather than omitted.\n\nExit codes:\n  0  Inventory written to stdout\n  1  Invocation or I/O error, or the input is not an ADF document",
   )
-  .action((source: string, opts: AdfOptions) =>
-    adfActionBoundary("inspect", opts, () => adfInspectAction(source, opts)),
-  );
+  .action(async (source: string, opts: AdfOptions) => {
+    const { adfActionBoundary, adfInspectAction } = await import("./commands/jira.js");
+    return adfActionBoundary("inspect", opts, () => adfInspectAction(source, opts));
+  });
 
 const pdf = program
   .command("pdf")
@@ -728,9 +717,10 @@ pdfCommon(pdf.command("inspect"))
     "after",
     "\nAnswers what a conversion will cost before paying it, and whether a document needs OCR at\nall. Each page is classified present, sparse, or absent by glyph count per square inch; an\nabsent text layer means the page is an image and `pdf text` returns nothing for it. The\ncharacter count and density are reported beside the label, so a caller who disagrees with\nthe threshold can re-classify from the evidence.\n\ndocument.tagged is the field to read first: a tagged document carries a structure tree that\nnames its own paragraphs, headings, and lists, so `pdf to-markdown` infers almost nothing.\ndocument.structured is the measured version of that claim — some producers declare tagging\nand ship an empty tree.\n\nExit codes:\n  0  Inventory written to stdout\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A page could not be analyzed, leaving the inventory incomplete",
   )
-  .action((file: string, opts: PdfOptions) =>
-    pdfActionBoundary("inspect", file, opts, () => pdfInspectAction(file, opts)),
-  );
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfInspectAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("inspect", file, opts, () => pdfInspectAction(file, opts));
+  });
 
 pdfDocument(pdf.command("text"))
   .description("Extract the text layer, page by page")
@@ -738,9 +728,10 @@ pdfDocument(pdf.command("text"))
     "after",
     "\nExtracts the text a document already carries. It does not recognize text in an image: a\nscanned page has no text layer and reports AP050 rather than returning an empty string with\nno explanation. Run `pdf inspect` first to see which pages have one.\n\nPages are separated by a form feed on stdout, as pdftotext does. Under --format json they\nare a per-page array instead, and a page that could not be decoded is absent from it rather\nthan present and empty.\n\nExamples:\n  cairn pdf text report.pdf --pages 1,4-6\n  cairn pdf text scan.pdf --strict     # fail if any page is an image\n\nExit codes:\n  0  Text written to stdout\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A page could not be decoded, or a page has no text layer under --strict",
   )
-  .action((file: string, opts: PdfOptions) =>
-    pdfActionBoundary("text", file, opts, () => pdfTextAction(file, opts)),
-  );
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfTextAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("text", file, opts, () => pdfTextAction(file, opts));
+  });
 
 pdfCommon(pdf.command("outline"))
   .description("Read the document outline (bookmarks) as a heading tree")
@@ -748,9 +739,10 @@ pdfCommon(pdf.command("outline"))
     "after",
     "\nReports the outline the document declares, not one inferred from its text. A document with\nno /Outlines returns an empty tree and exits 0: that is an answer, not a failure. An entry\nwhose destination does not resolve keeps its title with a null page and reports AP080,\nrather than being dropped.\n\nURLs are recorded and never followed. An entry whose scheme the parser refused carries no\nurl at all, rather than presenting a javascript: or file: URI as though it were clickable.\n\nExit codes:\n  0  Outline written to stdout, possibly empty\n  1  Invocation or I/O error, or the input is not a PDF\n  2  An outline entry could not be resolved",
   )
-  .action((file: string, opts: PdfOptions) =>
-    pdfActionBoundary("outline", file, opts, () => pdfOutlineAction(file, opts)),
-  );
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfOutlineAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("outline", file, opts, () => pdfOutlineAction(file, opts));
+  });
 
 pdfCommon(pdf.command("validate"))
   .description("Check a PDF's structural integrity without converting it")
@@ -759,9 +751,10 @@ pdfCommon(pdf.command("validate"))
     "after",
     "\nReports what the parser itself can see: a damaged cross-reference table, a content stream\nit could not decode, a font it could not resolve, a page tree cycle, an unsupported filter.\n\nIt is deliberately not a PDF/A or PDF/UA conformance checker. Full conformance validation is\nveraPDF's job and is a Java program; claiming it here would be a lie. It also does not\nverify signatures or judge whether a document renders, neither of which is reachable\nwithout rasterizing. This is the same line `jira adf validate` draws when it reports AD100\nfor a node type it does not model.\n\nA cross-reference table that was damaged but successfully rebuilt reports AP101 and still\nparses, so a finding here does not mean the document is unreadable.\n\nExit codes:\n  0  No structural errors\n  1  Invocation or I/O error, or the input is not a PDF\n  2  Invalid structure, or an unsupported construct under --strict",
   )
-  .action((file: string, opts: PdfOptions) =>
-    pdfActionBoundary("validate", file, opts, () => pdfValidateAction(file, opts)),
-  );
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfValidateAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("validate", file, opts, () => pdfValidateAction(file, opts));
+  });
 
 pdfDocument(pdf.command("to-markdown"))
   .description("Convert a PDF's content to Markdown, reporting what was inferred")
@@ -769,9 +762,10 @@ pdfDocument(pdf.command("to-markdown"))
     "after",
     "\nA PDF has no paragraphs, no headings, and no lists — only positioned glyph runs. On an\nuntagged page every block boundary is inferred from geometry and font metrics, so the\nconversion is approximate by construction; a tagged page uses the structure tree instead and\nis close to exact. The path is chosen per page, and AP200 always reports which was used.\n\nRead document.tagged before trusting the structure, and run `pdf inspect` before running\nthis at all.\n\nTabular content is flattened to one paragraph per row and reported. A real table is only\nemitted for a tagged document: a geometric reconstruction gets merged and wrapped cells\nwrong and produces a confidently wrong table that cannot be told from a right one.\n\n--pages restricts which pages are emitted, not what the inference saw — the modal body font\nand repeated-header detection still run over the whole document, so a page range is a true\nsubset of the full conversion.\n\nEmits no frontmatter: a PDF's metadata is `pdf inspect`'s answer.\n\nExit codes:\n  0  Converted; read diagnostics to learn what was inferred or lost\n  1  Invocation or I/O error, or the input is not a PDF\n  2  An error, or any approximation under --strict",
   )
-  .action((file: string, opts: PdfOptions) =>
-    pdfActionBoundary("to-markdown", file, opts, () => pdfToMarkdownAction(file, opts)),
-  );
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfToMarkdownAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("to-markdown", file, opts, () => pdfToMarkdownAction(file, opts));
+  });
 
 pdfCommon(pdf.command("attachments"))
   .description("List the files embedded in a PDF, and optionally write them out")
@@ -781,9 +775,10 @@ pdfCommon(pdf.command("attachments"))
     "after",
     "\nEmbedded files are files carried inside the document. Without --extract this only\ninventories them — name, size, SHA-256 — which is what makes it safe to reach for and\nsafe to expose over MCP; writing is the opt-in.\n\nBinary never goes to stdout under any format. --extract is the only way bytes leave this\ncommand.\n\nA stored file name is attacker-controlled and is sanitized before it is used as a path. The\npayload reports both the raw stored name and the name actually written, so a rename is\nvisible. Extraction is planned in full before anything is written: one refused destination\nmeans no file is written at all, and a name that collides is written under a resolved name\nrather than overwriting anything.\n\nNothing embedded is ever executed or opened.\n\nExamples:\n  cairn pdf attachments report.pdf\n  cairn pdf attachments report.pdf --extract ./out\n\nExit codes:\n  0  Listed, and written when --extract was given\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A destination was refused, an embedded file could not be decoded, or any\n     name had to be sanitized under --strict",
   )
-  .action((file: string, opts: PdfOptions) =>
-    pdfActionBoundary("attachments", file, opts, () => pdfAttachmentsAction(file, opts)),
-  );
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfAttachmentsAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("attachments", file, opts, () => pdfAttachmentsAction(file, opts));
+  });
 
 pdfCommon(pdf.command("forms"))
   .description("List AcroForm fields and their current values")
@@ -792,9 +787,10 @@ pdfCommon(pdf.command("forms"))
     "after",
     "\nReads and never writes. Filling a form is manipulation, which this toolset does not do, so\nthere is no flag that sets a value.\n\nOne field can render as several widgets across pages; they are folded into one row carrying\na count. A field's page is reported 1-based, matching every other page number here.\n\nA field marked as a password field is reported with its value and the flag. The same bytes\nare already reachable through `pdf text`, so withholding them would be theatre.\n\nAn XFA-only document reports type:xfa with no fields and AP311, never a silently empty\nlist: its values live in an XML packet this does not read.\n\nExit codes:\n  0  Reported, including a document that carries no form\n  1  Invocation or I/O error, or the input is not a PDF\n  2  Under --strict, a form this cannot fully read — an XFA form, or a field\n     that resolves to no page",
   )
-  .action((file: string, opts: PdfOptions) =>
-    pdfActionBoundary("forms", file, opts, () => pdfFormsAction(file, opts)),
-  );
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfFormsAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("forms", file, opts, () => pdfFormsAction(file, opts));
+  });
 
 const scripts = program
   .command("scripts")
@@ -820,9 +816,10 @@ scriptsCommon(scripts.command("run"))
     "after",
     "\nExamples:\n  cairn scripts run gather-context\n  cairn scripts run lint-changed -- --since main\n\nIn llm and human formats the script's streams pass through untouched and its exit\nstatus becomes this process's exit status, so a hook reads the real code. With\n--format json the streams are captured into the payload instead.\n\nRefuses to run outside a Git repository unless --root sets the boundary explicitly.\n\nExit codes:\n  *  llm and human: the script's own exit status, verbatim\n  0  --format json: the script exited 0\n  1  Unresolvable name, or the script could not be started\n  2  --format json: the script exited non-zero or was killed by a signal",
   )
-  .action((name: string, args: string[], opts: Record<string, unknown>) =>
-    scriptsRunAction(name, args, opts as ScriptsOptions),
-  );
+  .action(async (name: string, args: string[], opts: Record<string, unknown>) => {
+    const { scriptsRunAction } = await import("./commands/scripts.js");
+    return scriptsRunAction(name, args, opts as ScriptsOptions);
+  });
 
 scriptsCommon(scripts.command("which"))
   .description("Show which registry defines a script, without running it")
@@ -831,9 +828,10 @@ scriptsCommon(scripts.command("which"))
     "after",
     "\nReports the winning .cairn.yml, the working directory the script would run in,\nand any same-named definitions it shadows.\n\nExit codes:\n  0  The name resolved\n  1  Invocation error\n  2  No script by that name",
   )
-  .action((name: string, opts: Record<string, unknown>) =>
-    scriptsWhichAction(name, opts as ScriptsOptions),
-  );
+  .action(async (name: string, opts: Record<string, unknown>) => {
+    const { scriptsWhichAction } = await import("./commands/scripts.js");
+    return scriptsWhichAction(name, opts as ScriptsOptions);
+  });
 
 scriptsCommon(scripts.command("list"))
   .description("List every script visible from the working directory")
@@ -841,7 +839,10 @@ scriptsCommon(scripts.command("list"))
     "after",
     "\nNearest definition wins, so a name declared in a nested registry hides the one above\nit. Files that could not be parsed are reported rather than skipped silently.\n\nExit codes:\n  0  Listing written to stdout\n  1  Invocation error\n  2  A consulted configuration file could not be read",
   )
-  .action((opts: Record<string, unknown>) => scriptsListAction(opts as ScriptsOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { scriptsListAction } = await import("./commands/scripts.js");
+    return scriptsListAction(opts as ScriptsOptions);
+  });
 
 const usage = program
   .command("usage")
@@ -883,7 +884,10 @@ usageCommon(usage.command("summary"))
     "\nToken counts deduplicate the per-response fan-out in the source transcripts, where\none API response is written as several lines each carrying an identical copy of its\nusage. Subagent transcripts are included; --no-subagents excludes them." +
       usageExitCodes,
   )
-  .action((opts: Record<string, unknown>) => usageSummaryAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageSummaryAction } = await import("./commands/usage.js");
+    return usageSummaryAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("tokens"))
   .description("Token usage rolled up by model, time, project, or session")
@@ -893,7 +897,10 @@ usageCommon(usage.command("tokens"))
     "\nCache writes report an authoritative total alongside a best-effort split by TTL,\nwhich the oldest records do not carry." +
       usageExitCodes,
   )
-  .action((opts: Record<string, unknown>) => usageTokensAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageTokensAction } = await import("./commands/usage.js");
+    return usageTokensAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("tools"))
   .description("Tool calls rolled up by name, kind, server, day, or session")
@@ -904,7 +911,10 @@ usageCommon(usage.command("tools"))
     "\nAn MCP tool named mcp__<server>__<tool> is split into its server and tool halves,\nso --by server and --kind mcp are how that surface is queried." +
       usageExitCodes,
   )
-  .action((opts: Record<string, unknown>) => usageToolsAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageToolsAction } = await import("./commands/usage.js");
+    return usageToolsAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("sessions"))
   .description("One row per session, with its subagent transcripts folded in")
@@ -914,7 +924,10 @@ usageCommon(usage.command("sessions"))
     "\n--last n selects the n most recently active sessions rather than the n most recent\nfiles, so a session's subagent spend is never dropped from its own row." +
       usageExitCodes,
   )
-  .action((opts: Record<string, unknown>) => usageSessionsAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageSessionsAction } = await import("./commands/usage.js");
+    return usageSessionsAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("projects"))
   .description("Usage rolled up by the directory each session ran in")
@@ -923,7 +936,10 @@ usageCommon(usage.command("projects"))
     "\nProject identity is the working directory recorded inside the transcripts, not the\nlog directory name, whose separator substitution is not reliably invertible." +
       usageExitCodes,
   )
-  .action((opts: Record<string, unknown>) => usageProjectsAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageProjectsAction } = await import("./commands/usage.js");
+    return usageProjectsAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("skills"))
   .description("Skill invocations by name")
@@ -932,7 +948,10 @@ usageCommon(usage.command("skills"))
     "\nCounted from every surface that records one: the Skill tool, the invoked-skill\nattachments, and the slash-command form." +
       usageExitCodes,
   )
-  .action((opts: Record<string, unknown>) => usageSkillsAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageSkillsAction } = await import("./commands/usage.js");
+    return usageSkillsAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("agents"))
   .description("Subagent activity by agent type, with real token cost")
@@ -942,7 +961,10 @@ usageCommon(usage.command("agents"))
     "\nSpawn counts come from the parent's tool calls; tokens come from the subagent\ntranscripts themselves. The parent's own tool result records only the subagent's\nfinal message and understates its spend several-fold, so it is not used.\n\n--by role groups by the reusable agent type; --by path groups by the task-specific\nidentifier, which only some providers record." +
       usageExitCodes,
   )
-  .action((opts: Record<string, unknown>) => usageAgentsAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageAgentsAction } = await import("./commands/usage.js");
+    return usageAgentsAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("hooks"))
   .description("Hook executions by event and tool, with failures and latency")
@@ -951,7 +973,10 @@ usageCommon(usage.command("hooks"))
     "\nKeyed by <Event>:<Tool>. Stop hooks report through a session summary record rather\nthan a per-execution one and are counted under Stop." +
       usageExitCodes,
   )
-  .action((opts: Record<string, unknown>) => usageHooksAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageHooksAction } = await import("./commands/usage.js");
+    return usageHooksAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("commands"))
   .description("Slash command usage by name")
@@ -960,7 +985,10 @@ usageCommon(usage.command("commands"))
     "\nSlash commands are not a field in the logs; they are a marker block inside the\nuser's message text, and are extracted from it." +
       usageExitCodes,
   )
-  .action((opts: Record<string, unknown>) => usageCommandsAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageCommandsAction } = await import("./commands/usage.js");
+    return usageCommandsAction(opts as UsageOptions);
+  });
 
 usage
   .command("providers")
@@ -972,7 +1000,10 @@ usage
     "after",
     "\nReports whether each provider has left anything on this machine and what its logs\ncan answer. Reports read those capabilities rather than branching on a provider\nname, so registering a second assistant is one module and one registry line.\n\nExit codes:\n  0  Listing written to stdout\n  1  Invocation error",
   )
-  .action((opts: Record<string, unknown>) => usageProvidersAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageProvidersAction } = await import("./commands/usage.js");
+    return usageProvidersAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("index"))
   .description("Show, rebuild, or clear the usage store")
@@ -982,7 +1013,10 @@ usageCommon(usage.command("index"))
     "after",
     "\nThe store keys on each transcript's path, size, and modification time. Transcripts\nare append-only, so an unchanged file cannot hold a record the stored aggregate is\nmissing, and only files that grew are reopened.\n\nOne SQLite store under XDG_DATA_HOME holds every provider, so --clear is scoped by\n--provider and the size it reports is the whole file's.\n\nExit codes:\n  0  Status written, or the store was rebuilt or cleared\n  1  Invocation error",
   )
-  .action((opts: Record<string, unknown>) => usageIndexAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageIndexAction } = await import("./commands/usage.js");
+    return usageIndexAction(opts as UsageOptions);
+  });
 
 usageCommon(usage.command("import"))
   .description("Import transcripts into the usage store")
@@ -991,7 +1025,10 @@ usageCommon(usage.command("import"))
     "after",
     "\nReports populate the store on first use, so this is never required. It exists to do\nthat work deliberately: to warm a cold store before a timed report, to run on a\nschedule, and to see the import counters without a report wrapped around them.\n\nThe store keeps two grains. Day buckets answer every report this tool offers; the\nevent rows answer what a day bucket cannot, and are there for anything querying the\nSQLite file directly.\n\nExit codes:\n  0  Import completed\n  1  Invocation error, or no logs found\n  2  --strict was given and a transcript could not be fully read",
   )
-  .action((opts: Record<string, unknown>) => usageImportAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageImportAction } = await import("./commands/usage.js");
+    return usageImportAction(opts as UsageOptions);
+  });
 
 usage
   .command("migrate")
@@ -1003,7 +1040,10 @@ usage
     "after",
     "\nEvery command that opens the store migrates it, so this is needed only to migrate\ndeliberately, or with --check to see what is pending first.\n\nThe store is migrated rather than discarded. Once transcripts have been archived and\npruned it may be the only record of that usage left, so a version bump carries the\ndata forward instead of throwing it away. A store written by a newer cairn is\nrefused rather than guessed at.\n\nExit codes:\n  0  Store is current, or was migrated\n  1  Invocation error, or the store is newer than this build understands",
   )
-  .action((opts: Record<string, unknown>) => usageMigrateAction(opts as UsageOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { usageMigrateAction } = await import("./commands/usage.js");
+    return usageMigrateAction(opts as UsageOptions);
+  });
 
 const archive = program
   .command("archive")
@@ -1033,12 +1073,18 @@ archiveCommon(archive.command("run"))
     "after",
     "\nplans and artifacts are archived by default; transcripts and logs are opt-in because\nthey are three orders of magnitude larger.\n\nIncremental twice over: a file whose size and modification time already match the index\nis never opened, and a file whose content is already stored is never written again, so a\nsecond run over an unchanged corpus costs one stat per file.\n\nA file that changes gets a new row against a new blob, so the archive keeps every version\nit ever saw.\n\nProgress:\n  A run over a full corpus is tens of thousands of files and takes minutes, so it draws a\n  progress line on stderr. That line rewrites itself in place, so it appears only when\n  stderr is a terminal, --format is not json, and CI is unset; --no-progress suppresses it.\n\n  -v prints one durable line per artifact instead, giving its disposition (stored,\n  duplicate, unchanged, skipped), size, hash, and path. It is not gated on a terminal,\n  so `cairn archive run -v 2> archive.log` is the way to keep a record of a long run.\n\nExit codes:\n  0  Run completed\n  1  Invocation error, or no logs found",
   )
-  .action((opts: Record<string, unknown>) => archiveRunAction(opts as ArchiveOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { archiveRunAction } = await import("./commands/archive.js");
+    return archiveRunAction(opts as ArchiveOptions);
+  });
 
 archiveCommon(archive.command("status"))
   .description("Report what the archive holds")
   .addHelpText("after", "\nExit codes:\n  0  Status written\n  1  Invocation error")
-  .action((opts: Record<string, unknown>) => archiveStatusAction(opts as ArchiveOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { archiveStatusAction } = await import("./commands/archive.js");
+    return archiveStatusAction(opts as ArchiveOptions);
+  });
 
 archiveCommon(archive.command("list"))
   .description("List archived artifacts")
@@ -1050,7 +1096,10 @@ archiveCommon(archive.command("list"))
     "after",
     "\nOne row per archived path, newest first. A path the archive holds several versions of is\nlisted once, with the count.\n\nExit codes:\n  0  Listing written\n  1  Invocation error",
   )
-  .action((opts: Record<string, unknown>) => archiveListAction(opts as ArchiveOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { archiveListAction } = await import("./commands/archive.js");
+    return archiveListAction(opts as ArchiveOptions);
+  });
 
 archiveCommon(archive.command("extract"))
   .argument("<target>", "Original path, or a sha256 prefix")
@@ -1060,9 +1109,10 @@ archiveCommon(archive.command("extract"))
     "after",
     "\nA path resolves to its newest version; name a hash to reach an older one. The content is\nre-hashed on the way out, so an archive whose index and bytes disagree reports that rather\nthan handing back the wrong file.\n\nExit codes:\n  0  File written\n  1  Invocation error, or nothing matched",
   )
-  .action((target: string, opts: Record<string, unknown>) =>
-    archiveExtractAction(target, opts as ArchiveOptions),
-  );
+  .action(async (target: string, opts: Record<string, unknown>) => {
+    const { archiveExtractAction } = await import("./commands/archive.js");
+    return archiveExtractAction(target, opts as ArchiveOptions);
+  });
 
 archiveCommon(archive.command("verify"))
   .description("Check the archive against its index")
@@ -1071,7 +1121,10 @@ archiveCommon(archive.command("verify"))
     "after",
     "\nThe default pass hashes each segment file, catching truncation and corruption for the cost\nof reading it. --deep additionally re-hashes every member, which catches an index whose\noffsets no longer point where it claims.\n\nExit codes:\n  0  Archive matches its index\n  1  Invocation error\n  2  The archive and its index disagree",
   )
-  .action((opts: Record<string, unknown>) => archiveVerifyAction(opts as ArchiveOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { archiveVerifyAction } = await import("./commands/archive.js");
+    return archiveVerifyAction(opts as ArchiveOptions);
+  });
 
 archiveCommon(archive.command("migrate"))
   .description("Apply pending archive index migrations")
@@ -1080,13 +1133,19 @@ archiveCommon(archive.command("migrate"))
     "after",
     "\nThe index is migrated rather than discarded: it is the only map from an original path to\nthe segment holding that file's bytes. An index written by a newer cairn is refused rather\nthan guessed at.\n\nExit codes:\n  0  Index is current, or was migrated\n  1  Invocation error, or the index is newer than this build understands",
   )
-  .action((opts: Record<string, unknown>) => archiveMigrateAction(opts as ArchiveOptions));
+  .action(async (opts: Record<string, unknown>) => {
+    const { archiveMigrateAction } = await import("./commands/archive.js");
+    return archiveMigrateAction(opts as ArchiveOptions);
+  });
 
 // Internal: refreshes the cached latest version. Spawned detached by the notifier.
 program
   .command(REFRESH_COMMAND, { hidden: true })
   .description("Internal: refresh the cached latest-version check")
-  .action(() => refreshUpdateCacheAction(packageName));
+  .action(async () => {
+    const { refreshUpdateCacheAction } = await import("./commands/update-check.js");
+    return refreshUpdateCacheAction(packageName);
+  });
 
 const md = program
   .command("md")
@@ -1125,8 +1184,9 @@ common(md.command("lint"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nExit codes:\n  0  All checks pass\n  2  One or more issues found",
   )
-  .action((files: string[], opts: Record<string, unknown>) =>
-    lintAction(
+  .action(async (files: string[], opts: Record<string, unknown>) => {
+    const { lintAction } = await import("./commands/lint.js");
+    return lintAction(
       files,
       commandOptions(
         "lint",
@@ -1140,8 +1200,8 @@ common(md.command("lint"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("lint-dir"))
   .description("Run all checks on all markdown files in a directory")
@@ -1164,8 +1224,9 @@ common(md.command("lint-dir"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nExit codes:\n  0  All files pass all checks\n  2  One or more issues found in any file",
   )
-  .action((directory: string | undefined, opts: Record<string, unknown>) =>
-    lintDirAction(
+  .action(async (directory: string | undefined, opts: Record<string, unknown>) => {
+    const { lintDirAction } = await import("./commands/lint-dir.js");
+    return lintDirAction(
       directory ?? projectConfig.root,
       commandOptions(
         "lint-dir",
@@ -1181,8 +1242,8 @@ common(md.command("lint-dir"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("refs"))
   .description("List all references from a markdown file and check if targets exist")
@@ -1197,12 +1258,13 @@ common(md.command("refs"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nExit codes:\n  0  All referenced targets exist\n  2  One or more targets missing",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    refsAction(
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { refsAction } = await import("./commands/refs.js");
+    return refsAction(
       file,
       commandOptions("refs", { external: false, anchors: false, images: false }, opts) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("refs-to"))
   .description("Find all markdown files that reference a given file")
@@ -1214,8 +1276,9 @@ common(md.command("refs-to"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   )
-  .action((file: string, directory: string | undefined, opts: Record<string, unknown>) =>
-    refsToAction(
+  .action(async (file: string, directory: string | undefined, opts: Record<string, unknown>) => {
+    const { refsToAction } = await import("./commands/refs-to.js");
+    return refsToAction(
       file,
       directory ?? projectConfig.root,
       commandOptions(
@@ -1223,8 +1286,8 @@ common(md.command("refs-to"))
         { include: projectConfig.files.include, exclude: projectConfig.files.exclude },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("headers"))
   .description("Extract headings from a markdown file with line numbers")
@@ -1234,9 +1297,10 @@ common(md.command("headers"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    headersAction(file, commandOptions("headers", { maxDepth: "6" }, opts) as never),
-  );
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { headersAction } = await import("./commands/headers.js");
+    return headersAction(file, commandOptions("headers", { maxDepth: "6" }, opts) as never);
+  });
 
 common(md.command("outline"))
   .description("Show headings in an indented outline format")
@@ -1246,9 +1310,10 @@ common(md.command("outline"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    outlineAction(file, commandOptions("outline", { maxDepth: "6" }, opts) as never),
-  );
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { outlineAction } = await import("./commands/outline.js");
+    return outlineAction(file, commandOptions("outline", { maxDepth: "6" }, opts) as never);
+  });
 
 common(md.command("toc"))
   .description("Generate a markdown table of contents from headings")
@@ -1264,16 +1329,17 @@ common(md.command("toc"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    tocAction(
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { tocAction } = await import("./commands/toc.js");
+    return tocAction(
       file,
       commandOptions(
         "toc",
         { maxDepth: "6", minDepth: "1", ordered: false, check: false, write: false, dryRun: false },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("graph"))
   .description("Analyze the workspace Markdown document graph")
@@ -1288,8 +1354,9 @@ common(md.command("graph"))
     "after",
     "\n--focus narrows the report and the mermaid/dot diagrams to the documents within\n--depth undirected hops, so backlinks are included. The graph is analyzed in full\nfirst, so inbound/outbound counts, components, and cycles remain whole-workspace\nfacts rather than artifacts of the narrowing.\n\nExit codes:\n  0  No broken or unreachable documents\n  2  Broken or unreachable documents found",
   )
-  .action((directory: string | undefined, opts: Record<string, unknown>) =>
-    graphAction(
+  .action(async (directory: string | undefined, opts: Record<string, unknown>) => {
+    const { graphAction } = await import("./commands/graph.js");
+    return graphAction(
       directory ?? projectConfig.root,
       commandOptions(
         "graph",
@@ -1303,8 +1370,8 @@ common(md.command("graph"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("validate-frontmatter"))
   .description("Validate Markdown frontmatter with schema and workspace rules")
@@ -1317,8 +1384,9 @@ common(md.command("validate-frontmatter"))
     "after",
     "\nExit codes:\n  0  Frontmatter is valid\n  1  Configuration or schema error\n  2  Validation findings",
   )
-  .action((target: string[], opts: Record<string, unknown>) =>
-    validateFrontmatterAction(
+  .action(async (target: string[], opts: Record<string, unknown>) => {
+    const { validateFrontmatterAction } = await import("./commands/validate-frontmatter.js");
+    return validateFrontmatterAction(
       target,
       commandOptions(
         "validate-frontmatter",
@@ -1329,8 +1397,8 @@ common(md.command("validate-frontmatter"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("audit"))
   .description("Run composable checks across a Markdown workspace")
@@ -1368,8 +1436,9 @@ common(md.command("audit"))
     "after",
     "\nA baseline suppresses findings it already records, so only regressions fail. Entries\nare keyed on checker, workspace-relative path, and message — not line number — so\nediting prose above a known finding does not resurface it. Recording is explicit:\n--write-baseline writes the file and exits 0, and the two flags cannot be combined.\n\nExit codes:\n  0  Audit passed, or a baseline was written\n  1  Operational error\n  2  Actionable findings",
   )
-  .action((directory: string | undefined, opts: Record<string, unknown>) =>
-    auditAction(
+  .action(async (directory: string | undefined, opts: Record<string, unknown>) => {
+    const { auditAction } = await import("./commands/audit.js");
+    return auditAction(
       directory ?? projectConfig.root,
       commandOptions(
         "audit",
@@ -1396,8 +1465,8 @@ common(md.command("audit"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("stats"))
   .description("Show document statistics (words, headings, links, code blocks)")
@@ -1406,9 +1475,10 @@ common(md.command("stats"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    statsAction(file, commandOptions("stats", {}, opts) as never),
-  );
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { statsAction } = await import("./commands/stats.js");
+    return statsAction(file, commandOptions("stats", {}, opts) as never);
+  });
 
 common(md.command("code-blocks"))
   .description("List fenced code blocks with language and line ranges")
@@ -1420,9 +1490,10 @@ common(md.command("code-blocks"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    codeBlocksAction(file, commandOptions("code-blocks", { content: false }, opts) as never),
-  );
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { codeBlocksAction } = await import("./commands/code-blocks.js");
+    return codeBlocksAction(file, commandOptions("code-blocks", { content: false }, opts) as never);
+  });
 
 common(md.command("structure"))
   .description("Show document structure skeleton (headings, code blocks, lists, math)")
@@ -1431,9 +1502,10 @@ common(md.command("structure"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    structureAction(file, commandOptions("structure", {}, opts) as never),
-  );
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { structureAction } = await import("./commands/structure.js");
+    return structureAction(file, commandOptions("structure", {}, opts) as never);
+  });
 
 common(md.command("links"))
   .description("List all links with context, grouped by type")
@@ -1445,9 +1517,10 @@ common(md.command("links"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nExit codes:\n  0  All link targets exist (or not checked)\n  2  One or more broken links found",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    linksAction(file, commandOptions("links", { brokenOnly: false }, opts) as never),
-  );
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { linksAction } = await import("./commands/links.js");
+    return linksAction(file, commandOptions("links", { brokenOnly: false }, opts) as never);
+  });
 
 common(md.command("section"))
   .description("Extract content of a section by heading text or slug")
@@ -1463,8 +1536,9 @@ common(md.command("section"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nExit codes:\n  0  Section found and extracted\n  1  File not found or heading not found",
   )
-  .action((file: string, heading: string, opts: Record<string, unknown>) =>
-    sectionAction(
+  .action(async (file: string, heading: string, opts: Record<string, unknown>) => {
+    const { sectionAction } = await import("./commands/section.js");
+    return sectionAction(
       file,
       heading,
       commandOptions(
@@ -1472,8 +1546,8 @@ common(md.command("section"))
         { includeHeading: true, children: true, raw: false },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("context"))
   .description("Assemble a reproducible context pack from the workspace graph")
@@ -1500,8 +1574,9 @@ common(md.command("context"))
       "  0  Pack written to stdout, whether or not it was truncated\n" +
       "  1  No seeds given, or a --section heading matched nothing",
   )
-  .action((seeds: string[], opts: Record<string, unknown>) =>
-    contextAction(
+  .action(async (seeds: string[], opts: Record<string, unknown>) => {
+    const { contextAction } = await import("./commands/context.js");
+    return contextAction(
       seeds,
       commandOptions(
         "context",
@@ -1517,8 +1592,8 @@ common(md.command("context"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("diff"))
   .description("Summarize Markdown changes by structure rather than by text")
@@ -1543,8 +1618,9 @@ common(md.command("diff"))
       "  0  Report written to stdout, whether or not anything changed\n" +
       "  1  Bad invocation, a missing file, or an unreadable revision",
   )
-  .action((a: string | undefined, b: string | undefined, opts: Record<string, unknown>) =>
-    diffAction(
+  .action(async (a: string | undefined, b: string | undefined, opts: Record<string, unknown>) => {
+    const { diffAction } = await import("./commands/diff.js");
+    return diffAction(
       a,
       b,
       commandOptions(
@@ -1556,8 +1632,8 @@ common(md.command("diff"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("frontmatter"))
   .description("Parse and display YAML frontmatter from a markdown file")
@@ -1567,9 +1643,10 @@ common(md.command("frontmatter"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nExit codes:\n  0  Frontmatter found (or no frontmatter)\n  1  File not found or key not found",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    frontmatterAction(file, commandOptions("frontmatter", {}, opts) as never),
-  );
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { frontmatterAction } = await import("./commands/frontmatter.js");
+    return frontmatterAction(file, commandOptions("frontmatter", {}, opts) as never);
+  });
 
 common(md.command("tasks"))
   .description("Extract GFM task list items with completion status")
@@ -1581,9 +1658,10 @@ common(md.command("tasks"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    tasksAction(file, commandOptions("tasks", { summary: false }, opts) as never),
-  );
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { tasksAction } = await import("./commands/tasks.js");
+    return tasksAction(file, commandOptions("tasks", { summary: false }, opts) as never);
+  });
 
 common(md.command("tables"))
   .description("List or extract GFM tables with location and dimensions")
@@ -1595,9 +1673,10 @@ common(md.command("tables"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   )
-  .action((file: string, opts: Record<string, unknown>) =>
-    tablesAction(file, commandOptions("tables", { content: false }, opts) as never),
-  );
+  .action(async (file: string, opts: Record<string, unknown>) => {
+    const { tablesAction } = await import("./commands/tables.js");
+    return tablesAction(file, commandOptions("tables", { content: false }, opts) as never);
+  });
 
 common(md.command("check-urls"))
   .description("Validate external URLs across Markdown inputs")
@@ -1623,8 +1702,9 @@ common(md.command("check-urls"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nExit codes:\n  0  All URLs reachable (or no external URLs)\n  2  One or more URLs are broken",
   )
-  .action((file: string[], opts: Record<string, unknown>) =>
-    checkUrlsAction(
+  .action(async (file: string[], opts: Record<string, unknown>) => {
+    const { checkUrlsAction } = await import("./commands/check-urls.js");
+    return checkUrlsAction(
       file,
       commandOptions(
         "check-urls",
@@ -1645,8 +1725,8 @@ common(md.command("check-urls"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("orphans"))
   .description("Find markdown files not referenced by any other markdown file")
@@ -1659,8 +1739,9 @@ common(md.command("orphans"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nExit codes:\n  0  No orphans found\n  2  One or more orphans found",
   )
-  .action((directory: string | undefined, opts: Record<string, unknown>) =>
-    orphansAction(
+  .action(async (directory: string | undefined, opts: Record<string, unknown>) => {
+    const { orphansAction } = await import("./commands/orphans.js");
+    return orphansAction(
       directory ?? projectConfig.root,
       commandOptions(
         "orphans",
@@ -1672,8 +1753,8 @@ common(md.command("orphans"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("query"))
   .description("Run a focused query across the Markdown workspace")
@@ -1711,8 +1792,9 @@ common(md.command("query"))
       "  md query tasks --where status=pending --group-by frontmatter.owner\n\n" +
       "An unknown field, predicate, or operator exits 1 rather than matching nothing.",
   )
-  .action((kind: string, directory: string | undefined, opts: Record<string, unknown>) =>
-    queryAction(
+  .action(async (kind: string, directory: string | undefined, opts: Record<string, unknown>) => {
+    const { queryAction } = await import("./commands/query.js");
+    return queryAction(
       kind,
       directory ?? projectConfig.root,
       commandOptions(
@@ -1733,8 +1815,8 @@ common(md.command("query"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("index"))
   .description("Inspect or manage the persistent workspace index")
@@ -1746,8 +1828,9 @@ common(md.command("index"))
     "after",
     "\nActions:\n  status  Inspect cache coverage\n  build   Force a rebuild\n  clear   Clear this workspace cache",
   )
-  .action((action: string, directory: string | undefined, opts: Record<string, unknown>) =>
-    indexAction(
+  .action(async (action: string, directory: string | undefined, opts: Record<string, unknown>) => {
+    const { indexAction } = await import("./commands/index.js");
+    return indexAction(
       action,
       directory ?? projectConfig.root,
       commandOptions(
@@ -1755,8 +1838,8 @@ common(md.command("index"))
         { include: projectConfig.files.include, exclude: projectConfig.files.exclude },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("fix"))
   .description("Plan and apply deterministic Markdown fixes")
@@ -1780,8 +1863,9 @@ common(md.command("fix"))
       "  0  No pending fixes, or --write/--dry-run completed\n" +
       "  2  --check found pending fixes, or any mode found a conflict",
   )
-  .action((inputs: string[], opts: Record<string, unknown>) =>
-    fixAction(
+  .action(async (inputs: string[], opts: Record<string, unknown>) => {
+    const { fixAction } = await import("./commands/fix.js");
+    return fixAction(
       inputs,
       commandOptions(
         "fix",
@@ -1797,8 +1881,8 @@ common(md.command("fix"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("check-snippets"))
   .description("Compare fenced code blocks against the source regions they declare")
@@ -1828,8 +1912,9 @@ common(md.command("check-snippets"))
       "     could not resolve, a malformed link, a fence it cannot rewrite,\n" +
       "     or an edit-plan conflict",
   )
-  .action((inputs: string[], opts: Record<string, unknown>) =>
-    checkSnippetsAction(
+  .action(async (inputs: string[], opts: Record<string, unknown>) => {
+    const { checkSnippetsAction } = await import("./commands/check-snippets.js");
+    return checkSnippetsAction(
       inputs.length ? inputs : [projectConfig.root],
       commandOptions(
         "check-snippets",
@@ -1840,8 +1925,8 @@ common(md.command("check-snippets"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 common(md.command("rename-heading"))
   .description("Rename a heading and update all internal anchor references")
@@ -1857,21 +1942,24 @@ common(md.command("rename-heading"))
     "after",
     "\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json\n\nExit codes:\n  0  Heading renamed successfully (or dry-run completed)\n  1  File/heading not found or new heading slug already exists",
   )
-  .action((file: string, oldHeading: string, newHeading: string, opts: Record<string, unknown>) =>
-    renameHeadingAction(
-      file,
-      oldHeading,
-      newHeading,
-      commandOptions(
-        "rename-heading",
-        {
-          dryRun: false,
-          include: projectConfig.files.include,
-          exclude: projectConfig.files.exclude,
-        },
-        opts,
-      ) as never,
-    ),
+  .action(
+    async (file: string, oldHeading: string, newHeading: string, opts: Record<string, unknown>) => {
+      const { renameHeadingAction } = await import("./commands/rename-heading.js");
+      return renameHeadingAction(
+        file,
+        oldHeading,
+        newHeading,
+        commandOptions(
+          "rename-heading",
+          {
+            dryRun: false,
+            include: projectConfig.files.include,
+            exclude: projectConfig.files.exclude,
+          },
+          opts,
+        ) as never,
+      );
+    },
   );
 
 common(md.command("rename-file"))
@@ -1882,8 +1970,9 @@ common(md.command("rename-file"))
   .option("--exclude <glob>", "Markdown exclude glob (repeatable)", collect)
   .option("--dry-run", "Show changes without modifying files")
   .option("--no-dry-run", "Apply changes")
-  .action((source: string, destination: string, opts: Record<string, unknown>) =>
-    renameFileAction(
+  .action(async (source: string, destination: string, opts: Record<string, unknown>) => {
+    const { renameFileAction } = await import("./commands/rename-file.js");
+    return renameFileAction(
       source,
       destination,
       commandOptions(
@@ -1895,8 +1984,8 @@ common(md.command("rename-file"))
         },
         opts,
       ) as never,
-    ),
-  );
+    );
+  });
 
 try {
   await program.parseAsync(argv);
