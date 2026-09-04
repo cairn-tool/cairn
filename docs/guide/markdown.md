@@ -36,9 +36,9 @@ with the published package.
 
 ## Over MCP
 
-[`serve mcp`](../commands/serve.md) exposes the read-only workspace engine to a host as eleven
-tools, so an assistant can ask for a document's outline or a workspace query without shelling
-out. It is read-only by construction: no writing command is reachable, and
+[`serve mcp`](../commands/serve.md) exposes the read-only workspace engine to a host as eleven of
+its tools, so an assistant can ask for a document's outline or a workspace query without shelling
+out. The same server also carries six read-only [PDF tools](pdf.md#over-mcp). It is read-only by construction: no writing command is reachable, and
 `tests/unit/serve-tools.test.ts` has a tripwire that keeps `scripts run` off that surface.
 
 ## Configuration

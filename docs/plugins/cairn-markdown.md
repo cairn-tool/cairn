@@ -109,11 +109,16 @@ Hooks render in the **plugin** profile only.
 
 | Server  | Command                    | Tools         |
 | ------- | -------------------------- | ------------- |
-| `cairn` | `cairn serve mcp --root .` | 11, read-only |
+| `cairn` | `cairn serve mcp --root .` | 17, read-only |
 
-Exposes the read-only workspace engine as `mcp__plugin_cairn-markdown_cairn__*`. It ships here
-and nowhere else: those eleven tools are all Markdown tools, so registering the same server in
-five plugins would register the same eleven tools five times.
+Exposes the read-only workspace engine as `mcp__plugin_cairn-markdown_cairn__*`, alongside six
+read-only PDF tools.
+
+**It ships here and nowhere else, including for the PDF tools.** `cairn serve mcp` is one server
+carrying every toolset that has tools, so registering it in a second plugin would give a host
+installing both the same seventeen tools twice under two prefixes. That is a worse outcome than
+the alternative, which is that PDF tools over MCP arrive with this plugin — so
+[`cairn-pdf`](cairn-pdf.md) documents the dependency rather than duplicating the server.
 
 `scripts run` is deliberately absent from that surface — config may declare what a script is,
 never how it is run. [`tests/unit/serve-tools.test.ts`](https://github.com/cairn-tool/cairn/blob/main/tests/unit/serve-tools.test.ts)

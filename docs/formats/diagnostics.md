@@ -1,13 +1,14 @@
 # Diagnostics
 
-Three finding shapes exist in this project, for three different kinds of check, and they are not
+Four finding shapes exist in this project, for four different kinds of check, and they are not
 interchangeable.
 
-| Shape                  | Produced by              | Carries                                                |
-| ---------------------- | ------------------------ | ------------------------------------------------------ |
-| `Issue`                | every `md` checker       | file, line, checker, message                           |
-| `AgentDiagnostic`      | every `agent` command    | a stable `AB###` code, severity, quality, and location |
-| `ConversionDiagnostic` | every `jira adf` command | a stable `AD###` code, severity, quality, and location |
+| Shape                  | Produced by              | Carries                                                       |
+| ---------------------- | ------------------------ | ------------------------------------------------------------- |
+| `Issue`                | every `md` checker       | file, line, checker, message                                  |
+| `AgentDiagnostic`      | every `agent` command    | a stable `AB###` code, severity, quality, and location        |
+| `ConversionDiagnostic` | every `jira adf` command | a stable `AD###` code, severity, quality, and location        |
+| `PdfDiagnostic`        | every `pdf` command      | a stable `AP###` code, severity, quality, page, and construct |
 
 ## `Issue`
 
@@ -64,8 +65,8 @@ came from the renderer. Consumers that need one or the other normalize; the SARI
 
 ### Codes are stable identifiers
 
-`AB###` for an agent bundle and `AD###` for a conversion, and a code is never reused for a
-different condition. One condition keeps one ID
+`AB###` for an agent bundle, `AD###` for an ADF conversion, and `AP###` for PDF reading, and a code
+is never reused for a different condition. One condition keeps one ID
 whichever command surfaces it — which is why `agent audit` **re-emits** `AB504`, `AB505`, and
 `AB506` from the packager rather than minting its own. Doing otherwise breaks a consumer's
 suppression list.
@@ -103,6 +104,33 @@ reports the condition once per cell position rather than burying every other fin
 
 The published schema is `adf-result`.
 
+## `PdfDiagnostic`
+
+```ts
+interface PdfDiagnostic {
+  code: string; // AP###
+  severity: "notice" | "warning" | "error";
+  message: string;
+  quality: "exact" | "approximate" | "unsupported";
+  page?: number; // 1-based, when the finding concerns one page
+  construct?: string; // a structure role, a filter name, a font name
+  remediation?: string;
+}
+```
+
+Structurally a `ConversionDiagnostic` with `node` and `location` replaced by `page` and
+`construct`. A PDF finding is positioned by page rather than by a node ancestry trail, and putting a
+page number into a field documented as "slash-joined ancestor node types" would be worse than a
+fourth shape. `quality` and the quality-to-severity rule come from `src/mapping-quality.ts`, shared
+with the other two conversion families so the three cannot drift.
+
+Findings are deduplicated on code, construct, and page, and ordered by code, then **numerically** by
+page, then by byte comparison of the construct. The numeric page ordering is the one place this
+differs from the ADF sink: a bytewise sort puts page 10 before page 2, and a reader scanning a
+300-page document's findings would be reading them out of order.
+
+The published schema is `pdf-result`.
+
 ## Code ranges
 
 Every code, with its severity and meaning, is in
@@ -112,38 +140,47 @@ Every code, with its severity and meaning, is in
 own, on the same rule `agent audit` follows for `AB504`–`AB506`: one condition keeps one
 identifier whichever command surfaces it, or a consumer's suppression list breaks.
 
-| Range           | Emitted by                    | Concerns                                                                             |
-| --------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
-| `AB000`         | `src/commands/agent.ts`       | invocation failure                                                                   |
-| `AB001`         | bundle parser                 | legacy Claude Code plugin input accepted                                             |
-| `AB100`–`AB160` | bundle parser and manifest    | source validation: names, versions, fields, components, policies, references, cycles |
-| `AB170`         | renderer                      | duplicate output path                                                                |
-| `AB180`–`AB187` | manifest and overlays         | native overlay declaration and loading                                               |
-| `AB200`–`AB203` | `agent init`, `agent add`     | scaffolding                                                                          |
-| `AB220`–`AB224` | `agent upgrade`               | schema migration                                                                     |
-| `AB230`–`AB239` | `agent import`                | detection, normalization, provenance                                                 |
-| `AB302`–`AB370` | renderer                      | per-feature mapping losses; see below                                                |
-| `AB400`–`AB414` | `agent doctor`                | host status, undeclared paths, output drift                                          |
-| `AB420`–`AB439` | `agent verify`                | pinned versions, committed-tree drift, orphaned generated files                      |
-| `AB500`–`AB509` | `agent package`               | catalog completeness, assets, collisions, pinning, archives                          |
-| `AB600`–`AB607` | `agent audit`                 | what hook and MCP commands actually run                                              |
-| `AB610`–`AB614` | `agent audit`                 | credentials and environment handed to MCP servers                                    |
-| `AB620`–`AB624` | `agent audit`                 | how broad the permission grants are                                                  |
-| `AB630`–`AB634` | `agent audit`                 | executables, binaries, symlinks, and total size                                      |
-| `AB640`–`AB642` | `agent audit`                 | manifest claims with nothing behind them                                             |
-| `AB650`–`AB654` | `agent audit`                 | baseline drift against a previous `sbom.json`                                        |
-| `AB700`–`AB720` | `agent test`                  | test-file validity, assertion failures, skips                                        |
-| `AB800`–`AB809` | `agent install` / `uninstall` | locations, manifests, registration, co-resident installs                             |
-| `AB900`–`AB907` | `agent marketplace`           | collection spec: schema, required and malformed fields, bundle paths, selection      |
-| `AD001`–`AD005` | `jira adf` input reader       | invocation, I/O, and input bounds                                                    |
-| `AD100`–`AD112` | `jira adf validate`           | ADF source validation: unknown types, illegal nesting, attributes                    |
-| `AD200`–`AD211` | `jira adf to-markdown`        | ADF to Markdown mapping losses                                                       |
-| `AD300`–`AD311` | `jira adf from-markdown`      | Markdown to ADF mapping and degradation                                              |
-| `AD400`–        | —                             | reserved for a future round-trip fidelity mode                                       |
+| Range           | Emitted by                     | Concerns                                                                             |
+| --------------- | ------------------------------ | ------------------------------------------------------------------------------------ |
+| `AB000`         | `src/commands/agent.ts`        | invocation failure                                                                   |
+| `AB001`         | bundle parser                  | legacy Claude Code plugin input accepted                                             |
+| `AB100`–`AB160` | bundle parser and manifest     | source validation: names, versions, fields, components, policies, references, cycles |
+| `AB170`         | renderer                       | duplicate output path                                                                |
+| `AB180`–`AB187` | manifest and overlays          | native overlay declaration and loading                                               |
+| `AB200`–`AB203` | `agent init`, `agent add`      | scaffolding                                                                          |
+| `AB220`–`AB224` | `agent upgrade`                | schema migration                                                                     |
+| `AB230`–`AB239` | `agent import`                 | detection, normalization, provenance                                                 |
+| `AB302`–`AB370` | renderer                       | per-feature mapping losses; see below                                                |
+| `AB400`–`AB414` | `agent doctor`                 | host status, undeclared paths, output drift                                          |
+| `AB420`–`AB439` | `agent verify`                 | pinned versions, committed-tree drift, orphaned generated files                      |
+| `AB500`–`AB509` | `agent package`                | catalog completeness, assets, collisions, pinning, archives                          |
+| `AB600`–`AB607` | `agent audit`                  | what hook and MCP commands actually run                                              |
+| `AB610`–`AB614` | `agent audit`                  | credentials and environment handed to MCP servers                                    |
+| `AB620`–`AB624` | `agent audit`                  | how broad the permission grants are                                                  |
+| `AB630`–`AB634` | `agent audit`                  | executables, binaries, symlinks, and total size                                      |
+| `AB640`–`AB642` | `agent audit`                  | manifest claims with nothing behind them                                             |
+| `AB650`–`AB654` | `agent audit`                  | baseline drift against a previous `sbom.json`                                        |
+| `AB700`–`AB720` | `agent test`                   | test-file validity, assertion failures, skips                                        |
+| `AB800`–`AB809` | `agent install` / `uninstall`  | locations, manifests, registration, co-resident installs                             |
+| `AB900`–`AB907` | `agent marketplace`            | collection spec: schema, required and malformed fields, bundle paths, selection      |
+| `AD001`–`AD005` | `jira adf` input reader        | invocation, I/O, and input bounds                                                    |
+| `AD100`–`AD112` | `jira adf validate`            | ADF source validation: unknown types, illegal nesting, attributes                    |
+| `AD200`–`AD211` | `jira adf to-markdown`         | ADF to Markdown mapping losses                                                       |
+| `AD300`–`AD311` | `jira adf from-markdown`       | Markdown to ADF mapping and degradation                                              |
+| `AD400`–        | —                              | reserved for a future round-trip fidelity mode                                       |
+| `AP000`–`AP019` | `pdf` reader and loader        | invocation, I/O, input bounds, encryption, resource budgets                          |
+| `AP020`–`AP049` | `pdf` page walker              | the page tree and per-page decoding                                                  |
+| `AP050`–`AP079` | `pdf text`, `pdf inspect`      | the text layer: absent, sparse, undecodable                                          |
+| `AP080`–`AP099` | `pdf outline`                  | unresolvable destinations, depth                                                     |
+| `AP100`–`AP130` | `pdf validate`                 | structural integrity: xref recovery, fonts, filters, metadata, tagging claims        |
+| `AP200`–`AP240` | `pdf to-markdown`              | reading order, structure inference, and mapping losses                               |
+| `AP300`–`AP330` | `pdf attachments`, `pdf forms` | embedded files, name sanitization, extraction collisions, form fields                |
+| `AP600`–        | —                              | reserved for a future `pdf audit`                                                    |
 
 The `AD` range is chosen by where the condition is detected, not by which command the user typed:
 `AD100` and `AD101` are emitted by both `jira adf validate` and `jira adf to-markdown`, on the
-same one-condition-one-identifier rule the `AB` family follows.
+same one-condition-one-identifier rule the `AB` family follows. `AP` follows it too — `AP020` is
+emitted by `pdf inspect` and `pdf validate` alike, and `AP050` by three commands.
 
 ### The renderer range in detail
 

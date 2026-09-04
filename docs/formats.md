@@ -7,22 +7,22 @@ guarantees each carries. Formats owned by somebody else are documented per host 
 
 ## The formats
 
-| Format                                                  | File                                                                       | Versioned by                                 | Owner                           |
-| ------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------- |
-| [Agent bundle](formats/agent-bundle.md)                 | `agent-bundle.yaml`                                                        | `schemaVersion` (hand-owned)                 | authors                         |
-| [Bundle contract tests](formats/agent-tests.md)         | `tests/**/*.test.yaml`                                                     | `schemaVersion` (hand-owned)                 | authors                         |
-| [Marketplace spec](formats/agent-marketplace.md)        | `agent-marketplace.yaml`                                                   | `schemaVersion` (hand-owned)                 | authors                         |
-| [Target profile](formats/target-profile.md)             | `src/agent/targets/*.ts`                                                   | `PROFILE_SCHEMA_VERSION`                     | this project                    |
-| [Conversion output](formats/conversion-output.md)       | `conversion-report.json`, `import-report.json`                             | payload schema major                         | `agent convert`, `agent import` |
-| [Package](formats/package.md)                           | `checksums.sha256`, `sbom.json`, `marketplace.json`, `package-report.json` | `specVersion` on the inventory               | `agent package`                 |
-| [Install manifest](formats/install-manifest.md)         | `.cairn-install.json`                                                      | unversioned; shape-checked                   | `agent install`                 |
-| [Usage store](formats/usage-store.md)                   | `usage.db`                                                                 | `PRAGMA user_version` (hand-owned, migrated) | `usage`                         |
-| [Archive store](formats/archive-store.md)               | `archive.db`, `segments/*.tar.gz`                                          | `PRAGMA user_version` (hand-owned, migrated) | `archive`                       |
-| [Deterministic tar](formats/deterministic-tar.md)       | `*.tar.gz`                                                                 | none — byte-stable by construction           | `agent package`, `archive`      |
-| [Markdown conventions](formats/markdown-conventions.md) | TOC markers, snippet links                                                 | none — both spellings read                   | `md`                            |
-| [Audit baselines](formats/audit-baseline.md)            | baseline JSON, `sbom.json` as baseline                                     | `version` / `bomFormat`                      | `md audit`, `agent audit`       |
-| [Diagnostics](formats/diagnostics.md)                   | `AB###` codes, `Issue`, SARIF                                              | SARIF 2.1.0                                  | every checker                   |
-| [Diagnostic codes](formats/diagnostic-codes.md)         | Every `AB###` with its severity and meaning                                | —                                            | every `agent` command           |
+| Format                                                  | File                                                                       | Versioned by                                 | Owner                                |
+| ------------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------ |
+| [Agent bundle](formats/agent-bundle.md)                 | `agent-bundle.yaml`                                                        | `schemaVersion` (hand-owned)                 | authors                              |
+| [Bundle contract tests](formats/agent-tests.md)         | `tests/**/*.test.yaml`                                                     | `schemaVersion` (hand-owned)                 | authors                              |
+| [Marketplace spec](formats/agent-marketplace.md)        | `agent-marketplace.yaml`                                                   | `schemaVersion` (hand-owned)                 | authors                              |
+| [Target profile](formats/target-profile.md)             | `src/agent/targets/*.ts`                                                   | `PROFILE_SCHEMA_VERSION`                     | this project                         |
+| [Conversion output](formats/conversion-output.md)       | `conversion-report.json`, `import-report.json`                             | payload schema major                         | `agent convert`, `agent import`      |
+| [Package](formats/package.md)                           | `checksums.sha256`, `sbom.json`, `marketplace.json`, `package-report.json` | `specVersion` on the inventory               | `agent package`                      |
+| [Install manifest](formats/install-manifest.md)         | `.cairn-install.json`                                                      | unversioned; shape-checked                   | `agent install`                      |
+| [Usage store](formats/usage-store.md)                   | `usage.db`                                                                 | `PRAGMA user_version` (hand-owned, migrated) | `usage`                              |
+| [Archive store](formats/archive-store.md)               | `archive.db`, `segments/*.tar.gz`                                          | `PRAGMA user_version` (hand-owned, migrated) | `archive`                            |
+| [Deterministic tar](formats/deterministic-tar.md)       | `*.tar.gz`                                                                 | none — byte-stable by construction           | `agent package`, `archive`           |
+| [Markdown conventions](formats/markdown-conventions.md) | TOC markers, snippet links                                                 | none — both spellings read                   | `md`                                 |
+| [Audit baselines](formats/audit-baseline.md)            | baseline JSON, `sbom.json` as baseline                                     | `version` / `bomFormat`                      | `md audit`, `agent audit`            |
+| [Diagnostics](formats/diagnostics.md)                   | `AB###`, `AD###`, `AP###` codes, `Issue`, SARIF                            | SARIF 2.1.0                                  | every checker                        |
+| [Diagnostic codes](formats/diagnostic-codes.md)         | Every code with its severity and meaning                                   | —                                            | every `agent`, `jira`, `pdf` command |
 
 Two more formats are documented elsewhere because they have their own pages:
 

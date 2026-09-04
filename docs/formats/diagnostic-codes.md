@@ -1,9 +1,9 @@
 # Diagnostic codes
 
-Every code an `agent` or `jira` command can emit, with its severity, what emits it, and what it
-means. There are two families: `AB###` for agent bundles and `AD###` for ADF conversion. This
-page is a reference; [diagnostics](diagnostics.md) explains the finding _shapes_ and what a
-severity implies for an exit code.
+Every code an `agent`, `jira`, or `pdf` command can emit, with its severity, what emits it, and
+what it means. There are three families: `AB###` for agent bundles, `AD###` for ADF conversion,
+and `AP###` for PDF reading. This page is a reference; [diagnostics](diagnostics.md) explains the
+finding _shapes_ and what a severity implies for an exit code.
 
 **Markdown commands emit no codes.** An `Issue` carries no severity and no identifier — every
 finding a `md` checker reports is of equal weight, and whether it blocks is decided by the
@@ -364,9 +364,143 @@ reading twice: ADF images are block-level and `mediaInline` cannot carry an exte
 inline Markdown image cannot stay inside its paragraph. Splitting preserves reading order
 exactly, which is what separates it from lifting.
 
+## PDF invocation and input
+
+Emitted by the `pdf` input reader and by the single site that opens a document, so every `pdf`
+command can report them.
+
+| Code    | Severity | Emitted by                    | Meaning                                                                                   |
+| ------- | -------- | ----------------------------- | ----------------------------------------------------------------------------------------- |
+| `AP001` | error    | every `pdf` command           | An invocation, path, or filesystem error, reported as a payload under `--format json`.    |
+| `AP002` | error    | `pdf` input reader            | No `%PDF-` signature in the first 1024 bytes. The message names the leading bytes as hex. |
+| `AP003` | error    | `pdf` input reader            | The input is larger than `--max-bytes`.                                                   |
+| `AP004` | error    | `pdf` input reader            | The input is missing, unopenable, or not a regular file.                                  |
+| `AP005` | error    | document loader               | The `--timeout` wall-clock budget expired.                                                |
+| `AP006` | error    | `pdf` input reader            | The input is zero bytes.                                                                  |
+| `AP007` | notice   | `pdf` input reader            | `%PDF-` was found at a non-zero offset; the leading bytes were ignored, not stripped.     |
+| `AP010` | error    | document loader               | The document is encrypted and needs a password. This toolset accepts none.                |
+| `AP011` | error    | document loader               | A supplied password was rejected.                                                         |
+| `AP012` | error    | document loader               | The page count exceeds `--max-pages`, refused before any page was opened.                 |
+| `AP013` | error    | `pdf text`, `pdf to-markdown` | `--pages` is unparseable or names a page outside the document.                            |
+
+`AP002` and `AP100` are deliberately distinct: `AP002` means the bytes never carried a header, decided
+before the parser ran, and `AP100` means it looked like a PDF and could not be parsed. That is the
+difference between the wrong file and a damaged one.
+
+## PDF pages and text
+
+| Code    | Severity | Emitted by                                | Meaning                                                                 |
+| ------- | -------- | ----------------------------------------- | ----------------------------------------------------------------------- |
+| `AP020` | error    | `pdf inspect`, `pdf validate`             | A page could not be fetched from the page tree, which includes a cycle. |
+| `AP021` | error    | `pdf text`, `pdf validate`, `to-markdown` | A page's content stream could not be decoded.                           |
+| `AP050` | warning  | `pdf inspect`, `pdf text`, `to-markdown`  | The page carries no text layer, so nothing could be extracted from it.  |
+
+`AP050` is the finding that makes "does this document need OCR" answerable. It is a warning rather
+than an error because a scanned page is a fact about the document rather than a defect in it; under
+`--strict` it blocks, which is how a caller refuses a scan in CI.
+
+## PDF outline
+
+| Code    | Severity | Emitted by    | Meaning                                                                                |
+| ------- | -------- | ------------- | -------------------------------------------------------------------------------------- |
+| `AP080` | warning  | `pdf outline` | An outline destination does not resolve to a page. The entry is kept with a null page. |
+| `AP081` | warning  | `pdf outline` | The outline nests past the depth cap and was truncated.                                |
+
+## PDF structural integrity
+
+Emitted by `pdf validate`. Several are visible only through the parser's own warnings, so a parser
+upgrade that rewords a message degrades that check to `AP120` rather than to silence.
+
+| Code    | Severity | Emitted by                    | Meaning                                                                                  |
+| ------- | -------- | ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `AP100` | error    | document loader               | The document could not be parsed even after cross-reference recovery.                    |
+| `AP101` | warning  | `pdf validate`                | The cross-reference table was unusable and was rebuilt by scanning every object.         |
+| `AP110` | warning  | `pdf validate`                | A font is not embedded or failed to load, and a substitute was used.                     |
+| `AP111` | warning  | `pdf validate`                | A stream uses a filter the parser could not decode.                                      |
+| `AP112` | warning  | `pdf validate`, `pdf inspect` | The Info dictionary or the XMP packet could not be read.                                 |
+| `AP113` | notice   | every `pdf` command           | Encrypted, but opened with no password: the restrictions are advisory only.              |
+| `AP114` | warning  | `pdf inspect`, `pdf validate` | `/MarkInfo <</Marked true>>` is declared but no page has a usable structure tree.        |
+| `AP115` | notice   | `pdf inspect`, `pdf validate` | A structure tree is present on some pages and not others.                                |
+| `AP120` | warning  | `pdf validate`                | The parser recovered from a condition this tool does not classify. Carries the raw text. |
+
+`AP101` does not mean the document is unreadable — a rebuilt table still parses, which is why it is a
+warning and `pdf validate` still exits 0 without `--strict`.
+
+## PDF to Markdown
+
+Emitted while converting. `AP200` is always present and names the path each page took.
+
+| Code    | Severity | Emitted by        | Meaning                                                                                     |
+| ------- | -------- | ----------------- | ------------------------------------------------------------------------------------------- |
+| `AP200` | notice   | `pdf to-markdown` | Which path produced the document: the structure tree, geometry, or a mix, with page counts. |
+| `AP201` | warning  | `pdf to-markdown` | The column structure could not be resolved; the page was read top to bottom.                |
+| `AP202` | warning  | `pdf to-markdown` | Tabular content was emitted as one paragraph per row rather than as a table.                |
+| `AP203` | warning  | `pdf to-markdown` | Text at a non-right angle, or vertical text, was excluded from reading order.               |
+| `AP205` | notice   | `pdf to-markdown` | Repeated running headers or footers were detected and dropped.                              |
+| `AP206` | notice   | `pdf to-markdown` | A paragraph continuing across a page break was rejoined.                                    |
+| `AP208` | notice   | `pdf to-markdown` | `--pages` narrowed the output; document-wide inference still used every page.               |
+| `AP210` | notice   | `pdf to-markdown` | A multi-column layout was detected and read column by column.                               |
+| `AP211` | warning  | `pdf to-markdown` | More than six distinct heading sizes; the smallest were collapsed to level 6.               |
+| `AP213` | notice   | `pdf to-markdown` | An ordered list's original numbering is renumbered on output.                               |
+| `AP214` | notice   | `pdf to-markdown` | Words split by a line-end hyphen were rejoined.                                             |
+| `AP216` | warning  | `pdf to-markdown` | A figure's text was emitted; the image itself is not represented.                           |
+| `AP219` | warning  | `pdf to-markdown` | A structure role this tool does not model; its text was emitted as a paragraph.             |
+| `AP220` | warning  | `pdf to-markdown` | A table cell's block content was flattened into inline content.                             |
+| `AP224` | warning  | `pdf to-markdown` | A generic `H` element's level was inferred from font size rather than declared.             |
+| `AP225` | warning  | `pdf to-markdown` | A list's ordered-ness was inferred from its item labels.                                    |
+| `AP230` | warning  | `pdf to-markdown` | Bold and italic are inferred from font names; other inline styling is not represented.      |
+| `AP231` | notice   | `pdf to-markdown` | Typographic ligatures were expanded to their component letters.                             |
+| `AP232` | notice   | `pdf to-markdown` | Control characters in the text layer were removed.                                          |
+
+`AP200` is a notice rather than an approximation on purpose. Every untagged page is inferred
+throughout, so treating "this page was untagged" as itself blocking would make `--strict` refuse
+essentially every real PDF and therefore mean nothing. `--strict` blocks on the per-construct losses
+above instead.
+
+`AP219` is the `AD100` analogue and the non-negotiable one: an unrecognized structure role reports
+and emits its text rather than disappearing. Dropping is the one degradation whose output is
+indistinguishable from success.
+
+`AP202` is why a GFM table is only ever built from a structure tree. A geometric reconstruction gets
+merged cells, wrapped cell text, and rules drawn as vector paths wrong, and produces a confidently
+wrong table a consumer cannot tell from a right one.
+
+## PDF embedded files and forms
+
+Emitted by `pdf attachments` and `pdf forms`. Both read content that is already inside the document;
+neither ever rewrites it.
+
+| Code    | Severity | Emitted by        | Meaning                                                                            |
+| ------- | -------- | ----------------- | ---------------------------------------------------------------------------------- |
+| `AP300` | warning  | `pdf attachments` | An embedded file's stream could not be decoded; it is listed without size or hash. |
+| `AP301` | warning  | `pdf attachments` | A stored file name carried a path and was sanitized before being written.          |
+| `AP302` | notice   | `pdf attachments` | The name was already taken; the file was written under a resolved name.            |
+| `AP303` | error    | `pdf attachments` | A destination escaped `--extract`, or the name was unusable; nothing was written.  |
+| `AP304` | warning  | `pdf attachments` | The decode budget was reached; later entries are listed without size or hash.      |
+| `AP311` | warning  | `pdf forms`       | An XFA form: field values live in an XML packet that is not read.                  |
+| `AP312` | notice   | `pdf forms`       | A field resolves to no page in this document; its `page` is null.                  |
+
+`AP301` reports rather than blocks, and blocks only under `--strict`. A document carrying an unusual
+file name is not a failed extraction: the traversal was contained and the file was written safely.
+`--strict` is what turns it into a CI signal.
+
+`AP303` is an error and stops the whole extraction, not just its own file. An embedded file's stored
+name is attacker-controlled, so extraction is planned in full before anything is written — one
+refused destination means no file is written at all, rather than a partially populated directory
+whose contents depend on iteration order.
+
+`AP302` exists because the alternative is silent data loss. Two embedded files can sanitize to one
+name, and a name can collide with a file that was already in the target directory; overwriting
+either would destroy something the user did not ask to lose.
+
+`AP311` is the `AP219` analogue for forms. An XFA document has no AcroForm field objects at all, so
+reporting an empty field list without saying why would be indistinguishable from a document that
+carries no form. There is deliberately no code for "declares a form with no fields": the parser
+reports that identically to "no form", so a separate code would be a claim this cannot support.
+
 ## Keeping this page honest
 
-`tests/unit/diagnostic-codes.test.ts` extracts every `AB###` and `AD###` literal from `src/` and
+`tests/unit/diagnostic-codes.test.ts` extracts every `AB###`, `AD###`, and `AP###` literal from `src/` and
 every code from the tables above and asserts the two sets are equal. A code that ships undocumented fails
 the build, and so does a documented code that no longer exists — the same discipline
 `tests/e2e/contract.test.ts` applies to the command registry in both directions.

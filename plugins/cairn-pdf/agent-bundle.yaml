@@ -1,0 +1,25 @@
+# Portable agent bundle. Built as part of the collection:
+#   cairn agent marketplace ../../agent-marketplace.yaml --output ../../dist-plugins
+schemaVersion: "2"
+name: cairn-pdf
+version: 1.0.0
+description: Read PDF documents — text, structure, and conversion to Markdown.
+
+marketplace:
+  displayName: Cairn PDF
+  summary: Turn a PDF into text or Markdown, and know what the conversion cost.
+  description: >-
+    A PDF has no paragraphs, no headings, and no lists — only glyphs at
+    coordinates — and an assistant cannot read one at all. Extracts the text
+    layer, reads the outline, checks structural integrity, and converts content
+    to Markdown, reporting per construct what was inferred and what was lost.
+    Reads only: no command ever writes a PDF. Deterministic and local, with no
+    credentials, no network, and no OCR. Wraps the `cairn` CLI, which must be
+    installed separately.
+  categories: [productivity, developer-tools]
+  keywords: [pdf, markdown, text-extraction, documents, conversion]
+  publisher:
+    name: Bryan Stockus
+    url: https://github.com/cairn-tool
+  license: MIT
+  icon: assets/icon.svg

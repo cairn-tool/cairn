@@ -80,6 +80,7 @@ describe("published package contents", () => {
     expect(packedFiles).toContain("dist/commands/serve.js");
     expect(packedFiles).toContain("dist/serve/server.js");
     expect(packedFiles).toContain("dist/serve/tools.js");
+    expect(packedFiles).toContain("dist/serve/pdf-tools.js");
   });
 
   // Same trap again: src/scripts/ only reaches dist while every file in it stays
@@ -104,6 +105,32 @@ describe("published package contents", () => {
     expect(packedFiles).toContain("dist/jira/adf/from-markdown.js");
     expect(packedFiles).toContain("dist/jira/adf/diagnostics.js");
     expect(packedFiles).toContain("dist/mapping-quality.js");
+  });
+
+  // The same trap once more. `src/pdf/` holds the structure-role fidelity table
+  // and the AP catalogue, and both read as data; moving either into a `.json`
+  // would drop it from `dist` with no error at all, because `rootDir` is `src`
+  // and `resolveJsonModule` is off.
+  it("ships the PDF readers and their inference tables", () => {
+    for (const file of [
+      "dist/commands/pdf.js",
+      "dist/pdf/read.js",
+      "dist/pdf/document.js",
+      "dist/pdf/inspect.js",
+      "dist/pdf/outline.js",
+      "dist/pdf/text.js",
+      "dist/pdf/struct.js",
+      "dist/pdf/layout.js",
+      "dist/pdf/to-markdown.js",
+      "dist/pdf/validate.js",
+      "dist/pdf/diagnostics.js",
+      "dist/pdf/attachments.js",
+      "dist/pdf/forms.js",
+      "dist/binary-kind.js",
+      "dist/atomic-write.js",
+      "dist/markdown-stringify.js",
+    ])
+      expect(packedFiles).toContain(file);
   });
 
   it("ships the docs but not the sources or tests", () => {

@@ -15,6 +15,7 @@ This directory is the reference documentation for `cairn`.
 - [Shared usage command behavior](commands/usage/common.md)
 - [Shared archive command behavior](commands/archive/common.md)
 - [Shared `jira adf` command behavior](commands/jira/adf/common.md)
+- [Shared PDF command behavior](commands/pdf/common.md)
 
 ## Project
 
@@ -34,6 +35,7 @@ Why each toolset exists, and the facts that make its answers trustworthy.
 - [Usage reporting](guide/usage.md)
 - [Long-term archiving](guide/archiving.md)
 - [Jira and Confluence rich text](guide/jira.md)
+- [Reading PDF documents](guide/pdf.md)
 
 ## File formats
 
@@ -112,6 +114,8 @@ subagent, hook, MCP server, asset, and contract test.
 - [cairn-usage](plugins/cairn-usage.md)
 - [cairn-archive](plugins/cairn-archive.md)
 - [cairn-agent](plugins/cairn-agent.md)
+- [cairn-jira](plugins/cairn-jira.md)
+- [cairn-pdf](plugins/cairn-pdf.md)
 
 ## Contract commands
 
@@ -177,6 +181,17 @@ subagent, hook, MCP server, asset, and contract test.
 - [`jira adf from-markdown`](commands/jira/adf/from-markdown.md)
 - [`jira adf validate`](commands/jira/adf/validate.md)
 - [`jira adf inspect`](commands/jira/adf/inspect.md)
+
+## PDF commands
+
+- [Common behavior](commands/pdf/common.md)
+- [`pdf inspect`](commands/pdf/inspect.md)
+- [`pdf text`](commands/pdf/text.md)
+- [`pdf outline`](commands/pdf/outline.md)
+- [`pdf validate`](commands/pdf/validate.md)
+- [`pdf to-markdown`](commands/pdf/to-markdown.md)
+- [`pdf attachments`](commands/pdf/attachments.md)
+- [`pdf forms`](commands/pdf/forms.md)
 
 ## Other top-level commands
 

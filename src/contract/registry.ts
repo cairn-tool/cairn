@@ -98,6 +98,41 @@ function usageCommand(name: string, extra: Partial<CommandContract> = {}): Comma
  * stderr. Declared per row in `notes` as well, because a consumer that guesses
  * wrong splices diagnostics into a document.
  */
+/**
+ * Shared by every `pdf` note. The stream split and the input bounds are true of
+ * all five, and a consumer that guesses either one wrong gets a corrupted
+ * document or an unbounded read.
+ */
+const PDF_NOTE =
+  "The primary output owns stdout and diagnostics go to stderr, so the output can be redirected without findings being spliced into it. This differs from every agent subcommand, which puts findings on stdout. Under --format json the payload carries both and goes to stdout instead, which means -fj is not the same output in JSON. Input is bounded before it is parsed, because a PDF is a container format that usually arrives off a network: symlinks are resolved, a non-regular file is refused on the open descriptor rather than the path, --max-bytes caps the read at 64 MiB, --timeout the parse at 30 seconds, and --max-pages the page count at 5000. Embedded JavaScript, launch, and submit actions are never executed by anything in this toolset, and nothing in it ever writes a PDF. Project configuration is not loaded, so no .cairn.yml can change how a document handed to the tool on the command line is parsed. Every payload carries `document`, including pageCount, tagged, and encrypted, so a result from a tagged document and one from a scan are distinguishable without a second call. Sorting is by byte comparison, never localeCompare.";
+
+/**
+ * A `pdf` subcommand.
+ *
+ * All five declare exit 2, including the three that read as pure inventory. A
+ * PDF fails **per page, not per document** — an undecodable content stream on
+ * page 47 of 300 leaves the other 299 good — so `inspect`, `text`, and `outline`
+ * each have a real partial-failure path, and declaring exit 2 impossible would
+ * mean swallowing it, which is the one degradation this project refuses.
+ * `stream.findings` must be truthy exactly when exit 2 is declared, so the two
+ * are one decision rather than two. Each command's help text and docs page state
+ * the specific meaning of 2 rather than declaring a code that never fires.
+ */
+function pdfCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+  return {
+    id: `pdf ${name}`,
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "pdf-result",
+    exitCodes: [OK("No blocking findings"), USAGE, FINDINGS("Blocking findings")],
+    stream: { success: "stdout", findings: "stderr" },
+    writes: false,
+    stability: "experimental",
+    ...extra,
+  };
+}
+
 function jiraAdfCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
   return {
     id: `jira adf ${name}`,
@@ -219,6 +254,46 @@ const CONTRACTS: CommandContract[] = [
     notes:
       "Counts every node and mark type and rates each against the fidelity tables, so the cost of a conversion can be read before paying it. Reports no findings of its own and exits 0 unless the input could not be read or is not an ADF document. A type the content model does not know is listed as unsupported rather than omitted.",
   }),
+  // PDF
+  pdfCommand("inspect", {
+    notes:
+      PDF_NOTE +
+      " Classifies each page's text layer as present, sparse, or absent from glyph count per square inch, which is the field that makes \"does this need OCR\" answerable without guessing. The character count and the density are published beside the label, so a consumer that disagrees with the threshold can re-classify from the evidence rather than the verdict. `structured` is measured by opening each page's structure tree rather than trusting `tagged`, because producers do declare /MarkInfo <</Marked true>> and ship an empty tree. Exits 2 only when a page could not be analyzed at all, which leaves the inventory incomplete rather than wrong. Has no --pages or --output: the inventory is document-wide by definition and is a report rather than a document.",
+  }),
+  pdfCommand("text", {
+    writes: true,
+    notes:
+      PDF_NOTE +
+      " Extracts the text layer a document already carries and never recognizes text in an image; a scanned page reports AP050 rather than returning an empty string with no explanation. Pages are separated by a form feed on stdout, as pdftotext does, and are a per-page array under --format json. A page whose content stream could not be decoded is absent from the payload and reported, rather than present and silently empty, which would be indistinguishable from a blank page — that is why this command declares exit 2 despite reporting no mapping losses. --strict additionally blocks on a page with no text layer, which is the CI-shaped way to refuse a scan. --pages is 1-based and validated against the real page count rather than trusted. --output writes one file atomically and suppresses the text on stdout.",
+  }),
+  pdfCommand("outline", {
+    notes:
+      PDF_NOTE +
+      " Reports the outline the document declares, never one inferred from the text: a document with no /Outlines returns an empty tree and exits 0, which is an answer rather than a failure. An entry whose destination does not resolve to a page keeps its title with page:null and reports AP080 rather than being dropped, on the same rule that gives an unrecognized ADF node AD100. A URL is recorded and never followed — no fetch, no HEAD, no DNS — and an entry whose scheme the parser refused carries no url field at all, rather than presenting a javascript: or file: URI in a field named as though it were clickable. Nesting is capped, because an outline tree is attacker-controlled structure walked recursively. Has no --pages or --output.",
+  }),
+  pdfCommand("validate", {
+    notes:
+      PDF_NOTE +
+      " Reports what the parser itself can see: a damaged cross-reference table, a content stream it could not decode, a font it could not resolve, a page tree cycle, a filter it does not implement. It is deliberately not a PDF/A, PDF/UA, or PDF/X conformance checker — full conformance validation is veraPDF's job and is a Java program, and claiming it would be a lie. It also does not verify digital signatures, check glyph coverage, or judge whether the document renders, none of which are reachable without rasterizing. That is the same line jira adf validate draws when it reports AD100 for a node type it does not model rather than pretending to be Atlassian's schema. Several findings exist only because the parser prints a particular English string, so a pdfjs upgrade that rewords one degrades that check to AP120 carrying the raw text rather than to silence. A structural error exits 2; an unsupported construct does so only under --strict. A file whose cross-reference table was damaged but successfully rebuilt reports AP101 and still parses, so a finding here does not mean unreadable. Takes no --pages: a partial validation reporting `valid` would be a lie.",
+  }),
+  pdfCommand("to-markdown", {
+    writes: true,
+    notes:
+      PDF_NOTE +
+      " A PDF has no paragraphs, no headings, and no lists — only positioned glyph runs — so on an untagged page reading order, block boundaries, heading levels, and list items are all inferred from geometry and font metrics. The path is chosen per page rather than per document, because a scanned appendix bound onto a tagged report is a real document, and AP200 always reports which path each page took. AP200 is a notice rather than an approximation on purpose: making `this page was untagged` itself blocking would make --strict refuse essentially every real PDF and therefore mean nothing, so --strict blocks on the per-construct losses instead — a flattened table, an uncertain reading order, dropped rotated text. Tabular content is detected, flattened to one paragraph per row, and reported; a GFM table is only ever built from a structure tree, because a geometric reconstruction gets merged cells and wrapped cell text wrong and produces a confidently wrong table a consumer cannot tell from a right one. Heading level is derived from font size ranked against the document's modal body font, never from absolute point sizes, and is pinned to the outline where a bookmark title matches. ok:true does not mean the conversion was lossless. --pages restricts which pages are emitted but not what the inference saw: modal body size, heading ranking, and repeated-header detection still run over every page, so a page range is a true subset of the full conversion rather than a differently-inferred document. Emits no frontmatter: document metadata is pdf inspect's answer. remark-stringify options are pinned, shared with jira adf to-markdown, so a minor bump cannot silently change the bytes of every document either command has produced. --output writes one file atomically and suppresses the document on stdout.",
+  }),
+  pdfCommand("attachments", {
+    writes: true,
+    notes:
+      PDF_NOTE +
+      " Lists the files embedded inside the document, and writes them out unchanged under --extract. The source PDF is opened read-only and is never rewritten; extraction copies bytes that were already in it. Binary never goes to stdout under any format — --extract is the only way bytes leave this command, because a command that emits UTF-8 under one flag and a blob under another is a contract no consumer can code against. An inventory without --extract writes nothing. A stored file name is attacker-controlled and is sanitized here rather than trusted: the payload reports both the name written and the raw stored name, so a rename is visible rather than silent. Extraction is planned in full before anything is written, so one refused destination means no file is written at all, and a name that collides with an existing file is written under a resolved name rather than overwriting it. Size and SHA-256 require decoding each file, which is bounded; past the budget an entry is listed without them and AP304 says so. The declared media type is not reported because the parser does not expose it; an executable is identified from its magic number instead. A sanitized name is reported and blocks only under --strict, because a document with an unusual file name is not a failed extraction. Nothing embedded is ever executed or opened.",
+  }),
+  pdfCommand("forms", {
+    notes:
+      PDF_NOTE +
+      " Reports AcroForm field names, types, and current values. It reads and never writes: filling a form is manipulation, which this toolset does not do, so there is no flag that sets a value. Field values are frequently the most useful thing in a filled form and a nuisance to reach any other way. One field can render as several widgets across pages, so the widgets are folded into one row carrying a count, and a field's page is reported 1-based to match every other page number in this toolset. A field marked as a password field is reported with its value and the flag: the same bytes are already reachable through pdf text, so withholding them would be theatre rather than protection. An XFA-only document reports type:xfa with no fields and AP311, never an empty field list, because its values live in an XML packet this does not read and silence there would be indistinguishable from a document with no form. --strict blocks on a form this cannot fully read. Has no --pages or --output.",
+  }),
+
   // Scripts
   {
     id: "scripts run",

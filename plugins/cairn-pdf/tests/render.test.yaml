@@ -1,0 +1,80 @@
+# Contract tests: what this bundle must render. No tree digest -- one would
+# invalidate on every prose edit and on any formatter pass.
+schemaVersion: "1"
+cases:
+  - name: renders-a-complete-claude-code-plugin
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - .claude-plugin/plugin.json
+          - skills/pdf-read/SKILL.md
+          - skills/pdf-read/reference/fidelity.md
+        absent:
+          # Rules are project-profile only, and there is no `commands` kind.
+          - .claude/rules/**
+          - commands/**
+          # Five read-only commands justify neither a subagent nor anything
+          # that runs on its own.
+          - agents/**
+          - hooks/**
+          - .mcp.json
+      json:
+        - path: .claude-plugin/plugin.json
+          contains:
+            name: cairn-pdf
+            version: 1.0.0
+
+  # `agents` and `hooks` are implied manifest fields. Declaring `agents` fails
+  # the whole manifest; declaring `hooks` drops the plugin's hooks. Neither is
+  # caught by `claude plugin validate`.
+  - name: manifest-omits-the-implied-fields
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: .claude-plugin/plugin.json
+          excludes: ['"agents"', '"hooks"']
+          includes: ['"skills"']
+
+  # Reading a PDF is something the assistant should reach for on its own, not a
+  # slash command a user has to know about. The exclusion is newline-anchored so
+  # prose documenting the flag cannot match it.
+  - name: the-skill-stays-model-invocable
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/pdf-read/SKILL.md
+          mode: "0644"
+          excludes: ["\ndisable-model-invocation: true\n"]
+
+  # The five facts a caller gets wrong without reading the skill: the command
+  # path is two tokens, the streams are split, exit 0 is not lossless, there is
+  # no OCR, and nothing here writes a PDF.
+  - name: the-skill-pins-the-load-bearing-facts
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/pdf-read/SKILL.md
+          includes:
+            - "cairn pdf inspect"
+            - "cairn pdf to-markdown"
+            - "Diagnostics are on stderr"
+            - "does not mean lossless"
+            - "no OCR"
+            - "never writes a PDF"
+            # The MCP tools are confined to the served root and none of them
+            # write, so the skill must not imply either is otherwise.
+            - "inside the served root"
+            - "the MCP surface writes nothing"
+
+  - name: the-fidelity-reference-ships
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/pdf-read/reference/fidelity.md
+          includes: ["approximate", "unsupported", "AP219", "AP202"]

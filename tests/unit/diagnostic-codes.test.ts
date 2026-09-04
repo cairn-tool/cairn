@@ -14,13 +14,14 @@ import { describe, expect, it } from "vitest";
 const root = path.join(__dirname, "..", "..");
 
 /**
- * Both families: `AB###` for agent bundles, `AD###` for ADF conversion.
+ * Three families: `AB###` for agent bundles, `AD###` for ADF conversion, and
+ * `AP###` for PDF reading.
  *
  * Built once and shared by the four matchers below. The pattern used to be
  * written out at each of them, which is three chances for a widening to be
  * applied inconsistently.
  */
-const CODE = "A[BD]\\d{3}";
+const CODE = "A[BDP]\\d{3}";
 const EMITTED = new RegExp(`"(${CODE})"`, "g");
 const ROW = new RegExp(`^\\|\\s*\`(${CODE})\`\\s*\\|`);
 const ROW_WITH_SEVERITY = new RegExp(`^\\|\\s*\`(${CODE})\`\\s*\\|\\s*([a-z]+)\\s*\\|`);

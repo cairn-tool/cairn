@@ -89,6 +89,17 @@ import {
   type AdfOptions,
 } from "./commands/jira.js";
 import {
+  pdfActionBoundary,
+  pdfAttachmentsAction,
+  pdfFormsAction,
+  pdfInspectAction,
+  pdfOutlineAction,
+  pdfTextAction,
+  pdfToMarkdownAction,
+  pdfValidateAction,
+  type PdfOptions,
+} from "./commands/pdf.js";
+import {
   usageAgentsAction,
   usageCommandsAction,
   usageHooksAction,
@@ -686,6 +697,103 @@ adfCommon(adf.command("inspect"))
   )
   .action((source: string, opts: AdfOptions) =>
     adfActionBoundary("inspect", opts, () => adfInspectAction(source, opts)),
+  );
+
+const pdf = program
+  .command("pdf")
+  .description("Read PDF documents: text, structure, embedded files, and conversion to Markdown")
+  .addHelpText(
+    "after",
+    "\nEvery subcommand is a local, deterministic read: no credentials, no network, and no model\ncall. Project configuration is not consulted.\n\nThis toolset never writes a PDF. There is no merge, split, page reorder, form fill, or\nredact: input is a PDF, output is Markdown, text, or JSON.\n\nInput is bounded before it is parsed, because a PDF is a container format that usually\narrives off a network. Symlinks are resolved, a non-regular file is refused on the open\ndescriptor, and --max-bytes, --timeout, and --max-pages cap the read, the parse, and the\npage count. Embedded JavaScript, launch, and submit actions are never executed.\n\nStart with `pdf inspect`: document.tagged and the per-page text layer decide what every\nother subcommand can tell you.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+  );
+
+const pdfCommon = (command: Command): Command =>
+  command
+    .argument("<file>", "Input PDF file, or - for stdin")
+    .option("--format <fmt>", "Output format: llm, human, json", "llm")
+    .option("--envelope", "Wrap --format json output in the versioned result envelope")
+    .option("--max-bytes <n>", "Maximum input size in bytes (default: 67108864)")
+    .option("--max-pages <n>", "Refuse a document with more pages than this (default: 5000)")
+    .option("--timeout <ms>", "Wall-clock budget for parsing, in milliseconds (default: 30000)");
+
+const pdfDocument = (command: Command): Command =>
+  pdfCommon(command)
+    .option("--pages <ranges>", "Pages to read, e.g. 1,3,5-8; every page by default")
+    .option("--output <file>", "Write the output to this file instead of stdout")
+    .option("--strict", "Treat approximations as blocking findings");
+
+pdfCommon(pdf.command("inspect"))
+  .description("Report page count, metadata, tagging, and a per-page text-layer forecast")
+  .addHelpText(
+    "after",
+    "\nAnswers what a conversion will cost before paying it, and whether a document needs OCR at\nall. Each page is classified present, sparse, or absent by glyph count per square inch; an\nabsent text layer means the page is an image and `pdf text` returns nothing for it. The\ncharacter count and density are reported beside the label, so a caller who disagrees with\nthe threshold can re-classify from the evidence.\n\ndocument.tagged is the field to read first: a tagged document carries a structure tree that\nnames its own paragraphs, headings, and lists, so `pdf to-markdown` infers almost nothing.\ndocument.structured is the measured version of that claim — some producers declare tagging\nand ship an empty tree.\n\nExit codes:\n  0  Inventory written to stdout\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A page could not be analyzed, leaving the inventory incomplete",
+  )
+  .action((file: string, opts: PdfOptions) =>
+    pdfActionBoundary("inspect", file, opts, () => pdfInspectAction(file, opts)),
+  );
+
+pdfDocument(pdf.command("text"))
+  .description("Extract the text layer, page by page")
+  .addHelpText(
+    "after",
+    "\nExtracts the text a document already carries. It does not recognize text in an image: a\nscanned page has no text layer and reports AP050 rather than returning an empty string with\nno explanation. Run `pdf inspect` first to see which pages have one.\n\nPages are separated by a form feed on stdout, as pdftotext does. Under --format json they\nare a per-page array instead, and a page that could not be decoded is absent from it rather\nthan present and empty.\n\nExamples:\n  cairn pdf text report.pdf --pages 1,4-6\n  cairn pdf text scan.pdf --strict     # fail if any page is an image\n\nExit codes:\n  0  Text written to stdout\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A page could not be decoded, or a page has no text layer under --strict",
+  )
+  .action((file: string, opts: PdfOptions) =>
+    pdfActionBoundary("text", file, opts, () => pdfTextAction(file, opts)),
+  );
+
+pdfCommon(pdf.command("outline"))
+  .description("Read the document outline (bookmarks) as a heading tree")
+  .addHelpText(
+    "after",
+    "\nReports the outline the document declares, not one inferred from its text. A document with\nno /Outlines returns an empty tree and exits 0: that is an answer, not a failure. An entry\nwhose destination does not resolve keeps its title with a null page and reports AP080,\nrather than being dropped.\n\nURLs are recorded and never followed. An entry whose scheme the parser refused carries no\nurl at all, rather than presenting a javascript: or file: URI as though it were clickable.\n\nExit codes:\n  0  Outline written to stdout, possibly empty\n  1  Invocation or I/O error, or the input is not a PDF\n  2  An outline entry could not be resolved",
+  )
+  .action((file: string, opts: PdfOptions) =>
+    pdfActionBoundary("outline", file, opts, () => pdfOutlineAction(file, opts)),
+  );
+
+pdfCommon(pdf.command("validate"))
+  .description("Check a PDF's structural integrity without converting it")
+  .option("--strict", "Treat an unsupported construct as a blocking finding")
+  .addHelpText(
+    "after",
+    "\nReports what the parser itself can see: a damaged cross-reference table, a content stream\nit could not decode, a font it could not resolve, a page tree cycle, an unsupported filter.\n\nIt is deliberately not a PDF/A or PDF/UA conformance checker. Full conformance validation is\nveraPDF's job and is a Java program; claiming it here would be a lie. It also does not\nverify signatures or judge whether a document renders, neither of which is reachable\nwithout rasterizing. This is the same line `jira adf validate` draws when it reports AD100\nfor a node type it does not model.\n\nA cross-reference table that was damaged but successfully rebuilt reports AP101 and still\nparses, so a finding here does not mean the document is unreadable.\n\nExit codes:\n  0  No structural errors\n  1  Invocation or I/O error, or the input is not a PDF\n  2  Invalid structure, or an unsupported construct under --strict",
+  )
+  .action((file: string, opts: PdfOptions) =>
+    pdfActionBoundary("validate", file, opts, () => pdfValidateAction(file, opts)),
+  );
+
+pdfDocument(pdf.command("to-markdown"))
+  .description("Convert a PDF's content to Markdown, reporting what was inferred")
+  .addHelpText(
+    "after",
+    "\nA PDF has no paragraphs, no headings, and no lists — only positioned glyph runs. On an\nuntagged page every block boundary is inferred from geometry and font metrics, so the\nconversion is approximate by construction; a tagged page uses the structure tree instead and\nis close to exact. The path is chosen per page, and AP200 always reports which was used.\n\nRead document.tagged before trusting the structure, and run `pdf inspect` before running\nthis at all.\n\nTabular content is flattened to one paragraph per row and reported. A real table is only\nemitted for a tagged document: a geometric reconstruction gets merged and wrapped cells\nwrong and produces a confidently wrong table that cannot be told from a right one.\n\n--pages restricts which pages are emitted, not what the inference saw — the modal body font\nand repeated-header detection still run over the whole document, so a page range is a true\nsubset of the full conversion.\n\nEmits no frontmatter: a PDF's metadata is `pdf inspect`'s answer.\n\nExit codes:\n  0  Converted; read diagnostics to learn what was inferred or lost\n  1  Invocation or I/O error, or the input is not a PDF\n  2  An error, or any approximation under --strict",
+  )
+  .action((file: string, opts: PdfOptions) =>
+    pdfActionBoundary("to-markdown", file, opts, () => pdfToMarkdownAction(file, opts)),
+  );
+
+pdfCommon(pdf.command("attachments"))
+  .description("List the files embedded in a PDF, and optionally write them out")
+  .option("--extract <dir>", "Write the embedded files into this directory")
+  .option("--strict", "Treat a sanitized name or an unreadable file as a blocking finding")
+  .addHelpText(
+    "after",
+    "\nEmbedded files are files carried inside the document. Without --extract this only\ninventories them — name, size, SHA-256 — which is what makes it safe to reach for and\nsafe to expose over MCP; writing is the opt-in.\n\nBinary never goes to stdout under any format. --extract is the only way bytes leave this\ncommand.\n\nA stored file name is attacker-controlled and is sanitized before it is used as a path. The\npayload reports both the raw stored name and the name actually written, so a rename is\nvisible. Extraction is planned in full before anything is written: one refused destination\nmeans no file is written at all, and a name that collides is written under a resolved name\nrather than overwriting anything.\n\nNothing embedded is ever executed or opened.\n\nExamples:\n  cairn pdf attachments report.pdf\n  cairn pdf attachments report.pdf --extract ./out\n\nExit codes:\n  0  Listed, and written when --extract was given\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A destination was refused, an embedded file could not be decoded, or any\n     name had to be sanitized under --strict",
+  )
+  .action((file: string, opts: PdfOptions) =>
+    pdfActionBoundary("attachments", file, opts, () => pdfAttachmentsAction(file, opts)),
+  );
+
+pdfCommon(pdf.command("forms"))
+  .description("List AcroForm fields and their current values")
+  .option("--strict", "Treat a form this cannot fully read as a blocking finding")
+  .addHelpText(
+    "after",
+    "\nReads and never writes. Filling a form is manipulation, which this toolset does not do, so\nthere is no flag that sets a value.\n\nOne field can render as several widgets across pages; they are folded into one row carrying\na count. A field's page is reported 1-based, matching every other page number here.\n\nA field marked as a password field is reported with its value and the flag. The same bytes\nare already reachable through `pdf text`, so withholding them would be theatre.\n\nAn XFA-only document reports type:xfa with no fields and AP311, never a silently empty\nlist: its values live in an XML packet this does not read.\n\nExit codes:\n  0  Reported, including a document that carries no form\n  1  Invocation or I/O error, or the input is not a PDF\n  2  Under --strict, a form this cannot fully read — an XFA form, or a field\n     that resolves to no page",
+  )
+  .action((file: string, opts: PdfOptions) =>
+    pdfActionBoundary("forms", file, opts, () => pdfFormsAction(file, opts)),
   );
 
 const scripts = program

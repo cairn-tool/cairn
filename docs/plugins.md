@@ -87,6 +87,7 @@ cannot find `cairn` on `PATH` exits quietly rather than failing an edit.
 | [`cairn-archive`](plugins/cairn-archive.md)   | `archive run\|status\|list\|extract\|verify\|migrate`                   | [cairn-archive](plugins/cairn-archive.md)   |
 | [`cairn-agent`](plugins/cairn-agent.md)       | The 18 `agent` commands: authoring, migrating, testing, publishing      | [cairn-agent](plugins/cairn-agent.md)       |
 | [`cairn-jira`](plugins/cairn-jira.md)         | `jira adf` in both directions, and what each conversion costs           | [cairn-jira](plugins/cairn-jira.md)         |
+| [`cairn-pdf`](plugins/cairn-pdf.md)           | `pdf inspect\|text\|outline\|validate\|to-markdown`                     | [cairn-pdf](plugins/cairn-pdf.md)           |
 
 Each carries model-invoked skills for the workflows and explicit skills that appear as slash
 commands. Skill bodies stay short; full flag tables live in `reference/` sidecars that load only

@@ -22,6 +22,7 @@ agent:
       - path: plugins/cairn-archive
       - path: plugins/cairn-agent
       - path: plugins/cairn-jira
+      - path: plugins/cairn-pdf
   verify:
     defaults:
       scope: project
@@ -55,6 +56,10 @@ agent:
         bundle: plugins/cairn-jira
         target: claude-code
         destination: .
+      - name: cairn-pdf-claude-code
+        bundle: plugins/cairn-pdf
+        target: claude-code
+        destination: .
       - name: cairn-markdown-codex
         bundle: plugins/cairn-markdown
         target: codex
@@ -77,5 +82,9 @@ agent:
         destination: .
       - name: cairn-jira-codex
         bundle: plugins/cairn-jira
+        target: codex
+        destination: .
+      - name: cairn-pdf-codex
+        bundle: plugins/cairn-pdf
         target: codex
         destination: .

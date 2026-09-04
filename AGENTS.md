@@ -24,17 +24,18 @@ src/sqlite-store.ts    generic open + migrate for the two owned SQLite stores
 src/archive/*.ts       artifact sets, tar reading, segments, and the archive index
 src/usage/providers/*.ts  per-LLM log-source profiles
 src/jira/adf/*.ts      ADF content model, both converters, and the AD diagnostic family
-src/mapping-quality.ts quality-to-severity, shared by the AB and AD families
+src/pdf/*.ts           the pdfjs boundary, layout inference, and the AP diagnostic family
+src/mapping-quality.ts quality-to-severity, shared by the AB, AD, and AP families
 src/config-schema.ts   validators shared by the config loader and the script registry
 tests/{unit,integration,e2e}
 ```
 
-There are six toolsets, `md`, `agent`, `scripts`, `usage`, `archive`, and `jira`, plus the top-level
+There are seven toolsets, `md`, `agent`, `scripts`, `usage`, `archive`, `jira`, and `pdf`, plus the top-level
 `check-update`, `describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
 `command(...)` registration in `src/cli.ts`, a `src/contract/registry.ts` entry, a
 `docs/commands/<toolset>/<name>.md` page (top-level commands stay directly under
 `docs/commands/`) with entries in `docs/commands.md` and `docs/_contents.md`, a row in
-`docs/formats/diagnostic-codes.md` for any new `AB###` or `AD###`, and e2e coverage. The README is a
+`docs/formats/diagnostic-codes.md` for any new `AB###`, `AD###`, or `AP###`, and e2e coverage. The README is a
 README: it links into `docs/` and does not list commands. For an `agent` subcommand, also widen
 `AgentResult["command"]` in `src/agent/types.ts` and the `command` enum plus `commands` list
 in `src/contract/schemas/agent.ts`. A new toolset group also needs adding to **both** `groups` sets
@@ -581,9 +582,76 @@ outputTokens}` on a `bubbleId:` record is a real per-request figure with no dist
 - **`AD###` is a third finding family**, alongside `AB###` and the `md` checker strings.
   `MappingQuality` and the quality-to-severity rule live in `src/mapping-quality.ts` — re-exported
   by `src/agent/types.ts` rather than defined there — so the agent and conversion families cannot
-  drift. `tests/unit/diagnostic-codes.test.ts` matches `A[BD]\d{3}`, so a new code in either
-  family must be documented in `docs/formats/diagnostic-codes.md` or the build fails, and a
+  drift. `tests/unit/diagnostic-codes.test.ts` matches `A[BDP]\d{3}`, so a new code in any of the
+  three families must be documented in `docs/formats/diagnostic-codes.md` or the build fails, and a
   documented code that nothing emits fails it too.
+- **The `pdf` toolset reads and never writes a PDF, and that boundary is load-bearing.** Input is a
+  PDF; output is Markdown, text, or JSON. It buys no writer library in the tree, commands that are
+  idempotent with respect to their input, and a coherent security posture — "parse hostile input and
+  never act on it" is defensible in a way that "parse it and write the result back" is not. `pdf`
+  is absent from `servesWorkspace` in `src/cli.ts` and from `COMMAND_OPTIONS`, like `usage` and
+  `scripts`: a checked-in config file has no say over a document named on the command line.
+- **All five `pdf` commands declare exit 2, including the three that read as pure inventory.** A PDF
+  fails _per page, not per document_ — an undecodable content stream on page 47 of 300 leaves the
+  other 299 good, so the command must emit them and say 47 is missing.
+  `tests/unit/contract-schemas.test.ts` requires `stream.findings` to be truthy exactly when exit 2
+  is declared, so the two are one decision. Unlike `jira adf inspect`, whose registry row and help
+  text disagree, every `pdf` help block and docs page states a specific meaning for 2.
+- **`AP200` is a notice, not an approximation, and that is what keeps `--strict` meaningful.** It
+  reports which path each page took. Making "this page was untagged" itself blocking would make
+  `--strict` refuse essentially every real PDF; it blocks on the per-construct losses instead.
+- **`getMarkInfo()` returns a `Map`, and `getDocument({data})` detaches its input.** Reading
+  `markInfo.Marked` is always `undefined` and would report every document as untagged — the
+  published `.d.ts` says otherwise and is wrong. `src/pdf/read.ts` returns a `Uint8Array` it
+  exclusively owns because pdf.js transfers what it is given, and Node `Buffer`s under 8 KiB are
+  views into a shared pool. pdf.js also **refuses a `Buffer` outright**, so `withDocument`
+  normalizes.
+- **Import pdf.js as `pdfjs-dist/legacy/build/pdf.mjs`.** The package-root entry warns to use the
+  legacy build in Node and then throws `hashOriginal.toHex is not a function`: it assumes a V8 with
+  `Uint8Array.prototype.toHex`, which Node 22 and 23 lack.
+- **`src/pdf/document.ts` captures `console`, it does not silence it, and restores it _after_
+  `destroy()`.** pdf.js routes warnings to `console.warn`, which is stderr — the stream carrying
+  this toolset's diagnostics, asserted empty on a clean run. Capturing is also what gives
+  `pdf validate` its only signal for a rebuilt xref, a substituted font, or an unsupported filter,
+  so raising verbosity to ERRORS would keep the stream clean and delete four checks. pdf.js fires
+  callbacks during teardown, so restoring early lets a late warning escape.
+- **Four pdf.js lookups return a `Map`, and the reflex to reach for `Object.entries` is wrong on all
+  of them.** `getMarkInfo`, `getAttachments`, `getFieldObjects`, and `getJSActions` are all Maps;
+  `Object.entries()` on any of them yields `[]` silently, reporting a document as untagged, with no
+  attachments, or with no form. Only `getMarkInfo`'s published `.d.ts` actually lies about it, which
+  is why the other three are easy to get wrong a second time.
+- **`getAttachments()` carries no bytes.** Its `content` is always `undefined`; the bytes come from a
+  separate `getAttachmentContent(key)` keyed by the _name-tree key_, which is a third string distinct
+  from both `filename` and `rawFilename`. That split is what makes `pdf attachments`' inventory cheap
+  and its extraction genuinely opt-in, so do not "simplify" it into one eager call.
+- **A form field's `page` is 0-based, and `-1` when the field is attached to no page.** Every other
+  page number in the toolset is 1-based. `src/pdf/forms.ts` converts once, at the boundary; the
+  sentinel becomes `page: null` plus `AP312` rather than page 0. Getting this wrong reads correctly
+  in every test written against the wrong value.
+- **`writeAtomically`'s `wx` guards the staging file, not the destination** — the `rename` still
+  replaces whatever is there. That is right for `--output`, which names one file the user asked to
+  write, and wrong for extracting many attacker-named files, so `src/pdf/attachments.ts` resolves
+  collisions while planning. Extraction is planned over the whole set before any write, so one
+  refused destination means nothing is written at all; `archive extract` sanitizes with
+  `path.basename` alone and is not the model.
+- **`pdf audit` and `pdf images` are deferred, and the reason is a measurement rather than a
+  preference.** pdf.js's public API cannot see `/Launch`, `/SubmitForm`, `/ImportData`, or a
+  non-JavaScript `/OpenAction`: `collectActions` filters on `isName(entry.get("S"), "JavaScript")`
+  and `parseDestDictionary` drops `SubmitForm` through its `default:` branch, so a document that
+  launches a process on open and exfiltrates form data audits _clean_. Images likewise arrive already
+  decoded to RGBA, so neither the original bytes nor the filter name is reachable. Both commands need
+  an object-layer reader (a lexer, a brute-force `N G obj` index, and `/ObjStm` inflation — modern
+  producers use object streams heavily, 876 in one real manual). Do not ship either on the public API
+  alone; a security command with silent blind spots is the indistinguishable-from-success failure in
+  the worst possible place.
+- **The PDF MCP tools live in `src/serve/pdf-tools.ts` and register through `SERVE_TOOLS`.** They are
+  confined to `--root` exactly like the Markdown tools, which is a real narrowing accepted on purpose
+  rather than adding a second boundary. Nothing there writes — `list_pdf_attachments` inventories and
+  `--extract` has no equivalent — and no handler may call a command action, because those
+  `terminate()` and would kill a long-lived stdio server. `src/serve/types.ts` exists so that module
+  can implement `ServeTool` without importing the array it registers into. `cairn serve mcp` is
+  registered by `plugins/cairn-markdown` **and no other plugin**: one server carries every toolset's
+  tools, so a second registration hands a host that installs both the same seventeen tools twice.
 
 ## Commits
 

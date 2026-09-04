@@ -118,15 +118,21 @@ describe("serve mcp", () => {
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "audit_markdown",
       "build_context",
+      "convert_pdf_to_markdown",
       "find_references",
       "get_frontmatter",
       "get_outline",
+      "get_pdf_outline",
       "get_section",
       "inspect_graph",
+      "inspect_pdf",
       "list_code_blocks",
       "list_documents",
+      "list_pdf_attachments",
+      "list_pdf_form_fields",
       "list_tasks",
       "query_workspace",
+      "read_pdf_text",
     ]);
   });
 

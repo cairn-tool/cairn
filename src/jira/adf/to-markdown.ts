@@ -1,6 +1,3 @@
-import { unified } from "unified";
-import remarkGfm from "remark-gfm";
-import remarkStringify from "remark-stringify";
 import type {
   BlockContent,
   Break,
@@ -21,39 +18,10 @@ import type {
   TableRow,
   Text,
 } from "mdast";
+import { stringifyMarkdown } from "../../markdown-stringify.js";
 import { CODES, DiagnosticSink } from "./diagnostics.js";
 import { FIDELITY, MARK_FIDELITY, PANEL_TYPES } from "./profile.js";
 import type { AdfDocument, AdfMark, AdfNode, ConversionDiagnostic } from "./types.js";
-
-/**
- * Every stringify option is pinned.
- *
- * Left at their defaults, a `remark-stringify` minor bump silently changes the
- * bytes of every document this command has ever produced. `emphasis: "_"` and
- * `strong: "*"` also match this repository's own `.markdownlintrc`, so converted
- * documents lint clean where they land.
- */
-const STRINGIFY_OPTIONS = {
-  bullet: "-",
-  bulletOrdered: ".",
-  emphasis: "_",
-  strong: "*",
-  fence: "`",
-  fences: true,
-  rule: "-",
-  ruleRepetition: 3,
-  ruleSpaces: false,
-  setext: false,
-  closeAtx: false,
-  incrementListMarker: true,
-  listItemIndent: "one",
-  resourceLink: false,
-  tightDefinitions: false,
-} as const;
-
-const processor = unified()
-  .use(remarkGfm)
-  .use(remarkStringify, STRINGIFY_OPTIONS as Parameters<typeof remarkStringify>[0]);
 
 /**
  * The order marks are applied, innermost first.
@@ -552,5 +520,5 @@ export function toMarkdown(document: AdfDocument): ToMarkdownResult {
   const converter = new Converter();
   const children = converter.blocks(document.content, ["doc"]) as RootContent[];
   const root: Root = { type: "root", children };
-  return { markdown: processor.stringify(root), diagnostics: converter.sink.all() };
+  return { markdown: stringifyMarkdown(root), diagnostics: converter.sink.all() };
 }
