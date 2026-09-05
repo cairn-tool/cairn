@@ -1,0 +1,6 @@
+{
+  "name": "cairn-archive",
+  "version": "1.2.0",
+  "description": "Archive assistant plans, artifacts, and transcripts into long-term storage.",
+  "skills": "./skills/"
+}
