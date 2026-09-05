@@ -1,6 +1,6 @@
 import { CONFIG_FILENAME, selectConfig } from "../config.js";
 import type { ConfigSelection } from "../config.js";
-import { terminate } from "../command-result.js";
+import { CommandExit, terminate } from "../command-result.js";
 import { BASE_FORMATS } from "../formats.js";
 import { jsonPayload } from "../result.js";
 import { executeScript, exitStatusFor } from "../scripts/execute.js";
@@ -13,6 +13,16 @@ export interface ScriptsOptions {
   envelope?: boolean;
   root?: string;
   config?: string | boolean;
+}
+
+export interface ScriptRunOptions extends ScriptsOptions {
+  /**
+   * Exit 0 whatever happened. For inline use inside a skill document, where the
+   * loader reads any non-zero status as a failure to load and a script whose code
+   * carries meaning would keep the skill from loading at all. It changes only this
+   * process's status: the script's real code stays in `exit.status`.
+   */
+  ignoreExitCode?: boolean;
 }
 
 /**
@@ -104,12 +114,9 @@ function requireWinner(resolution: ScriptResolution, name: string): void {
   }
 }
 
-export async function scriptsRunAction(
-  name: string,
-  args: string[],
-  opts: ScriptsOptions,
-): Promise<void> {
+async function runScript(name: string, args: string[], opts: ScriptRunOptions): Promise<void> {
   const format = resolveFormat(opts);
+  const ignore = Boolean(opts.ignoreExitCode);
   const resolution = resolveScript(name, walkOptions(opts));
 
   if (resolution.boundary.kind === "nearest-config") {
@@ -138,7 +145,7 @@ export async function scriptsRunAction(
     // Assigned rather than thrown: the child's status is outside CommandExit's
     // 1|2 type. Never process.exit() — a piped stdout write is asynchronous and
     // would be truncated.
-    process.exitCode = exitStatusFor(outcome);
+    process.exitCode = ignore ? 0 : exitStatusFor(outcome);
     return;
   }
 
@@ -166,7 +173,10 @@ export async function scriptsRunAction(
   // A script that never started is an invocation error, not a failing script;
   // collapsing the two would make a typo in exec[0] indistinguishable from a
   // legitimately failing test suite.
-  const exitCode = outcome.startupError ? 1 : status === 0 ? 0 : 2;
+  const declared = outcome.startupError ? 1 : status === 0 ? 0 : 2;
+  // The suppressed value is what `jsonPayload` is given, so `--envelope`'s
+  // exitCode never contradicts the process. `exit.status` still carries the truth.
+  const exitCode = ignore ? 0 : declared;
   process.stdout.write(
     jsonPayload("scripts run", payload, opts, {
       exitCode,
@@ -174,6 +184,28 @@ export async function scriptsRunAction(
     }),
   );
   if (exitCode !== 0) terminate(exitCode);
+}
+
+/**
+ * Under `--ignore-exit-code` every outcome exits 0, a refused resolution included:
+ * the flag exists so an invocation inline in a skill document cannot keep the skill
+ * from loading, and a name that failed to resolve would do exactly that. The message
+ * still reaches stderr in the CLI boundary's own wording; only the status changes.
+ */
+export async function scriptsRunAction(
+  name: string,
+  args: string[],
+  opts: ScriptRunOptions,
+): Promise<void> {
+  if (!opts.ignoreExitCode) return runScript(name, args, opts);
+  try {
+    await runScript(name, args, opts);
+  } catch (error) {
+    if (!(error instanceof CommandExit)) {
+      process.stderr.write(`Error: ${(error as Error).message}\n`);
+    }
+  }
+  process.exitCode = 0;
 }
 
 // ---------------------------------------------------------------------------

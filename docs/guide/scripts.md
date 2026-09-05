@@ -34,6 +34,10 @@ becomes the process's exit status, so a hook reads the real code; `--format json
 streams into a payload instead. Running outside a Git repository is refused unless `--root` sets
 the boundary explicitly.
 
+`--ignore-exit-code` discards that status and exits `0` instead. It is for an invocation written
+inline in a skill document, where any non-zero status is read as a failure to load; the script's
+real code is still reported as `exit.status` under `--format json`.
+
 This is the only command that executes anything. What makes that acceptable is that the command
 is declared by name in a tracked file inside the workspace rather than discovered in content
 being analyzed — the registry sits at the same trust level as a `Makefile`. See

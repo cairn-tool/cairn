@@ -75,6 +75,63 @@ describe("scripts run", () => {
     expect(result.code).toBe(7);
   });
 
+  it("exits 0 under --ignore-exit-code while the script's output still passes through", async () => {
+    const { deep } = workspace(
+      "version: 1\nscripts:\n  noisy:\n    run: printf 'out\\n'; exit 7\n",
+    );
+    const result = await run(deep, "scripts", "run", "noisy", "--ignore-exit-code");
+    expect(result.code).toBe(0);
+    expect(result.stdout).toBe("out\n");
+  });
+
+  it("keeps the script's real status in the payload under --ignore-exit-code", async () => {
+    const { deep } = workspace(REGISTRY);
+    const result = await run(deep, "scripts", "run", "fails", "--ignore-exit-code", "-fj");
+    expect(result.code).toBe(0);
+    const payload = JSON.parse(result.stdout);
+    expect(payload.exit).toEqual({ code: 7, signal: null, status: 7 });
+    validate("script-run", payload);
+  });
+
+  it("still reports a startup error under --ignore-exit-code, at status 0", async () => {
+    const { deep } = workspace(
+      'version: 1\nscripts:\n  ghost:\n    exec: ["no-such-program-xyz"]\n',
+    );
+    const result = await run(deep, "scripts", "run", "ghost", "--ignore-exit-code", "-fj");
+    expect(result.code).toBe(0);
+    const payload = JSON.parse(result.stdout);
+    expect(payload.startupError).toBeTruthy();
+    validate("script-run", payload);
+  });
+
+  // The flag exists so an invocation inline in a skill document cannot keep the
+  // skill from loading, which a refused resolution would do just as surely as a
+  // failing script. The message is still on stderr.
+  it("exits 0 under --ignore-exit-code even when the name does not resolve", async () => {
+    const { deep } = workspace(REGISTRY);
+    const result = await run(deep, "scripts", "run", "nope", "--ignore-exit-code");
+    expect(result.code).toBe(0);
+    expect(result.stderr).toMatch(/No script named 'nope'/);
+  });
+
+  it("does not let the envelope contradict the process under --ignore-exit-code", async () => {
+    const { deep } = workspace(REGISTRY);
+    const result = await run(
+      deep,
+      "scripts",
+      "run",
+      "fails",
+      "--ignore-exit-code",
+      "-fj",
+      "--envelope",
+    );
+    expect(result.code).toBe(0);
+    const envelope = JSON.parse(result.stdout);
+    expect(envelope.exitCode).toBe(0);
+    expect(envelope.data.exit.status).toBe(7);
+    validate("script-run", envelope.data);
+  });
+
   it("forwards arguments after -- without a shell re-reading them", async () => {
     const { deep } = workspace(REGISTRY);
     const result = await run(deep, "scripts", "run", "echo-args", "--", "one", "; echo pwned");

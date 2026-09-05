@@ -13,7 +13,7 @@ import { formatsFor } from "./formats.js";
 import { packageName, packageVersion as version } from "./version.js";
 import type { AgentAuditOptions } from "./commands/agent-audit.js";
 import type { ServeOptions } from "./commands/serve.js";
-import type { ScriptsOptions } from "./commands/scripts.js";
+import type { ScriptRunOptions, ScriptsOptions } from "./commands/scripts.js";
 import type { ArchiveOptions } from "./commands/archive.js";
 import type { AdfOptions } from "./commands/jira.js";
 import type { PdfOptions } from "./commands/pdf.js";
@@ -812,13 +812,17 @@ scriptsCommon(scripts.command("run"))
   .description("Run a named script from anywhere in the tree")
   .argument("<name>", "Script name declared under scripts: in a .cairn.yml")
   .argument("[args...]", "Arguments forwarded to the script, after --")
+  .option(
+    "--ignore-exit-code",
+    "Exit 0 whatever the script did; its real status stays in the payload",
+  )
   .addHelpText(
     "after",
-    "\nExamples:\n  cairn scripts run gather-context\n  cairn scripts run lint-changed -- --since main\n\nIn llm and human formats the script's streams pass through untouched and its exit\nstatus becomes this process's exit status, so a hook reads the real code. With\n--format json the streams are captured into the payload instead.\n\nRefuses to run outside a Git repository unless --root sets the boundary explicitly.\n\nExit codes:\n  *  llm and human: the script's own exit status, verbatim\n  0  --format json: the script exited 0\n  1  Unresolvable name, or the script could not be started\n  2  --format json: the script exited non-zero or was killed by a signal",
+    "\nExamples:\n  cairn scripts run gather-context\n  cairn scripts run lint-changed -- --since main\n\nIn llm and human formats the script's streams pass through untouched and its exit\nstatus becomes this process's exit status, so a hook reads the real code. With\n--format json the streams are captured into the payload instead.\n\n--ignore-exit-code discards that status and exits 0 instead, for an invocation\ninline in a skill document, where any non-zero status is read as a failure to load.\nThe script's own code is still reported as exit.status under --format json.\n\nRefuses to run outside a Git repository unless --root sets the boundary explicitly.\n\nExit codes:\n  *  llm and human: the script's own exit status, verbatim\n  0  --format json: the script exited 0\n  0  --ignore-exit-code: always, whatever the script did\n  1  Unresolvable name, or the script could not be started\n  2  --format json: the script exited non-zero or was killed by a signal",
   )
   .action(async (name: string, args: string[], opts: Record<string, unknown>) => {
     const { scriptsRunAction } = await import("./commands/scripts.js");
-    return scriptsRunAction(name, args, opts as ScriptsOptions);
+    return scriptsRunAction(name, args, opts as ScriptRunOptions);
   });
 
 scriptsCommon(scripts.command("which"))
