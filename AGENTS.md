@@ -309,6 +309,12 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   asynchronous and would be truncated. The divergence is declared through the optional
   `exitCodePassthrough` field on `CommandContract`, added rather than widening
   `ExitCodeMeaning.code`, whose `enum: [0,1,2]` is published in the `describe` schema.
+  **`--ignore-exit-code` is the one flag that turns that passthrough off**, and it suppresses the
+  status for _every_ outcome, a refused resolution included — `scriptsRunAction` is a wrapper
+  that catches around the real body for exactly that reason. It exists because an invocation
+  inline in a `SKILL.md` fails to load on any non-zero status, so a partial suppression would not
+  deliver what the flag is for. The suppressed value is also what `jsonPayload` is given, so
+  `--envelope`'s `exitCode` cannot contradict the process; `exit.status` keeps the real code.
 - **The `-fh`/`-fj` argv rewrite in `src/cli.ts` stops at the first `--`.** Everything after it
   is forwarded to a child process untouched; rewriting there would hand the script
   `--format=json` in place of the `-fj` the user typed.

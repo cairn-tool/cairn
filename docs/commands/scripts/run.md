@@ -23,14 +23,15 @@ This is the only command in the tool that executes anything. See
 
 ## Options
 
-| Option            | Default         | Description                                          |
-| ----------------- | --------------- | ---------------------------------------------------- |
-| `--format <fmt>`  | `llm`           | `llm`, `human`, or `json`. Not configurable.         |
-| `--envelope`      | `false`         | Wrap `--format json` output in the result envelope.  |
-| `--root <dir>`    | Repository root | Stop the upward walk at this directory.              |
-| `--config <file>` | Discovered      | Use one specific registry and skip the walk.         |
-| `--no-config`     | —               | Disable discovery; every name then fails to resolve. |
-| `-h`, `--help`    | —               | Show help.                                           |
+| Option               | Default         | Description                                                |
+| -------------------- | --------------- | ---------------------------------------------------------- |
+| `--format <fmt>`     | `llm`           | `llm`, `human`, or `json`. Not configurable.               |
+| `--envelope`         | `false`         | Wrap `--format json` output in the result envelope.        |
+| `--ignore-exit-code` | `false`         | Exit `0` whatever happened. See [Exit codes](#exit-codes). |
+| `--root <dir>`       | Repository root | Stop the upward walk at this directory.                    |
+| `--config <file>`    | Discovered      | Use one specific registry and skip the walk.               |
+| `--no-config`        | —               | Disable discovery; every name then fails to resolve.       |
+| `-h`, `--help`       | —               | Show help.                                                 |
 
 `scripts` commands accept no `commands:` defaults in `.cairn.yml`. A checked-in
 configuration file may declare what a script _is_, but must never be able to change how it is
@@ -144,6 +145,7 @@ and process execution has no place behind it.
 | Any            | The script could not be started at all      | `1`            | stdout |
 | `json`         | The script exited `0`                       | `0`            | stdout |
 | `json`         | The script exited non-zero or was signalled | `2`            | stdout |
+| Any            | `--ignore-exit-code`, whatever happened     | `0`            | —      |
 
 In `llm` and `human` formats the child inherits all three streams and this command writes
 nothing of its own to stdout, so a hook's captured output is exactly the script's. **The exit
@@ -154,6 +156,25 @@ status is the script's, verbatim** — outside the tool's usual `0`/`1`/`2`, whi
 every outcome, including a failed script, so a consumer never has to switch streams. A script
 that never _started_ — a missing program, a permission error — exits `1` rather than `2`, so a
 typo in `exec[0]` stays distinguishable from a legitimately failing test suite.
+
+### `--ignore-exit-code`
+
+Discards the status and exits `0`. This is for an invocation written **inline in a skill
+document**, where the loader reads any non-zero status as a failure to load: a script whose exit
+code carries meaning the author wants to read as text would otherwise keep the skill from
+loading at all.
+
+It changes only this process's status. The script's stdout and stderr still pass through
+untouched, `exit.status` under `--format json` still carries the real code, and `startupError` is
+still emitted. The envelope's own `exitCode` follows the process rather than the script, so
+`--envelope` cannot contradict what the shell saw.
+
+The suppression is unconditional, and that includes the cases that are cairn's own errors rather
+than the script's — an unresolvable name, a refused boundary, a program that never started. Each
+still writes its message to stderr, but exits `0`. That is what makes the flag actually
+guarantee the skill loads; the cost is that a mistyped script name is no longer detectable from
+the status alone, so do not reach for this flag in a hook or in CI, where the whole point is the
+real code.
 
 ## Related surfaces
 

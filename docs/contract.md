@@ -107,6 +107,11 @@ under `exitCodePassthrough`, which is present only on commands that forward a st
 unresolvable name or a script that never started, and under `--format json`, `0` and `2` for a
 script that ran.
 
+That command's `--ignore-exit-code` turns the passthrough off and exits `0` for every outcome,
+which is a deliberate exception to both tables rather than a third convention: it exists so an
+invocation inline in a skill document cannot keep the skill from loading. Nothing in the payload
+changes with it — `exit.status` still carries the script's real code.
+
 ## Streams
 
 The general rule is **actionable findings to stderr, clean and informational output to

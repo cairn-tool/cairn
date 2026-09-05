@@ -56,6 +56,13 @@ codes are `0`/`1`/`2`. Report the script's real code; do not translate it.
 With `--format json` the streams are captured into the payload instead, which is what you want
 when you need to inspect output programmatically rather than show it.
 
+`--ignore-exit-code` is the one way to turn the passthrough off: it exits `0` whatever happened,
+including an unresolvable name. Reach for it only when a non-zero status would break the caller
+rather than inform it — an invocation written inline in a skill document, where the loader reads
+any non-zero status as a failure to load. Never in a hook or in CI, where the real code is the
+point. The script's own code is still there as `exit.status` under `--format json`, so report
+that rather than claiming the run succeeded.
+
 ## Resolution, briefly
 
 Every `.cairn.yml` from the working directory up to the repository root is consulted, and the
