@@ -1,0 +1,6 @@
+{
+  "name": "cairn-pdf",
+  "version": "1.0.0",
+  "description": "Read PDF documents — text, structure, and conversion to Markdown.",
+  "skills": "./skills/"
+}
