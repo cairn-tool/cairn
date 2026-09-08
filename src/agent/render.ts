@@ -13,6 +13,7 @@ import { applyConditionals } from "./conditionals.js";
 import type { ModelClass } from "./targets/index.js";
 import { HOOK_EVENT_ALIASES, nativeHookEvent, profileFor } from "./targets/index.js";
 import { applyOverlayManifest, mergeOverlay, overlayArtifacts } from "./overlays.js";
+import { configuredPath } from "./manifest.js";
 
 function json(value: unknown): Buffer {
   return Buffer.from(JSON.stringify(value, null, 2) + "\n");
@@ -65,6 +66,39 @@ export function selected(component: MarkdownComponent, target: AgentTarget): boo
   if (override.enabled === false || override.exclude === true) return false;
   if (Array.isArray(include) && !include.map(String).includes(target)) return false;
   return !(Array.isArray(exclude) && exclude.map(String).includes(target));
+}
+
+/** OS-native relative path to the POSIX spelling every artifact path uses. */
+function posix(value: string): string {
+  return value.split(path.sep).join("/");
+}
+
+/**
+ * The assets `marketplace:` claims, as paths relative to the configured assets
+ * root, for a profile that must not carry them.
+ *
+ * `marketplace.icon` and `marketplace.screenshots` are written bundle-relative,
+ * so matching them against a loaded asset means re-resolving the same root the
+ * parser read them from -- a bundle may configure one, and `assets` is only the
+ * default. Returns an empty set for the plugin profile, which is the profile a
+ * catalog is built from and so the one that has to ship them.
+ */
+function marketplaceAssetPaths(bundle: AgentBundle, profile: AgentProfile): Set<string> {
+  if (profile === "plugin" || !bundle.marketplace) return new Set();
+  const root = posix(configuredPath(bundle.manifest, "assets", "assets"))
+    .replace(/^\.\//, "")
+    .replace(/\/+$/, "");
+  const declared = [bundle.marketplace.icon, ...bundle.marketplace.screenshots].filter(
+    (reference): reference is string => typeof reference === "string",
+  );
+  const withheld = new Set<string>();
+  for (const reference of declared) {
+    const normalized = posix(reference).replace(/^\.\//, "");
+    // A reference outside the assets root names nothing this loop can emit.
+    if (root && normalized.startsWith(`${root}/`)) withheld.add(normalized.slice(root.length + 1));
+    else if (!root) withheld.add(normalized);
+  }
+  return withheld;
 }
 
 function rewritePlaceholders(
@@ -952,7 +986,19 @@ export function renderBundle(
           );
         else local.push({ path: mcpPath, content: json(JSON.parse(rewritten)), mode: 0o644 });
       }
+      // Marketplace assets are catalog metadata, not bundle content. The icon
+      // and screenshots exist so a listing can point at a file inside the
+      // bundle, and a catalog is only ever built from the plugin profile --
+      // `buildCatalogs` is called with `["plugin"]` and nothing else. Emitting
+      // them into `project` therefore put a file no host reads at the
+      // destination root, and because AB502 makes `marketplace.icon` an error
+      // when absent, *every* pair of schema 2 bundles merged into one project
+      // destination collided on `assets/icon.svg` (AB808) over exactly that
+      // unread file. Bundle assets a component actually links to still render
+      // in both profiles; only the ones `marketplace:` claims are withheld.
+      const withheld = marketplaceAssetPaths(bundle, profile);
       for (const asset of bundle.assets) {
+        if (withheld.has(posix(asset.path))) continue;
         const textual =
           /\.(?:md|txt|json|ya?ml|toml|sh|js|mjs|cjs|ts|py)$/i.test(asset.path) &&
           !asset.content.includes(0);
@@ -972,9 +1018,7 @@ export function renderBundle(
                 ),
               )
             : asset.content,
-          path: bundle.legacy
-            ? asset.path.split(path.sep).join("/")
-            : `assets/${asset.path.split(path.sep).join("/")}`,
+          path: bundle.legacy ? posix(asset.path) : `assets/${posix(asset.path)}`,
         });
       }
       // Overlays merge after every portable component so a collision is decided

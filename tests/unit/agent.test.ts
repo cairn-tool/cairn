@@ -193,6 +193,41 @@ describe("agent bundles", () => {
     expect(codes).toContain("AB123");
   });
 
+  it("withholds marketplace assets from the project profile and keeps the rest", () => {
+    // AB502 makes `marketplace.icon` mandatory, so before this every pair of
+    // schema 2 bundles merged into one project destination collided (AB808) on
+    // `assets/icon.svg` -- a file only a catalog reads, and a catalog is only
+    // built from the plugin profile. The linked asset beside it still renders.
+    const root = bundleRoot();
+    fs.mkdirSync(path.join(root, "art"), { recursive: true });
+    fs.writeFileSync(path.join(root, "art", "icon.svg"), "<svg/>\n");
+    fs.writeFileSync(path.join(root, "art", "shot.png"), "png\n");
+    fs.writeFileSync(path.join(root, "art", "cli-basics.md"), "Conventions.\n");
+    fs.writeFileSync(
+      path.join(root, "agent-bundle.yaml"),
+      [
+        "schemaVersion: '2'",
+        "name: sample",
+        "version: 1.0.0",
+        "description: Sample bundle",
+        "components:",
+        "  assets: art",
+        "marketplace:",
+        "  icon: art/icon.svg",
+        "  screenshots: [art/shot.png]",
+        "",
+      ].join("\n"),
+    );
+    const rendered = renderBundle(loadBundle(root), ["claude-code"], ["plugin", "project"]);
+    const paths = rendered.artifacts.map((artifact) => artifact.path);
+    expect(paths).toContain("claude-code/plugin/assets/icon.svg");
+    expect(paths).toContain("claude-code/plugin/assets/shot.png");
+    expect(paths).toContain("claude-code/plugin/assets/cli-basics.md");
+    expect(paths).not.toContain("claude-code/project/assets/icon.svg");
+    expect(paths).not.toContain("claude-code/project/assets/shot.png");
+    expect(paths).toContain("claude-code/project/assets/cli-basics.md");
+  });
+
   it("normalizes typed hooks and copies executable hook scripts", () => {
     const root = bundleRoot();
     fs.mkdirSync(path.join(root, "hooks"));

@@ -25,6 +25,36 @@ export const COMPONENT_KEYS = [
 ] as const;
 export type ComponentKey = (typeof COMPONENT_KEYS)[number];
 
+/**
+ * The bundle-relative root a component key is configured at, or `fallback`.
+ *
+ * Read by the parser to find the files and by the renderer to reconstruct the
+ * bundle-relative path of one it already loaded — `marketplace.icon` is written
+ * against this root, so comparing against it needs the same resolution. Both
+ * the v1 top-level spelling and schema 2's `components:` block are accepted,
+ * and a key may be a bare string or an object carrying `path`.
+ */
+export function configuredPath(
+  manifest: Record<string, unknown>,
+  key: string,
+  fallback: string,
+): string {
+  const components =
+    manifest.components && typeof manifest.components === "object"
+      ? (manifest.components as Record<string, unknown>)
+      : {};
+  const value = components[key] ?? manifest[key];
+  if (typeof value === "string") return value;
+  if (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof (value as Record<string, unknown>).path === "string"
+  )
+    return String((value as Record<string, unknown>).path);
+  return fallback;
+}
+
 export interface MarketplacePrompt {
   title: string;
   prompt: string;

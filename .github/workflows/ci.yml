@@ -145,6 +145,18 @@ jobs:
       - name: Validate, convert, doctor, test, and audit each bundle, on every target
         run: scripts/check-bundles.sh --output "$RUNNER_TEMP/conv"
 
+      # The dogfood install, into the checkout itself. scripts/README.md has
+      # always said CI does this and nothing did, which is how `assets/icon.svg`
+      # came to collide across every pair of bundles (AB808) with the whole run
+      # refusing to write anything, unnoticed. check-bundles.sh renders each
+      # bundle alone, so it cannot see a conflict that only exists between two
+      # of them at one destination; this is the only step that does. Nothing
+      # downstream reads the working tree, so the files it leaves are harmless.
+      - name: Install every bundle into this repository, then verify it
+        run: >-
+          node dist/cli.js agent install --config cairn-verify.yml &&
+          node dist/cli.js agent verify --config cairn-verify.yml
+
       # Two builds, because --strict is only meaningful for one of the three
       # targets. Codex and Cursor carry `approximate` diagnostics inherently, so
       # a --strict build covering them would be permanently red; without the flag

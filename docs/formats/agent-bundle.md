@@ -294,7 +294,13 @@ bare package name resolves to whatever is newest at install time.
 
 ## Assets
 
-Everything under the assets root is copied verbatim into every rendered profile.
+Everything under the assets root is copied verbatim into `assets/` in the rendered output,
+with one exception: the files `marketplace:` claims — `icon` and `screenshots` — render in the
+**plugin profile only**. They are catalog metadata rather than bundle content, and a catalog is
+only ever built from the plugin profile, so in `project` they would be files no host reads. Since
+a missing `marketplace.icon` is `AB502`, an error, emitting them there also made every pair of
+schema 2 bundles installed into one project destination collide on `assets/icon.svg` (`AB808`).
+An asset a component links to renders in both profiles as before.
 
 ## Component frontmatter shared by all kinds
 
