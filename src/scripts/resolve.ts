@@ -3,7 +3,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { configIn, findConfig } from "../config.js";
 import type { ConfigSelection } from "../config.js";
-import { isInside, object } from "../config-schema.js";
+import { hasNodeModules, isInside, object } from "../config-schema.js";
 import { repositoryFor } from "../git.js";
 import { emptyRegistry, parseScriptsBlock } from "./registry.js";
 import type { ScriptDefinition, ScriptRegistry } from "./registry.js";
@@ -123,10 +123,6 @@ function realpath(target: string): string {
   } catch {
     return path.resolve(target);
   }
-}
-
-function hasNodeModules(directory: string): boolean {
-  return directory.split(path.sep).includes("node_modules");
 }
 
 export function resolveBoundary(options: ScriptsWalkOptions = {}): ScriptBoundary {

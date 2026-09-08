@@ -58,7 +58,7 @@ failure to retry. The [complete command listing](docs/commands.md) has all of th
 
 ## What is in it
 
-Seven toolsets, plus `describe`, `schema`, `serve`, `completion`, and `check-update`.
+Eight toolsets, plus `describe`, `schema`, `serve`, `completion`, and `check-update`.
 
 | Toolset   | Does                                                                             | Guide                                        |
 | --------- | -------------------------------------------------------------------------------- | -------------------------------------------- |
@@ -69,9 +69,11 @@ Seven toolsets, plus `describe`, `schema`, `serve`, `completion`, and `check-upd
 | `archive` | Keep what a session produced before the logs are pruned, and get it back.        | [Archiving](docs/guide/archiving.md)         |
 | `jira`    | Convert Jira and Confluence rich text between ADF and Markdown.                  | [Jira rich text](docs/guide/jira.md)         |
 | `pdf`     | Read PDF documents: text, structure, embedded files, and conversion to Markdown. | [PDF documents](docs/guide/pdf.md)           |
+| `qa`      | Run TC-N test-case plans through Cursor and Claude Code agent backends.          | [QA harness](docs/guide/qa.md)               |
 
-Nothing calls a model, and nothing sends anything anywhere. `scripts run` is the only command
-that executes anything, and only what a tracked file in your repository names.
+`scripts run` and `qa run` are the two commands that execute anything. `scripts run` only
+runs what a tracked file in your repository names. `qa run` discovers `_plans/tc-N.yaml` and
+spawns the named agent backend with permission checks bypassed.
 
 ## Documentation
 
@@ -105,7 +107,7 @@ holding that host's catalog at the branch root:
 | Cursor      | `cursor-plugins` | `.cursor-plugin/marketplace.json` |
 
 The marketplace is named `cairn`, and the plugins in it are `cairn-markdown`, `cairn-scripts`,
-`cairn-usage`, `cairn-archive`, `cairn-agent`, and `cairn-jira`.
+`cairn-usage`, `cairn-archive`, `cairn-agent`, `cairn-jira`, `cairn-pdf`, and `cairn-qa`.
 
 ### Claude Code
 

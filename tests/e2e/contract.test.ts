@@ -51,6 +51,20 @@ function workspace(): string {
   return root;
 }
 
+function qaRuns(): { repo: string; runs: string } {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "contract-qa-"));
+  temporary.push(repo);
+  const runs = path.join(repo, "runs");
+  fs.mkdirSync(path.join(runs, "_plans"), { recursive: true });
+  fs.writeFileSync(
+    path.join(runs, "_plans", "tc-1.yaml"),
+    ["id: TC-1", "name: Ping", "agent: cursor", "parallel: true", "plan: |", "  # ping", ""].join(
+      "\n",
+    ),
+  );
+  return { repo, runs };
+}
+
 /**
  * A workspace of its own, so the stale marker block cannot perturb the counts
  * every other case reads out of the shared one.
@@ -245,6 +259,7 @@ describe("describe", () => {
       "jira",
       "jira adf",
       "pdf",
+      "qa",
     ]);
     const walked = described.commands
       .map((command) => command.id)
@@ -325,6 +340,7 @@ describe("declared output schemas match real output", () => {
       auditBaseline: string;
       verifyConfig: string;
       pdf: string;
+      qaRuns: { repo: string; runs: string };
     }) => string[];
     outcome: "success" | "findings";
     exitCode: number;
@@ -934,6 +950,36 @@ describe("declared output schemas match real output", () => {
       outcome: "success",
       exitCode: 0,
     },
+    {
+      label: "qa list",
+      schema: "qa-result",
+      args: (c) => ["qa", "list", "--repo", c.qaRuns.repo, "--runs-dir", c.qaRuns.runs, "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "qa run (dry-run)",
+      schema: "qa-result",
+      args: (c) => [
+        "qa",
+        "run",
+        "--repo",
+        c.qaRuns.repo,
+        "--runs-dir",
+        c.qaRuns.runs,
+        "--dry-run",
+        "-fj",
+      ],
+      outcome: "success",
+      exitCode: 0,
+    },
+    {
+      label: "qa summary",
+      schema: "qa-result",
+      args: (c) => ["qa", "summary", "--runs-dir", c.qaRuns.runs, "-fj"],
+      outcome: "success",
+      exitCode: 0,
+    },
   ];
 
   /**
@@ -964,6 +1010,7 @@ describe("declared output schemas match real output", () => {
       publishedBundle: publishedBundle(),
       staleToc: staleToc(),
       auditBaseline: auditBaseline(),
+      qaRuns: qaRuns(),
     };
     const args = testCase.args(context);
     const result = await run(...args);

@@ -6,7 +6,7 @@
 #   cairn agent marketplace agent-marketplace.yaml --install --register
 schemaVersion: "1"
 name: cairn
-version: 1.1.0
+version: 1.2.0
 description: Cairn's own toolsets, as plugins.
 owner:
   name: Bryan Stockus
@@ -26,3 +26,4 @@ bundles:
   - path: plugins/cairn-agent
   - path: plugins/cairn-jira
   - path: plugins/cairn-pdf
+  - path: plugins/cairn-qa

@@ -87,7 +87,7 @@ every host — but Claude Code is the only marketplace published.
 
 ## Related
 
-- [Cairn's own plugins](../plugins.md) — installing, building, and versioning all six.
+- [Cairn's own plugins](../plugins.md) — installing, building, and versioning all eight.
 - [Jira and Confluence rich text](../guide/jira.md) — why the toolset exists.
 - [Agent bundle format](../formats/agent-bundle.md) — the source format this is written in.
 - [Bundle contract tests](../formats/agent-tests.md) — the assertion format above.

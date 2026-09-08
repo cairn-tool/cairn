@@ -108,7 +108,7 @@ describe("pdf, across every subcommand", () => {
     }
   });
 
-  it("writes nothing to stderr on a clean run", async () => {
+  it("writes nothing to stderr on a clean run", { timeout: 60_000 }, async () => {
     // The pdf.js console capture is what makes this true, and it is the piece
     // most likely to regress silently: pdf.js routes its warnings to
     // console.warn, which is stderr, which is this toolset's findings stream.

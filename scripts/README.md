@@ -14,7 +14,7 @@ target profiles, not from these scripts.
 | `install-opencode.sh`    | OpenCode    | the current directory (project scope)  |
 
 ```bash
-scripts/install-claude-code.sh              # all six bundles, one marketplace, activated
+scripts/install-claude-code.sh              # all eight bundles, one marketplace, activated
 scripts/install-cursor.sh --dry-run         # plan it without writing
 scripts/install-codex.sh --into ~/src/app   # into another repository
 scripts/install-antigravity.sh cairn-usage  # one bundle
@@ -71,7 +71,7 @@ does.
 `check-bundles.sh` is the check `ci.yml` runs, and it runs locally unchanged:
 
 ```bash
-scripts/check-bundles.sh                      # 5 targets x 6 bundles x 5 commands
+scripts/check-bundles.sh                      # 5 targets x 8 bundles x 5 commands
 scripts/check-bundles.sh cursor opencode      # just those hosts
 scripts/check-bundles.sh --bundle cairn-jira  # one bundle, every host
 scripts/check-bundles.sh --strict             # require zero findings everywhere
@@ -92,7 +92,7 @@ properties of the host:
 | `AB370` | unsupported | project MCP requires TOML                    |
 
 So those four are gated on `error` diagnostics instead, and the warning count per host is
-printed as a tally — currently 120 for Antigravity, 73 for Codex, 57 each for Cursor and
+printed as a tally — currently 129 for Antigravity, 77 for Codex, 63 for Cursor, 62 for
 OpenCode, 0 for Claude Code. An invocation or I/O error (exit 1) fails on every target.
 
 `agent test`'s cases are declared for `claude-code`, so on the other four hosts they report

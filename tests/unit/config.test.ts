@@ -46,6 +46,7 @@ commands:
 `);
     const config = loadConfig({ explicitPath: configPath, disabled: false });
     expect(config.root).toBe(path.join(tmpDir, "docs"));
+    expect(config.qa).toEqual({});
     expect(config.output).toEqual({ format: "json", paths: "relative" });
     expect(config.checks.mermaid).toBe(false);
     expect(config.checks.katex).toBe(true);
@@ -156,5 +157,50 @@ commands:
       field: "heading-slug",
       assetExtension: [".pdf"],
     });
+  });
+
+  it("stores a qa block and resolves runs-dir from the config directory", () => {
+    const configPath = writeConfig(
+      [
+        "version: 1",
+        "qa:",
+        "  runs-dir: runs",
+        "  model: sonnet",
+        "  parallel: 3",
+        "  agent: /bin/agent",
+        "",
+      ].join("\n"),
+    );
+    const config = loadConfig({ explicitPath: configPath, disabled: false });
+    expect(config.qa).toEqual({
+      runsDir: path.join(tmpDir, "runs"),
+      model: "sonnet",
+      parallel: 3,
+      agent: "/bin/agent",
+    });
+  });
+
+  it("rejects an unknown qa key and a non-positive parallel", () => {
+    expect(() =>
+      loadConfig({
+        explicitPath: writeConfig("version: 1\nqa:\n  repo: .\n"),
+        disabled: false,
+      }),
+    ).toThrow("Unknown qa key");
+    expect(() =>
+      loadConfig({
+        explicitPath: writeConfig("version: 1\nqa:\n  parallel: 0\n"),
+        disabled: false,
+      }),
+    ).toThrow("qa.parallel must be an integer >= 1");
+  });
+
+  it("skips a config under node_modules only when asked", () => {
+    const nested = path.join(tmpDir, "node_modules", "pkg");
+    fs.mkdirSync(nested, { recursive: true });
+    const vendored = path.join(nested, ".cairn.yml");
+    fs.writeFileSync(vendored, "version: 1\n");
+    expect(findConfig(nested)).toBe(vendored);
+    expect(findConfig(nested, { skipNodeModules: true })).toBeUndefined();
   });
 });

@@ -5,7 +5,7 @@ Source: `plugins/cairn-pdf/`. Bundle `schemaVersion: "2"`, version `1.0.0`.
 Wraps the `pdf` toolset: extracting a PDF's text layer, reading its outline, checking its structural integrity, and converting its content to Markdown, reporting per construct what was inferred and what was lost.
 
 See [the `pdf` command listing](../commands.md#pdf-commands) for the commands this skill invokes,
-and [Cairn's own plugins](../plugins.md) for installing, building, and versioning all seven.
+and [Cairn's own plugins](../plugins.md) for installing, building, and versioning all eight.
 
 ## At a glance
 
@@ -101,7 +101,7 @@ host — but Claude Code is the only marketplace published.
 
 ## Related
 
-- [Cairn's own plugins](../plugins.md) — installing, building, and versioning all seven.
+- [Cairn's own plugins](../plugins.md) — installing, building, and versioning all eight.
 - [Reading PDF documents](../guide/pdf.md) — why the toolset exists.
 - [Agent bundle format](../formats/agent-bundle.md) — the source format this is written in.
 - [Bundle contract tests](../formats/agent-tests.md) — the assertion format above.

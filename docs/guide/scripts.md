@@ -38,10 +38,10 @@ the boundary explicitly.
 inline in a skill document, where any non-zero status is read as a failure to load; the script's
 real code is still reported as `exit.status` under `--format json`.
 
-This is the only command that executes anything. What makes that acceptable is that the command
-is declared by name in a tracked file inside the workspace rather than discovered in content
-being analyzed — the registry sits at the same trust level as a `Makefile`. See
-[`scripts run`](../commands/scripts/run.md) for the full boundary.
+This is one of two commands that execute anything (`qa run` is the other). What makes `scripts run`
+acceptable is that the command is declared by name in a tracked file inside the workspace rather
+than discovered in content being analyzed — the registry sits at the same trust level as a
+`Makefile`. See [`scripts run`](../commands/scripts/run.md) for the full boundary.
 
 ## Related
 

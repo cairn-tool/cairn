@@ -32,3 +32,11 @@ plugins/*/.install/
 /assets/
 
 work/
+
+# Cursor's local workspace state, saved plans included. Not dogfood-install output —
+# cairn-verify.yml installs claude-code and codex only — but `cairn agent install
+# --target cursor` writes .cursor/{skills,agents,rules,hooks.json,mcp.json}, and the
+# Plan editor writes .cursor/plans/. All of it is local working state: a plan is a
+# scratch artifact for whoever generated it, not something the repository carries.
+.cursor/
+.cursor-plugin/

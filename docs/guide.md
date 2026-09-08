@@ -13,6 +13,7 @@ trustworthy. Per-command flags are not here — those are in the
 | [Long-term archiving](guide/archiving.md)      | `archive` | Keeping what a session produced, and getting it back.                      |
 | [Jira and Confluence rich text](guide/jira.md) | `jira`    | Converting between ADF and Markdown, and what each direction costs.        |
 | [Reading PDF documents](guide/pdf.md)          | `pdf`     | Text layers, tagged versus untagged, and why conversion is lossy.          |
+| [QA harness](guide/qa.md)                      | `qa`      | Running `_plans/tc-N.yaml` through Cursor and Claude Code.                 |
 
 ## Related
 

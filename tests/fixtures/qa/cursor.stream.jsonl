@@ -1,0 +1,7 @@
+{"type":"system","subtype":"init","model":"cursor-grok-4.6-high","session_id":"sess-cursor"}
+{"type":"thinking","subtype":"delta","text":"working "}
+{"type":"thinking","subtype":"completed"}
+{"type":"tool_call","subtype":"started","tool_call":{"readToolCall":{"args":{"path":"package.json"}}}}
+{"type":"tool_call","subtype":"completed","tool_call":{"readToolCall":{"args":{"path":"package.json"},"result":{"ok":true}}}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"done"}]}}
+{"type":"result","usage":{"inputTokens":100,"outputTokens":20,"cacheReadTokens":50,"cacheWriteTokens":5},"session_id":"sess-cursor"}
