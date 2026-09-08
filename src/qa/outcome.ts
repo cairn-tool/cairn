@@ -26,7 +26,9 @@ export function readVerdict(folder: string): string {
   const path = join(folder, RESULTS);
   let text: string;
   try {
-    if (!statSync(path).isFile()) return DASH;
+    // No statSync guard: readFileSync already throws ENOENT for a missing file
+    // and EISDIR for a directory, both of which land here as DASH. Checking
+    // first bought nothing and opened a window between the check and the read.
     text = readFileSync(path, "utf8");
   } catch {
     return DASH;
