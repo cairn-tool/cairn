@@ -1,0 +1,164 @@
+# Contract tests: what this bundle must render. No tree digest -- one would
+# invalidate on every prose edit and on any formatter pass.
+schemaVersion: "1"
+cases:
+  - name: renders-a-complete-claude-code-plugin
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - .claude-plugin/plugin.json
+          - skills/qa-case-plan/SKILL.md
+          - skills/qa-run-record/SKILL.md
+          - skills/qa-runner/SKILL.md
+          - skills/run-qa/SKILL.md
+        absent:
+          # Rules are project-profile only, and there is no `commands` kind.
+          - .claude/rules/**
+          - commands/**
+          # No subagent: the workflow skills that needed one stayed in the
+          # bundle this was ported from. No hook, because authoring or running
+          # a case is not a lifecycle event. No MCP server -- `cairn serve mcp`
+          # is registered by cairn-markdown and no other plugin, and `qa run`
+          # executes things, which has no place behind a read-only server.
+          - agents/**
+          - hooks/**
+          - .mcp.json
+      json:
+        - path: .claude-plugin/plugin.json
+          contains:
+            name: cairn-qa
+            version: 1.0.0
+
+  # `agents` and `hooks` are implied manifest fields. Declaring `agents` fails
+  # the whole manifest; declaring `hooks` drops the plugin's hooks. Neither is
+  # caught by `claude plugin validate`.
+  - name: manifest-omits-the-implied-fields
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: .claude-plugin/plugin.json
+          excludes: ['"agents"', '"hooks"']
+          includes: ['"skills"']
+
+  # The three standards are model-invocable on purpose: "may this case run in
+  # parallel?" and "why does summary.md say ??" should reach them in ordinary
+  # conversation. `run-qa` launches agents with permission checks bypassed, so
+  # it must never activate on relevance. Note the rendered key --
+  # `invocationPolicy: explicit` becomes `disable-model-invocation: true` on
+  # Claude Code, so asserting the source spelling would pass vacuously. The
+  # exclusions are newline-anchored so prose documenting the flag cannot match.
+  - name: only-the-launching-skill-is-explicit
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/qa-case-plan/SKILL.md
+          mode: "0644"
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/qa-run-record/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/qa-runner/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/run-qa/SKILL.md
+          includes: ["disable-model-invocation: true", "argument-hint:"]
+
+  # The facts a caller gets wrong without reading the skill: the command path is
+  # three tokens, `run` is not optional, a queue mixes backends, exit 2 means a
+  # case failed rather than the tool did, and the agents run with permission
+  # checks bypassed -- which is what makes this different from `scripts run`.
+  - name: the-runner-pins-the-load-bearing-facts
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/qa-runner/SKILL.md
+          includes:
+            - "cairn qa run"
+            - "cairn qa list"
+            - "cairn qa summary"
+            - "permission checks bypassed"
+            - "claude-code"
+            - "_logs/"
+
+  # A case is pending exactly while its run folder does not exist. Creating one
+  # by hand removes the case from the queue while leaving nothing that ran -- a
+  # failure with no error and no output. Stated at every site that could do it.
+  - name: the-pending-case-invariant-is-stated-wherever-a-folder-could-be-created
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/qa-case-plan/SKILL.md
+          includes: ["Never create a `tc-<N>/` run folder"]
+        - path: skills/qa-run-record/SKILL.md
+          includes: ["never create a `tc-<N>/` folder by hand"]
+        - path: skills/qa-runner/SKILL.md
+          includes: ["Never create a `tc-N/` folder by hand"]
+
+  # The rule the whole standard exists to enforce: an agent asked to check a
+  # value will recompute it, agree with itself, and produce an immaculate record
+  # that proves nothing. It is restated at every site that writes or judges an
+  # expectation, and losing it anywhere is a silent regression into
+  # self-confirming test records.
+  - name: the-quoted-expectation-rule-survives-wherever-an-expectation-is-written
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/qa-case-plan/SKILL.md
+          includes:
+            - "The expected values come from the source document"
+            - "Never edit an expectation to match an observation"
+        - path: skills/qa-run-record/SKILL.md
+          includes: ["Never edit an expectation to match an observation"]
+        - path: skills/qa-run-record/reference/run-record.md
+          includes: ["The expected values come from the source document"]
+
+  # These patterns are copied from src/qa/tracker.ts. They are the reason the
+  # record headings are a contract rather than a style: a wrong one makes a real
+  # verdict unreadable and the case tallies as `??`. Paraphrasing any of them
+  # would leave the standard describing a format the tracker does not parse.
+  - name: the-trackers-parse-rules-stay-exact
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/qa-run-record/reference/tracker-contract.md
+          includes:
+            - "^## (\\d+)\\. "
+            - "^\\| \\d+ \\|"
+            - "## Outcome"
+            - "input-<name>"
+
+  - name: every-reference-ships-with-the-skill-that-cites-it
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      paths:
+        # Without these the standards skills point at specifications that never
+        # shipped, and the runner skill loses its flag reference.
+        present:
+          - skills/qa-case-plan/reference/case-file.md
+          - skills/qa-case-plan/reference/plan.md
+          - skills/qa-run-record/reference/run-record.md
+          - skills/qa-run-record/reference/tracker-contract.md
+          - skills/qa-runner/reference/running.md
+
+  # Cursor namespaces every skill with the bundle name. The references have to
+  # travel into the namespaced directory too.
+  - name: the-cursor-plugin-namespaces-every-skill-and-keeps-the-references
+    targets: [cursor]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - .cursor-plugin/plugin.json
+          - skills/cairn-qa-qa-case-plan/SKILL.md
+          - skills/cairn-qa-qa-case-plan/reference/plan.md
+          - skills/cairn-qa-qa-run-record/SKILL.md
+          - skills/cairn-qa-qa-run-record/reference/tracker-contract.md
+          - skills/cairn-qa-qa-runner/SKILL.md
+          - skills/cairn-qa-run-qa/SKILL.md

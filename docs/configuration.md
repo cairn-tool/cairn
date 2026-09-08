@@ -89,6 +89,8 @@ scripts: {} # named scripts for the scripts toolset; schema documented below
 
 agent: {} # what `agent install` writes and `agent verify` checks; schema documented below
 
+qa: {} # defaults for the qa toolset; schema documented below
+
 commands: {} # command-specific defaults; schema documented below
 ```
 
@@ -257,6 +259,29 @@ file and must stay inside it. A checked-in document describes its own repository
 name an arbitrary path would make cloning a repository a way to have arbitrary directories
 read.
 
+## QA
+
+`qa` is a top-level key, not a `commands.` entry. Unlike `scripts:` and `agent:`, the block is
+**stored** on the resolved config because `qa` commands read it. Discovery skips `node_modules`
+so a vendored `.cairn.yml` cannot win. `--repo` is not confined to `config.root`.
+
+```yaml
+qa:
+  runs-dir: work/tc-runs
+  model: sonnet
+  parallel: 4
+  agent: /usr/local/bin/cursor-agent
+```
+
+| Key        | Type    | Description                                                                                                      |
+| ---------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `runs-dir` | String  | Directory containing `_plans/` and per-case output folders. Resolved against the configuration file's directory. |
+| `model`    | String  | Default `--model` when the flag is omitted. A bare slug applies to every backend.                                |
+| `parallel` | Integer | Default `--parallel`. Must be `>= 1`.                                                                            |
+| `agent`    | String  | Default `--agent`: an explicit binary used for every backend.                                                    |
+
+Gitignore `<runs-dir>/_logs/`. Cairn does not write a `.gitignore`.
+
 ## Frontmatter rule value types
 
 `frontmatter.rules.types` accepts these exact values:
@@ -277,13 +302,14 @@ Schema validation and shortcut rules are cumulative when both are configured.
 ## Command-default schema
 
 `commands` is a mapping keyed by an exact `md` command name. Agent commands, `scripts`
-commands, and `check-update` cannot be configured here. Unknown command names and unknown
+commands, `qa` commands, and `check-update` cannot be configured here. Unknown command names and unknown
 option keys are errors. Positional arguments cannot be configured.
 
 `scripts` commands are excluded deliberately rather than by omission: a checked-in
 configuration file may declare what a script _is_, under `scripts:`, but must never be able to
 change how one is invoked. This is the same rule that keeps `write` out of the configurable set
-for `md fix` and `md check-snippets`.
+for `md fix` and `md check-snippets`. `qa` is the same idea with a stored block: `qa:` may set
+`runs-dir`, `model`, `parallel`, and `agent`, never how a case is spawned.
 
 All command mappings may use the shared `format` and `paths` keys. `stdinName` is accepted
 only by commands that consume a single file or stdin, as listed below.
@@ -438,6 +464,9 @@ agent:
         bundle: plugins/cairn-markdown
         target: codex
         destination: .
+qa:
+  runs-dir: work/tc-runs
+  parallel: 4
 commands:
   lint-dir:
     summary: true

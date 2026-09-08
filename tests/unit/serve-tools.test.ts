@@ -109,11 +109,12 @@ describe("tool manifest", () => {
   });
 
   // SERVE_TOOLS is a hand-written table with nothing stopping an addition, and
-  // `scripts run` executes arbitrary commands. Exposing it over MCP would hand a
-  // host process execution through a server documented as read-only.
-  it("exposes no tool that runs a script", () => {
+  // `scripts run` / `qa run` execute arbitrary commands. Exposing either over
+  // MCP would hand a host process execution through a server documented as
+  // read-only.
+  it("exposes no tool that runs a script or a qa case", () => {
     const executing = SERVE_TOOLS.filter((tool) =>
-      /scripts?[_-]?run|run[_-]?scripts?/.test(tool.name),
+      /scripts?[_-]?run|run[_-]?scripts?|qa[_-]?run|run[_-]?qa/.test(tool.name),
     );
     expect(executing.map((tool) => tool.name)).toEqual([]);
   });

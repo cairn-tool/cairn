@@ -25,12 +25,14 @@ src/archive/*.ts       artifact sets, tar reading, segments, and the archive ind
 src/usage/providers/*.ts  per-LLM log-source profiles
 src/jira/adf/*.ts      ADF content model, both converters, and the AD diagnostic family
 src/pdf/*.ts           the pdfjs boundary, layout inference, and the AP diagnostic family
+src/qa/*.ts            the QA harness: cases, scheduler, TUI, reports, and logs
+src/qa/agents/*.ts     per-backend argv, stream-json normalize, and default models
 src/mapping-quality.ts quality-to-severity, shared by the AB, AD, and AP families
 src/config-schema.ts   validators shared by the config loader and the script registry
 tests/{unit,integration,e2e}
 ```
 
-There are seven toolsets, `md`, `agent`, `scripts`, `usage`, `archive`, `jira`, and `pdf`, plus the top-level
+There are eight toolsets, `md`, `agent`, `scripts`, `usage`, `archive`, `jira`, `pdf`, and `qa`, plus the top-level
 `check-update`, `describe`, and `schema`. Adding a subcommand means: a `src/commands/<name>.ts` exporting an action, a
 `command(...)` registration in `src/cli.ts` whose action loads the module with `await import()`, a
 `src/contract/registry.ts` entry, a
@@ -39,7 +41,7 @@ There are seven toolsets, `md`, `agent`, `scripts`, `usage`, `archive`, `jira`, 
 `docs/formats/diagnostic-codes.md` for any new `AB###`, `AD###`, or `AP###`, and e2e coverage. The README is a
 README: it links into `docs/` and does not list commands. For an `agent` subcommand, also widen
 `AgentResult["command"]` in `src/agent/types.ts` and the `command` enum plus `commands` list
-in `src/contract/schemas/agent.ts`. A new toolset group also needs adding to **both** `groups` sets
+in `src/contract/schemas/agent.ts`. A new toolset group also needs adding to the `groups` set
 in `tests/e2e/contract.test.ts`, which otherwise reports the group itself as `undeclared`. A
 nested group such as `jira adf` is two entries, not one: the walk emits a node per level.
 
@@ -51,8 +53,8 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   `-fh`/`-fj` shorthands expanded in `src/cli.ts` before commander parses argv.
 - Exit codes: `0` success, `1` usage error, `2` actionable issues found.
 - `md rename-heading`, `md rename-file`, `md toc --write`, `md fix --write`,
-  `md check-snippets --write`, `agent convert`, and `jira adf to-markdown`/`jira adf from-markdown`
-  with `--output` are the commands that write to files.
+  `md check-snippets --write`, `agent convert`, `jira adf to-markdown`/`jira adf from-markdown`
+  with `--output`, `qa run`, and `qa summary` are the commands that write to files.
 - Every `--format json` payload goes through `jsonPayload` in `src/result.ts`, which is what
   makes `--envelope` reach all of them. Writing `JSON.stringify` inline at a new site silently
   opts that command out.
@@ -288,9 +290,9 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   writes, so there is no `--update` to regenerate them with; a mismatch reports the actual value
   in the finding and in `test.cases[].failures[].actual`. The test-file `schemaVersion` is a
   fourth hand-owned version — see `docs/contract.md`; semantic-release does not touch it.
-- **`scripts run` is the only command that executes anything, and the guards are the feature.**
-  What makes it acceptable is that the command is declared by name in a tracked file rather than
-  discovered in analyzed content — a resolver, not an evaluator. The load-bearing rules:
+- **`scripts run` and `qa run` are the two commands that execute anything.** `scripts run` is a
+  resolver, not an evaluator: the command is declared by name in a tracked file rather than
+  discovered in analyzed content. The load-bearing rules:
   resolution stops at the git root (or a deeper `--root`) and refuses entirely outside a
   repository, `node_modules` is skipped so a vendored `.cairn.yml` cannot win by being
   nearest, the resolved `cwd` is containment-checked as well as the registry file, and `run:`
@@ -299,6 +301,16 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   `spawn(cmd, { shell: true })`, gives that last guarantee away. `scripts` commands are absent
   from `COMMAND_OPTIONS` on purpose: config may declare what a script is, never how it is run.
   `src/serve/tools.ts` must never expose it; `tests/unit/serve-tools.test.ts` has a tripwire.
+- **`qa run` discovers `_plans/tc-N.yaml`, inlines each plan into a prompt, and spawns the case's
+  agent backend with permission checks bypassed.** It does not resolve a named registry entry.
+  Cursor is spawned with `--force --trust`; Claude Code with `--verbose --dangerously-skip-permissions`
+  (stream-json requires `--verbose`). PATH lookup is lazy per profile so a cursor-only queue
+  does not fail because `claude` is absent. `--agent` overrides every backend (the fake-agent
+  test hook). `--runs-dir` must resolve under `--repo` and is not confined to `config.root`.
+  POSIX-only: `process.kill(-pid)` has no process-group meaning on Windows. Logs land under
+  `<runs-dir>/_logs/`. The `qa:` config block is stored (unlike `scripts:`). `qa` is absent
+  from `COMMAND_OPTIONS`; `src/serve/tools.ts` must never expose `qa run`, and the same
+  tripwire matches it. A change that touches `src/qa/` without touching this file is incomplete.
 - **`run:` uses `/bin/sh`, not `$SHELL`.** A login shell may be fish or csh, neither of which
   binds positional parameters for `-c`, so honoring `$SHELL` would make a committed registry
   behave differently per machine — the exact problem the toolset exists to solve. A body needing

@@ -146,6 +146,20 @@ describe("--envelope", () => {
     { label: "usage commands", args: () => ["usage", "commands", ...usageLogs] },
     { label: "usage providers", args: () => ["usage", "providers", ...usageFixture] },
     { label: "usage index", args: () => ["usage", "index", ...usageFixture] },
+    {
+      label: "qa list",
+      args: () => {
+        const repo = fs.mkdtempSync(path.join(os.tmpdir(), "envelope-qa-"));
+        temporary.push(repo);
+        const runs = path.join(repo, "runs");
+        fs.mkdirSync(path.join(runs, "_plans"), { recursive: true });
+        fs.writeFileSync(
+          path.join(runs, "_plans", "tc-1.yaml"),
+          "id: TC-1\nname: Ping\nagent: cursor\nparallel: true\nplan: |\n  # ping\n",
+        );
+        return ["qa", "list", "--repo", repo, "--runs-dir", runs];
+      },
+    },
   ];
 
   it.each(cases)("$label wraps without changing the payload", async (testCase) => {

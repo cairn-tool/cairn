@@ -1,6 +1,6 @@
 # Complete command listing
 
-`cairn` contains seven toolsets plus update and contract commands. Angle brackets in usage
+`cairn` contains eight toolsets plus update and contract commands. Angle brackets in usage
 signatures are required arguments; square brackets are optional arguments.
 
 Each command page lives under `commands/<toolset>/`; the top-level commands are directly under
@@ -11,22 +11,23 @@ Each command page lives under `commands/<toolset>/`; the top-level commands are 
 
 ## Global interface
 
-| Command                                              | Description                                                            |
-| ---------------------------------------------------- | ---------------------------------------------------------------------- |
-| `cairn --help`                                       | Show top-level help.                                                   |
-| `cairn --version`                                    | Print the installed version.                                           |
-| `cairn check-update`                                 | Query the configured npm registry for the latest published version.    |
-| `cairn describe`                                     | Describe the CLI contract: commands, options, exit codes, and schemas. |
-| `cairn schema`                                       | Print a published output schema, or list the available schemas.        |
-| [`cairn completion <shell>`](commands/completion.md) | Print a shell completion script for bash, zsh, fish, or powershell.    |
-| [`cairn serve <protocol>`](commands/serve.md)        | Serve the workspace engine over a machine protocol, read-only.         |
-| `cairn agent`                                        | Convert, validate, and inspect portable agent bundles.                 |
-| `cairn md`                                           | Validate, query, analyze, and modify Markdown workspaces.              |
-| `cairn scripts`                                      | Resolve and run named scripts declared in `.cairn.yml`.                |
-| `cairn usage`                                        | Report on Claude Code usage from its own session logs.                 |
-| `cairn archive`                                      | Archive plans, artifacts, and logs into long-term storage.             |
-| `cairn jira`                                         | Work with Jira and Confluence content formats.                         |
-| `cairn pdf`                                          | Read PDF documents: text, structure, embedded files, and Markdown.     |
+| Command                                              | Description                                                             |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| `cairn --help`                                       | Show top-level help.                                                    |
+| `cairn --version`                                    | Print the installed version.                                            |
+| `cairn check-update`                                 | Query the configured npm registry for the latest published version.     |
+| `cairn describe`                                     | Describe the CLI contract: commands, options, exit codes, and schemas.  |
+| `cairn schema`                                       | Print a published output schema, or list the available schemas.         |
+| [`cairn completion <shell>`](commands/completion.md) | Print a shell completion script for bash, zsh, fish, or powershell.     |
+| [`cairn serve <protocol>`](commands/serve.md)        | Serve the workspace engine over a machine protocol, read-only.          |
+| `cairn agent`                                        | Convert, validate, and inspect portable agent bundles.                  |
+| `cairn md`                                           | Validate, query, analyze, and modify Markdown workspaces.               |
+| `cairn scripts`                                      | Resolve and run named scripts declared in `.cairn.yml`.                 |
+| `cairn usage`                                        | Report on Claude Code usage from its own session logs.                  |
+| `cairn archive`                                      | Archive plans, artifacts, and logs into long-term storage.              |
+| `cairn jira`                                         | Work with Jira and Confluence content formats.                          |
+| `cairn pdf`                                          | Read PDF documents: text, structure, embedded files, and Markdown.      |
+| `cairn qa`                                           | Run TC-N test-case plans through Cursor and Claude Code agent backends. |
 
 ## Script commands
 
@@ -134,11 +135,24 @@ blocks only under `--strict`, so exit 0 does not mean lossless. Start with `pdf 
 | [`pdf attachments`](commands/pdf/attachments.md) | List the files embedded in a document, and write them out.         |
 | [`pdf forms`](commands/pdf/forms.md)             | List AcroForm fields and their current values.                     |
 
+## QA commands
+
+Discovers `_plans/tc-N.yaml`, inlines each plan into a prompt, and spawns the case's agent backend
+with permission checks bypassed. POSIX-only. A queue may mix `cursor` and `claude-code` cases.
+See [shared QA behavior](commands/qa/common.md).
+The narrative version is in [the QA guide](guide/qa.md).
+
+| Command                                | Description                                     |
+| -------------------------------------- | ----------------------------------------------- |
+| [`qa run`](commands/qa/run.md)         | Run the queue of pending test cases.            |
+| [`qa list`](commands/qa/list.md)       | Catalog every case with status pending or done. |
+| [`qa summary`](commands/qa/summary.md) | Regenerate `summary.md` from the files on disk. |
+
 ## Agent commands
 
 The `agent` toolset compiles one host-neutral bundle into the artifacts each assistant reads.
 The narrative version is in [the agent bundles guide](guide/agent-bundles.md), and
-[Cairn's own plugins](plugins.md) are five worked examples.
+[Cairn's own plugins](plugins.md) are eight worked examples.
 
 | Command                                                     | Description                                                                     |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------- |

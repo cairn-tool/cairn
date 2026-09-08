@@ -470,7 +470,7 @@ function storeKey(file: string): string {
     const stats = fs.statSync(file);
     // The path is part of the key, not just the stat: two stores can share a
     // size and an mtime, and the memo holds only one entry.
-    return `${file} ${stats.mtimeMs} ${stats.size}`;
+    return `${file}\u0000${stats.mtimeMs}\u0000${stats.size}`;
   } catch {
     return "";
   }

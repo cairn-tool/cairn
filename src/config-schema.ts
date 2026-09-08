@@ -46,3 +46,8 @@ export function isInside(root: string, target: string): boolean {
   const relative = path.relative(root, target);
   return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== "..");
 }
+
+/** True when `directory` is inside a node_modules tree, so a vendored config cannot win. */
+export function hasNodeModules(directory: string): boolean {
+  return directory.split(path.sep).includes("node_modules");
+}

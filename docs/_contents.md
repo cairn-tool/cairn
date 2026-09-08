@@ -16,6 +16,7 @@ This directory is the reference documentation for `cairn`.
 - [Shared archive command behavior](commands/archive/common.md)
 - [Shared `jira adf` command behavior](commands/jira/adf/common.md)
 - [Shared PDF command behavior](commands/pdf/common.md)
+- [Shared QA command behavior](commands/qa/common.md)
 
 ## Project
 
@@ -24,6 +25,7 @@ This directory is the reference documentation for `cairn`.
 - [Update checks](update-checks.md)
 - [Development](development.md)
 - [Releasing](releasing.md)
+- [Future enhancements](future-enhancements.md)
 
 ## Guides
 
@@ -36,6 +38,7 @@ Why each toolset exists, and the facts that make its answers trustworthy.
 - [Long-term archiving](guide/archiving.md)
 - [Jira and Confluence rich text](guide/jira.md)
 - [Reading PDF documents](guide/pdf.md)
+- [QA harness](guide/qa.md)
 
 ## File formats
 
@@ -49,6 +52,7 @@ change without breaking a consumer.
 - [Conversion output](formats/conversion-output.md)
 - [Package](formats/package.md)
 - [Install manifest](formats/install-manifest.md)
+- [QA case file](formats/qa-case-file.md)
 - [Usage store](formats/usage-store.md)
 - [Archive store](formats/archive-store.md)
 - [Deterministic tar](formats/deterministic-tar.md)
@@ -116,6 +120,7 @@ subagent, hook, MCP server, asset, and contract test.
 - [cairn-agent](plugins/cairn-agent.md)
 - [cairn-jira](plugins/cairn-jira.md)
 - [cairn-pdf](plugins/cairn-pdf.md)
+- [cairn-qa](plugins/cairn-qa.md)
 
 ## Contract commands
 
@@ -192,6 +197,13 @@ subagent, hook, MCP server, asset, and contract test.
 - [`pdf to-markdown`](commands/pdf/to-markdown.md)
 - [`pdf attachments`](commands/pdf/attachments.md)
 - [`pdf forms`](commands/pdf/forms.md)
+
+## QA commands
+
+- [Common behavior](commands/qa/common.md)
+- [`qa run`](commands/qa/run.md)
+- [`qa list`](commands/qa/list.md)
+- [`qa summary`](commands/qa/summary.md)
 
 ## Other top-level commands
 

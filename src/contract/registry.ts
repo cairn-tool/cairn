@@ -133,6 +133,32 @@ function pdfCommand(name: string, extra: Partial<CommandContract> = {}): Command
   };
 }
 
+/**
+ * A `qa` subcommand.
+ *
+ * POSIX-only: `process.kill(-pid)` has no process-group meaning on Windows, and
+ * the TUI's raw mode plus alt-screen is unverified there. `qa run` is the
+ * second executor in the tool (after `scripts run`); it discovers `_plans/`
+ * rather than resolving a named registry entry, inlines each plan into a
+ * prompt, and bypasses the backend's permission checks.
+ */
+function qaCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+  return {
+    id: `qa ${name}`,
+    formats: BASE_FORMATS,
+    defaultFormat: "llm",
+    formatConfigurable: false,
+    outputSchema: "qa-result",
+    exitCodes: [OK("Completed"), USAGE],
+    stream: { success: "stdout" },
+    writes: false,
+    stability: "experimental",
+    notes:
+      "POSIX-only. Process-group signalling, flock, and the TUI's raw mode have no Windows equivalent in this build. Project configuration may set `qa.runs-dir`, `qa.model`, `qa.parallel`, and `qa.agent`; how a case is spawned is not configurable. `--repo` is not confined to `config.root`.",
+    ...extra,
+  };
+}
+
 function jiraAdfCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
   return {
     id: `jira adf ${name}`,
@@ -292,6 +318,29 @@ const CONTRACTS: CommandContract[] = [
     notes:
       PDF_NOTE +
       " Reports AcroForm field names, types, and current values. It reads and never writes: filling a form is manipulation, which this toolset does not do, so there is no flag that sets a value. Field values are frequently the most useful thing in a filled form and a nuisance to reach any other way. One field can render as several widgets across pages, so the widgets are folded into one row carrying a count, and a field's page is reported 1-based to match every other page number in this toolset. A field marked as a password field is reported with its value and the flag: the same bytes are already reachable through pdf text, so withholding them would be theatre rather than protection. An XFA-only document reports type:xfa with no fields and AP311, never an empty field list, because its values live in an XML packet this does not read and silence there would be indistinguishable from a document with no form. --strict blocks on a form this cannot fully read. Has no --pages or --output.",
+  }),
+
+  // QA
+  qaCommand("run", {
+    writes: true,
+    exitCodes: [
+      OK("Every case passed, the queue was empty, or --dry-run listed the queue"),
+      USAGE,
+      FINDINGS("At least one case failed, timed out, or produced no output"),
+    ],
+    stream: { success: "stdout", findings: "stdout" },
+    notes:
+      "POSIX-only. Discovers `_plans/tc-N.yaml` under --runs-dir, inlines each plan into a prompt, and spawns the case's agent backend with permission checks bypassed. A queue may mix cursor and claude-code cases. Logs land under `<runs-dir>/_logs/<run-id>/`, which should be gitignored; cairn does not write a .gitignore. --format json implies --no-tui. An empty eligible queue exits 0. Project configuration may set `qa.runs-dir`, `qa.model`, `qa.parallel`, and `qa.agent`; how a case is spawned is not configurable. `--repo` is not confined to `config.root`.",
+  }),
+  qaCommand("summary", {
+    writes: true,
+    exitCodes: [OK("summary.md written"), USAGE],
+    notes:
+      "POSIX-only. Regenerates `<runs-dir>/summary.md` from the files on disk without launching an agent. Project configuration may set `qa.runs-dir`. `--repo` is not confined to `config.root`.",
+  }),
+  qaCommand("list", {
+    notes:
+      "POSIX-only. Catalogs every `_plans/tc-N.yaml` with status pending or done and launches nothing. Project configuration may set `qa.runs-dir`. `--repo` is not confined to `config.root`.",
   }),
 
   // Scripts

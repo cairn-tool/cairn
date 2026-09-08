@@ -72,7 +72,7 @@ contacts the network and never publishes.
 
 `agent marketplace` builds a **collection**: several bundles rendered together into one
 aggregated catalog per target, from an `agent-marketplace.yaml` naming which bundles, which
-targets, and which bundles to skip for which target. Packaging five bundles individually
+targets, and which bundles to skip for which target. Packaging eight bundles individually
 produces five marketplaces a user has to add one at a time; this produces one. Entry `source`
 paths are relative, so the tree names no owner, repo, or branch and works however it was
 fetched.
@@ -182,4 +182,4 @@ configuration rather than flags, so CI runs it with no arguments.
 - [Target profile](../formats/target-profile.md) — how target behaviour is described as data.
 - [Conversion output](../formats/conversion-output.md) — what `agent convert` writes.
 - [Providers](../providers.md) — each host's own support tables.
-- [Cairn's own plugins](../plugins.md) — five bundles built with exactly this.
+- [Cairn's own plugins](../plugins.md) — eight bundles built with exactly this.

@@ -2,7 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { parse as parseYaml } from "yaml";
-import { isInside, knownKeys, object, optionalString, strings } from "./config-schema.js";
+import {
+  hasNodeModules,
+  isInside,
+  knownKeys,
+  object,
+  optionalString,
+  strings,
+} from "./config-schema.js";
 import { parseScriptsBlock } from "./scripts/registry.js";
 import { parseVerifyBlock } from "./agent/verify/config.js";
 import { parseInstallBlock } from "./agent/install/config.js";
@@ -53,6 +60,12 @@ export interface ResolvedConfig {
     reportRedirects: boolean;
   };
   commands: Record<string, Record<string, unknown>>;
+  qa: {
+    runsDir?: string;
+    model?: string;
+    parallel?: number;
+    agent?: string;
+  };
 }
 
 const COMMAND_OPTIONS: Record<string, Set<string>> = {
@@ -216,6 +229,7 @@ const ROOT_KEYS = new Set([
   "assets",
   "scripts",
   "agent",
+  "qa",
 ]);
 
 const AUTOMATION_FORMAT_COMMANDS = new Set([
@@ -230,6 +244,27 @@ function boolean(value: unknown, name: string, fallback: boolean): boolean {
   if (value === undefined) return fallback;
   if (typeof value !== "boolean") throw new Error(`${name} must be a boolean`);
   return value;
+}
+
+function parseQaBlock(raw: unknown, base: string): ResolvedConfig["qa"] {
+  const qa = object(raw, "qa");
+  knownKeys(qa, new Set(["runs-dir", "model", "parallel", "agent"]), "qa");
+  const runsDir = optionalString(qa["runs-dir"], "qa.runs-dir");
+  const model = optionalString(qa.model, "qa.model");
+  const agent = optionalString(qa.agent, "qa.agent");
+  let parallel: number | undefined;
+  if (qa.parallel !== undefined) {
+    if (typeof qa.parallel !== "number" || !Number.isInteger(qa.parallel) || qa.parallel < 1) {
+      throw new Error("qa.parallel must be an integer >= 1");
+    }
+    parallel = qa.parallel;
+  }
+  return {
+    ...(runsDir ? { runsDir: path.resolve(base, runsDir) } : {}),
+    ...(model ? { model } : {}),
+    ...(parallel !== undefined ? { parallel } : {}),
+    ...(agent ? { agent } : {}),
+  };
 }
 
 function resolveFile(base: string, value: string | undefined): string | undefined {
@@ -441,11 +476,16 @@ export function configIn(directory: string): string | undefined {
   return undefined;
 }
 
-export function findConfig(start: string = process.cwd()): string | undefined {
+export function findConfig(
+  start: string = process.cwd(),
+  options: { skipNodeModules?: boolean } = {},
+): string | undefined {
   let current = path.resolve(start);
   while (true) {
-    const candidate = configIn(current);
-    if (candidate) return candidate;
+    if (!(options.skipNodeModules && hasNodeModules(current))) {
+      const candidate = configIn(current);
+      if (candidate) return candidate;
+    }
     const parent = path.dirname(current);
     if (parent === current) return undefined;
     current = parent;
@@ -455,8 +495,11 @@ export function findConfig(start: string = process.cwd()): string | undefined {
 export function loadConfig(
   selection: ConfigSelection = { disabled: false },
   cwd: string = process.cwd(),
+  discovery: { skipNodeModules?: boolean } = {},
 ): ResolvedConfig {
-  const configPath = selection.disabled ? undefined : (selection.explicitPath ?? findConfig(cwd));
+  const configPath = selection.disabled
+    ? undefined
+    : (selection.explicitPath ?? findConfig(cwd, discovery));
   if (selection.explicitPath && !fs.existsSync(selection.explicitPath)) {
     throw new Error(`Configuration file not found: ${selection.explicitPath}`);
   }
@@ -483,6 +526,10 @@ export function loadConfig(
     parseVerifyBlock(rootObject.agent, { file: configPath, directory: base });
     parseInstallBlock(rootObject.agent, { file: configPath, directory: base });
   }
+
+  // Unlike `scripts:` and `agent:`, the `qa:` block is stored: qa commands read
+  // it. A typo still fails every command that loads configuration.
+  const qa = parseQaBlock(rootObject.qa, base);
 
   const files = object(rootObject.files, "files");
   knownKeys(files, new Set(["include", "exclude", "entryPoints"]), "files");
@@ -722,6 +769,7 @@ export function loadConfig(
       reportRedirects: boolean(urls.reportRedirects, "urls.reportRedirects", false),
     },
     commands,
+    qa,
   };
 }
 

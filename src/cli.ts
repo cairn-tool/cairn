@@ -17,6 +17,9 @@ import type { ScriptRunOptions, ScriptsOptions } from "./commands/scripts.js";
 import type { ArchiveOptions } from "./commands/archive.js";
 import type { AdfOptions } from "./commands/jira.js";
 import type { PdfOptions } from "./commands/pdf.js";
+import type { QaRunOptions } from "./commands/qa-run.js";
+import type { QaSummaryOptions } from "./commands/qa-summary.js";
+import type { QaListOptions } from "./commands/qa-list.js";
 import type { UsageOptions } from "./commands/usage.js";
 import type { AgentDoctorOptions } from "./commands/agent-doctor.js";
 import type { AgentImportOptions } from "./commands/agent-import.js";
@@ -49,13 +52,14 @@ const argv = process.argv.map((arg, index) => {
 // workspace's own checks and exclusions, so a tool call and the equivalent `md`
 // command agree. Discovery starts at --root rather than the cwd, because the host
 // spawns the server from an arbitrary directory.
-const servesWorkspace = argv[2] === "md" || argv[2] === "serve";
+const servesWorkspace = argv[2] === "md" || argv[2] === "serve" || argv[2] === "qa";
 let projectConfig: ResolvedConfig;
 try {
   projectConfig = servesWorkspace
     ? loadConfig(
         selectConfig(argv.slice(2)),
         argv[2] === "serve" ? selectRoot(argv.slice(2)) : process.cwd(),
+        { skipNodeModules: argv[2] === "qa" },
       )
     : loadConfig({ disabled: true });
   initializeRuntime(projectConfig);
@@ -790,6 +794,69 @@ pdfCommon(pdf.command("forms"))
   .action(async (file: string, opts: PdfOptions) => {
     const { pdfActionBoundary, pdfFormsAction } = await import("./commands/pdf.js");
     return pdfActionBoundary("forms", file, opts, () => pdfFormsAction(file, opts));
+  });
+
+const qa = program
+  .command("qa")
+  .description("Run TC-N test-case plans through Cursor and Claude Code agent backends")
+  .addHelpText(
+    "after",
+    "\nDiscovers `_plans/tc-N.yaml` under --runs-dir, inlines each plan into a prompt, and\nspawns the case's agent backend with permission checks bypassed. A queue may mix\ncursor and claude-code cases in one execution. POSIX-only: process-group signalling\nhas no meaning on Windows.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+  );
+
+const qaCommon = (command: Command): Command =>
+  command
+    .option("--format <fmt>", "Output format: llm, human, json", "llm")
+    .option("--envelope", "Wrap --format json output in the versioned result envelope")
+    .option("--config <file>", "Use a specific .cairn.yml configuration file")
+    .option("--no-config", "Disable project configuration discovery");
+
+qaCommon(qa.command("run"))
+  .description("Run the queue of pending test cases")
+  .requiredOption("--repo <path>", "Repository root: agent cwd and Cursor --workspace")
+  .option("--runs-dir <path>", "Directory containing _plans/ and per-case output folders")
+  .option("--parallel <n>", "Most agents at once (default 8)")
+  .option(
+    "--model <slug>",
+    "Model for cases with no model: key; repeat as --model agent=slug",
+    collect,
+  )
+  .option("--only <names>", "Comma-separated case names, e.g. tc-27,tc-28")
+  .option("--limit <n>", "Run at most N eligible cases")
+  .option("--dry-run", "Print the queue and the commands; launch nothing")
+  .option("--show-prompts", "With --dry-run, print each prompt in full instead of eliding the plan")
+  .option("--no-tui", "Line-oriented log instead of the pane view")
+  .option("--timeout-min <n>", "Kill an agent after N minutes (default 60)")
+  .option("--agent <path>", "Explicit agent binary for every backend (default: look on PATH)")
+  .addHelpText(
+    "after",
+    "\nA case is pending while <runs-dir>/tc-N/ does not exist. The agent writes to\ntc-N-temp/; the harness renames that to tc-N/ only on success. Agent transcripts\nland in <runs-dir>/_logs/<run-id>/ — gitignore that directory.\n\n--format json implies --no-tui. The TUI draws only when stdout is a TTY, the\nformat is llm or human, and CI is unset.\n\nExit codes:\n  0  Every started case reached ok, or the eligible queue was empty\n  1  Invocation or I/O error\n  2  One or more started cases failed",
+  )
+  .action(async (opts: QaRunOptions) => {
+    const { qaRunAction } = await import("./commands/qa-run.js");
+    return qaRunAction(opts);
+  });
+
+qaCommon(qa.command("summary"))
+  .description("Regenerate <runs-dir>/summary.md from the files on disk; launches no agents")
+  .option("--runs-dir <path>", "Directory containing _plans/ and per-case output folders")
+  .addHelpText("after", "\nExit codes:\n  0  summary.md written\n  1  Invocation or I/O error")
+  .action(async (opts: QaSummaryOptions) => {
+    const { qaSummaryAction } = await import("./commands/qa-summary.js");
+    return qaSummaryAction(opts);
+  });
+
+qaCommon(qa.command("list"))
+  .description("List every tc-N plan under --runs-dir, with pending or done status")
+  .option("--runs-dir <path>", "Directory containing _plans/ and per-case output folders")
+  .option("--repo <path>", "Repository root, used only to relativize paths")
+  .addHelpText(
+    "after",
+    "\nExit codes:\n  0  Listing written to stdout\n  1  Invocation or I/O error",
+  )
+  .action(async (opts: QaListOptions) => {
+    const { qaListAction } = await import("./commands/qa-list.js");
+    return qaListAction(opts);
   });
 
 const scripts = program

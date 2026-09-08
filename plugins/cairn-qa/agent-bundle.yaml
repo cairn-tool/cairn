@@ -1,0 +1,24 @@
+# Portable agent bundle. Built as part of the collection:
+#   cairn agent marketplace ../../agent-marketplace.yaml --output ../../dist-plugins
+schemaVersion: "2"
+name: cairn-qa
+version: 1.0.0
+description: Author and run TC-N test-case plans with the cairn qa toolset.
+
+marketplace:
+  displayName: Cairn QA
+  summary: Run a queue of test-case plans across Cursor and Claude Code, and read what came back.
+  description: >-
+    An unsupervised queue of test cases, each a YAML plan handed to an agent
+    backend with permission checks bypassed. Covers the case-file schema the
+    runner parses, the run-record shapes the tracker reads back, and the
+    commands that dispatch and summarize a queue. A queue may mix Cursor and
+    Claude Code cases in one execution. POSIX only. Wraps the `cairn` CLI,
+    which must be installed separately.
+  categories: [developer-tools, quality]
+  keywords: [qa, testing, test-cases, agents, automation]
+  publisher:
+    name: Bryan Stockus
+    url: https://github.com/cairn-tool
+  license: MIT
+  icon: assets/icon.svg
