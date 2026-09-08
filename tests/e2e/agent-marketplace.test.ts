@@ -40,7 +40,13 @@ async function runIn(
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const env = home ? { ...process.env, HOME: home } : process.env;
   try {
-    const result = await exec("node", [cli, ...args], { env });
+    // Run from inside the sandbox home, not the repository. `agent installed`
+    // and `agent uninstall` read the *project* scope as well as the user scope,
+    // so with the repository as cwd they pick up whatever
+    // `agent install --config cairn-verify.yml` last wrote there and report it
+    // alongside — or ahead of — what the case installed. Every argument here is
+    // an absolute path, so the cwd carries nothing else.
+    const result = await exec("node", [cli, ...args], { env, ...(home ? { cwd: home } : {}) });
     return { ...result, exitCode: 0 };
   } catch (error) {
     const result = error as { stdout?: string; stderr?: string; code?: number };

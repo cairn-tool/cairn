@@ -10,7 +10,7 @@ import type {
 } from "./types.js";
 import { diagnostic, TARGETS } from "./types.js";
 import { CONDITIONAL_TEXT, validateConditionals } from "./conditionals.js";
-import { normalizeManifest } from "./manifest.js";
+import { configuredPath, normalizeManifest } from "./manifest.js";
 import { loadOverlays } from "./overlays.js";
 
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -100,23 +100,6 @@ export function allFiles(directory: string): SourceFile[] {
   };
   if (fs.statSync(root).isDirectory()) visit(root);
   return result;
-}
-
-function configuredPath(manifest: Record<string, unknown>, key: string, fallback: string): string {
-  const components =
-    manifest.components && typeof manifest.components === "object"
-      ? (manifest.components as Record<string, unknown>)
-      : {};
-  const value = components[key] ?? manifest[key];
-  if (typeof value === "string") return value;
-  if (
-    value &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    typeof (value as Record<string, unknown>).path === "string"
-  )
-    return String((value as Record<string, unknown>).path);
-  return fallback;
 }
 
 function loadMarkdownComponents(

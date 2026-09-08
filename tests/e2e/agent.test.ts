@@ -1331,8 +1331,14 @@ describe("agent install", () => {
     ...args: string[]
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     try {
+      // cwd is the sandbox home, not the repository: `agent installed` and
+      // `agent uninstall` read the project scope alongside the user scope, so
+      // running from the repository would fold in whatever
+      // `agent install --config cairn-verify.yml` last wrote there. Every path
+      // argument here is absolute.
       const result = await exec("node", [cli, ...args], {
         env: { ...process.env, HOME: home, CI: "1" },
+        cwd: home,
       });
       return { ...result, exitCode: 0 };
     } catch (error) {

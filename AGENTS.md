@@ -215,6 +215,17 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   nothing emits them. `normalize.ts` also has to unwrap the `named` hook envelope, whose top
   level is the bundle name rather than an event.
 
+- **`marketplace:` assets render in the plugin profile only.** `marketplace.icon` and
+  `marketplace.screenshots` are catalog metadata, and `buildCatalogs` is only ever called with
+  `["plugin"]`. Emitting them into `project` put a file no host reads at the destination root —
+  and because a missing `marketplace.icon` is `AB502`, an _error_, every pair of schema 2 bundles
+  merged into one project destination collided on `assets/icon.svg` with `AB808`, which no
+  `--force` can resolve. That made `agent install --config cairn-verify.yml` — this repository's
+  own dogfood install of all eight bundles — fail outright while writing nothing. `render.ts`
+  withholds exactly those references, resolved through `configuredPath` so a bundle that
+  configures its own assets root still matches; every other asset renders in both profiles. CI
+  never ran that install, which is why it went unnoticed.
+
 - **Native overlay paths are deliberately undeclared.** `TargetProfile.outputs` describes what
   the _renderer_ emits; an overlay is user-supplied content whose whole purpose is a surface the
   portable profile does not describe. `agent doctor` and the conformance suite skip artifacts
