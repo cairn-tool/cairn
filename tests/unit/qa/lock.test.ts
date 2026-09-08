@@ -13,7 +13,16 @@ const runsDir = (): string => {
   return dir;
 };
 
-it("a second acquire is refused and names the holding pid", () => {
+// The two implementations refuse contention differently, and a single test can
+// only assert what the running platform actually guarantees. The kernel lock is
+// held by an open fd, so it refuses a second acquire from anyone including this
+// process. The fallback is a pid file, and it deliberately lets a process
+// reclaim its *own* leftover lock -- real contention there is another live pid.
+// Asserting the kernel's behaviour everywhere passed on macOS and failed on
+// Linux, which is exactly the gap the split makes visible.
+const KERNEL_LOCK = process.platform === "darwin" || process.platform.endsWith("bsd");
+
+it.skipIf(!KERNEL_LOCK)("kernel lock: a second acquire is refused and names the holder", () => {
   const runs = runsDir();
   const first = acquireLock(runs);
   try {
@@ -27,6 +36,38 @@ it("a second acquire is refused and names the holding pid", () => {
   } finally {
     first.release();
   }
+});
+
+it.skipIf(KERNEL_LOCK)("pid file: a lock held by another live process is refused", () => {
+  // The parent of the test runner: a real pid, alive, and not this process.
+  // `readPid` rejects anything <= 1, so an orphaned runner would invalidate this.
+  assert.ok(process.ppid > 1, "expected a real parent pid to stand in for another harness");
+  const runs = runsDir();
+  writeFileSync(join(runs, ".harness.lock"), String(process.ppid));
+  assert.throws(
+    () => acquireLock(runs),
+    (err: unknown) =>
+      err instanceof UserError &&
+      err.message.includes("another harness already holds") &&
+      err.message.includes(String(process.ppid)),
+  );
+});
+
+it.skipIf(KERNEL_LOCK)("pid file: this process reclaims its own leftover lock", () => {
+  // Not contention: a crash can leave the file behind, and the next run of the
+  // same process must not be locked out by its own corpse.
+  const runs = runsDir();
+  writeFileSync(join(runs, ".harness.lock"), String(process.pid));
+  const lock = acquireLock(runs);
+  lock.release();
+});
+
+it.skipIf(KERNEL_LOCK)("pid file: a lock naming a dead process is reclaimed", () => {
+  const runs = runsDir();
+  // A pid that cannot be running: above the platform maximum.
+  writeFileSync(join(runs, ".harness.lock"), "4194304");
+  const lock = acquireLock(runs);
+  lock.release();
 });
 
 it("the lock is re-acquirable after release", () => {
