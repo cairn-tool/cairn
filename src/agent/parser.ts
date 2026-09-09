@@ -65,6 +65,104 @@ function relativeSafe(root: string, candidate: string, label: string): string {
 }
 
 /**
+ * Whether `resolved` sits inside `root`, both lexically and after resolving
+ * symlinks. Same two checks as `relativeSafe`, reported rather than thrown,
+ * because a resource may legitimately sit outside its component and the caller
+ * has several roots to try before it knows anything is wrong.
+ */
+function within(root: string, resolved: string): "inside" | "outside" | "symlink-escape" {
+  const relative = path.relative(root, resolved);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) return "outside";
+  if (!fs.existsSync(root)) return "outside";
+  let existing = resolved;
+  while (!fs.existsSync(existing) && existing !== path.dirname(existing))
+    existing = path.dirname(existing);
+  const real = path.resolve(fs.realpathSync(existing), path.relative(existing, resolved));
+  const realRelative = path.relative(fs.realpathSync(root), real);
+  return realRelative.startsWith("..") || path.isAbsolute(realRelative)
+    ? "symlink-escape"
+    : "inside";
+}
+
+/**
+ * Absolute paths of the extra resource roots a bundle declared, dropping any
+ * that does not exist. A declared root that is missing is an error rather than
+ * a silent no-op: it means every resource meant to live under it will be
+ * reported as escaping, and the root is the actual mistake.
+ */
+function resolveResourceRoots(
+  bundleRoot: string,
+  declared: string[],
+  manifestPath: string,
+  diagnostics: AgentDiagnostic[],
+): string[] {
+  const roots: string[] = [];
+  for (const entry of declared) {
+    const resolved = path.resolve(bundleRoot, entry);
+    if (!fs.existsSync(resolved)) {
+      diagnostics.push({
+        ...diagnostic("AB155", `Declared resourceRoot '${entry}' does not exist`, "unsupported", {
+          path: manifestPath,
+          remediation: "Create the directory or remove it from resourceRoots.",
+        }),
+        severity: "error",
+      });
+      continue;
+    }
+    if (!fs.statSync(resolved).isDirectory()) {
+      diagnostics.push({
+        ...diagnostic(
+          "AB155",
+          `Declared resourceRoot '${entry}' is not a directory`,
+          "unsupported",
+          {
+            path: manifestPath,
+          },
+        ),
+        severity: "error",
+      });
+      continue;
+    }
+    roots.push(resolved);
+  }
+  return roots;
+}
+
+/**
+ * A resource's landing path inside its component, normalized to POSIX, or null
+ * if it could escape. Enforced at the output boundary rather than inferred from
+ * the filesystem, the same rule native overlay paths follow.
+ */
+function safeLanding(candidate: string): string | null {
+  const normalized = candidate.split(path.sep).join("/");
+  if (!normalized || normalized.startsWith("/") || /^[A-Za-z]:/.test(normalized)) return null;
+  if (normalized.includes("\\")) return null;
+  if (normalized.split("/").some((segment) => segment === ".." || segment === "." || !segment))
+    return null;
+  return normalized;
+}
+
+/** One `resources:` entry, in either the bare-string or the mapping form. */
+interface ResourceEntry {
+  /** The path as authored, for diagnostics. */
+  declared: string;
+  /** Where it lands in the rendered component, component-relative POSIX. */
+  as: string;
+}
+
+function parseResourceEntry(raw: unknown): ResourceEntry | undefined {
+  if (typeof raw === "string") {
+    const declared = raw.trim();
+    return declared ? { declared, as: "" } : undefined;
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const entry = raw as Record<string, unknown>;
+  if (typeof entry.path !== "string" || !entry.path.trim()) return undefined;
+  const as = typeof entry.as === "string" ? entry.as.trim() : "";
+  return { declared: entry.path.trim(), as };
+}
+
+/**
  * Every file under `directory`, with root-relative paths in the platform's
  * separator. Refuses a symlink that resolves outside `directory`, which is why
  * callers outside this module use it rather than walking the tree themselves.
@@ -107,6 +205,7 @@ function loadMarkdownComponents(
   relative: string,
   kind: "skill" | "agent" | "rule",
   diagnostics: AgentDiagnostic[],
+  resourceRoots: string[] = [],
 ): MarkdownComponent[] {
   const directory = relativeSafe(root, relative, `${kind} path`);
   if (!fs.existsSync(directory)) return [];
@@ -221,14 +320,17 @@ function loadMarkdownComponents(
               }),
               severity: "error",
             });
-    for (const field of ["resources", "scripts"] as const) {
-      const references = Array.isArray(metadata[field]) ? metadata[field] : [];
+    // `scripts:` stays strictly component-local. Widening it would let a bundle
+    // declare an executable from outside its own tree, which is a supply-chain
+    // question rather than a documentation-sharing one.
+    {
+      const references = Array.isArray(metadata.scripts) ? metadata.scripts : [];
       for (const reference of references.map(String)) {
         try {
-          const resolved = relativeSafe(componentRoot, reference, `${kind} ${field} reference`);
+          const resolved = relativeSafe(componentRoot, reference, `${kind} scripts reference`);
           if (!fs.existsSync(resolved))
             diagnostics.push({
-              ...diagnostic("AB151", `Missing ${field} reference '${reference}'`, "unsupported", {
+              ...diagnostic("AB151", `Missing scripts reference '${reference}'`, "unsupported", {
                 component: name,
                 path: full,
               }),
@@ -245,7 +347,155 @@ function loadMarkdownComponents(
         }
       }
     }
-    return { name, description, path: full, metadata, body, files: allFiles(componentRoot) };
+    // A `resources:` entry may sit outside its own component -- elsewhere in the
+    // bundle, or under a declared resourceRoot -- so that one reference document
+    // can serve several skills, or several bundles. Anything resolving outside
+    // the component is *copied into* it under its landing path, because
+    // `${SKILL_DIR}` is the only per-skill placeholder and it collapses to a
+    // bare relative path off Claude Code: there is no way to point at a sibling
+    // skill's rendered directory. Materializing keeps the rendered plugin
+    // self-contained.
+    const materialized: SourceFile[] = [];
+    const landings = new Map<string, string>();
+    if (metadata.resources !== undefined && !Array.isArray(metadata.resources))
+      diagnostics.push({
+        ...diagnostic("AB110", "resources must be an array", "unsupported", {
+          component: name,
+          path: full,
+        }),
+        severity: "error",
+      });
+    for (const raw of Array.isArray(metadata.resources) ? metadata.resources : []) {
+      const entry = parseResourceEntry(raw);
+      if (!entry) {
+        diagnostics.push({
+          ...diagnostic(
+            "AB152",
+            "Each resources entry must be a path or { path, as }",
+            "unsupported",
+            { component: name, path: full },
+          ),
+          severity: "error",
+        });
+        continue;
+      }
+      const resolved = path.resolve(componentRoot, entry.declared);
+      const componentPlacement = within(componentRoot, resolved);
+      if (componentPlacement === "symlink-escape") {
+        diagnostics.push({
+          ...diagnostic(
+            "AB152",
+            `${kind} resources reference resolves through a symlink outside the component: ${entry.declared}`,
+            "unsupported",
+            { component: name, path: full },
+          ),
+          severity: "error",
+        });
+        continue;
+      }
+      if (componentPlacement === "inside") {
+        // Already travels with the component directory; nothing to materialize.
+        if (!fs.existsSync(resolved))
+          diagnostics.push({
+            ...diagnostic(
+              "AB151",
+              `Missing resources reference '${entry.declared}'`,
+              "unsupported",
+              { component: name, path: full },
+            ),
+            severity: "error",
+          });
+        continue;
+      }
+      const roots = [root, ...resourceRoots];
+      const host = roots.find((candidate) => within(candidate, resolved) === "inside");
+      if (!host) {
+        const escaped = roots.some((candidate) => within(candidate, resolved) === "symlink-escape");
+        diagnostics.push({
+          ...diagnostic(
+            escaped ? "AB152" : "AB153",
+            escaped
+              ? `${kind} resources reference resolves through a symlink outside the bundle: ${entry.declared}`
+              : `Resource '${entry.declared}' resolves outside the bundle and no declared resourceRoot covers it`,
+            "unsupported",
+            {
+              component: name,
+              path: full,
+              remediation: escaped
+                ? undefined
+                : "Add its directory to resourceRoots in agent-bundle.yaml.",
+            },
+          ),
+          severity: "error",
+        });
+        continue;
+      }
+      if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
+        diagnostics.push({
+          ...diagnostic("AB151", `Missing resources reference '${entry.declared}'`, "unsupported", {
+            component: name,
+            path: full,
+          }),
+          severity: "error",
+        });
+        continue;
+      }
+      const landing = entry.as || path.basename(resolved);
+      const safe = safeLanding(landing);
+      if (!safe) {
+        diagnostics.push({
+          ...diagnostic(
+            "AB152",
+            `Resource landing path '${landing}' must be a relative path inside the component`,
+            "unsupported",
+            { component: name, path: full },
+          ),
+          severity: "error",
+        });
+        continue;
+      }
+      const prior = landings.get(safe);
+      if (prior !== undefined) {
+        diagnostics.push({
+          ...diagnostic(
+            "AB154",
+            `Resources '${prior}' and '${entry.declared}' both land at '${safe}'`,
+            "unsupported",
+            { component: name, path: full, remediation: "Give one of them a distinct 'as' path." },
+          ),
+          severity: "error",
+        });
+        continue;
+      }
+      landings.set(safe, entry.declared);
+      materialized.push({
+        path: safe.split("/").join(path.sep),
+        content: fs.readFileSync(resolved),
+        mode: fs.statSync(resolved).mode & 0o777,
+      });
+    }
+    const own = allFiles(componentRoot);
+    for (const file of materialized) {
+      const clash = own.find((candidate) => candidate.path === file.path);
+      if (clash)
+        diagnostics.push({
+          ...diagnostic(
+            "AB154",
+            `Resource lands at '${file.path.split(path.sep).join("/")}', which the component already contains`,
+            "unsupported",
+            { component: name, path: full, remediation: "Give it a distinct 'as' path." },
+          ),
+          severity: "error",
+        });
+    }
+    return {
+      name,
+      description,
+      path: full,
+      metadata,
+      body,
+      files: [...own, ...materialized.filter((file) => !own.some((o) => o.path === file.path))],
+    };
   });
 }
 
@@ -464,17 +714,25 @@ export function loadBundle(source: string): AgentBundle {
         }),
         severity: "error",
       });
+  const extraResourceRoots = resolveResourceRoots(
+    root,
+    normalized.resourceRoots,
+    legacy ? legacyPath : neutralPath,
+    diagnostics,
+  );
   const skills = loadMarkdownComponents(
     root,
     configuredPath(manifest, "skills", "skills"),
     "skill",
     diagnostics,
+    extraResourceRoots,
   );
   const agents = loadMarkdownComponents(
     root,
     configuredPath(manifest, "agents", "agents"),
     "agent",
     diagnostics,
+    extraResourceRoots,
   );
   if (!legacy)
     for (const component of [...skills, ...agents])
@@ -491,6 +749,7 @@ export function loadBundle(source: string): AgentBundle {
     configuredPath(manifest, "rules", "rules"),
     "rule",
     diagnostics,
+    extraResourceRoots,
   );
   const rules: BundleRule[] = rawRules.map((rule) => ({
     ...rule,

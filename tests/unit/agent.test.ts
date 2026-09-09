@@ -122,6 +122,126 @@ describe("agent bundles", () => {
     expect(codes).toContain("AB160");
   });
 
+  describe("shared resources", () => {
+    /** A v2 bundle plus a sibling `shared/` directory outside it. */
+    function sharedRoot(
+      manifestExtra: string,
+      resources: string,
+    ): { root: string; parent: string } {
+      const parent = fs.mkdtempSync(path.join(os.tmpdir(), "agent-shared-unit-"));
+      temporary.push(parent);
+      const root = path.join(parent, "bundle");
+      fs.mkdirSync(path.join(root, "skills", "release"), { recursive: true });
+      fs.mkdirSync(path.join(parent, "shared"), { recursive: true });
+      fs.writeFileSync(path.join(parent, "shared", "standards.md"), "# Shared standard\n");
+      fs.writeFileSync(path.join(parent, "shared", "other.md"), "# Other\n");
+      fs.writeFileSync(
+        path.join(root, "agent-bundle.yaml"),
+        `schemaVersion: '2'\nname: sample\nversion: 1.0.0\ndescription: Sample bundle\n${manifestExtra}`,
+      );
+      fs.writeFileSync(
+        path.join(root, "skills", "release", "SKILL.md"),
+        `---\nname: release\ndescription: Prepare a release\n${resources}---\nBody\n`,
+      );
+      return { root, parent };
+    }
+
+    it("materializes a declared resource from outside the bundle", () => {
+      const { root } = sharedRoot(
+        "resourceRoots:\n  - ../shared\n",
+        "resources:\n  - path: ../../../shared/standards.md\n    as: reference/standards.md\n",
+      );
+      const bundle = loadBundle(root);
+      expect(bundle.diagnostics.filter((item) => item.severity === "error")).toEqual([]);
+      const skill = bundle.skills[0];
+      const landed = skill.files.find(
+        (file) => file.path.split(path.sep).join("/") === "reference/standards.md",
+      );
+      expect(landed?.content.toString("utf8")).toBe("# Shared standard\n");
+
+      // It must land inside the skill's own rendered directory on every target,
+      // because no placeholder can name a sibling skill's directory off Claude Code.
+      const rendered = renderBundle(bundle, ["claude-code", "cursor"], ["plugin", "project"]);
+      const paths = rendered.artifacts.map((artifact) => artifact.path);
+      expect(paths).toContain("claude-code/plugin/skills/release/reference/standards.md");
+      expect(paths).toContain("cursor/plugin/skills/sample-release/reference/standards.md");
+      expect(paths).toContain("cursor/project/.cursor/skills/release/reference/standards.md");
+    });
+
+    it("rewrites the mapping form to its landing path in rendered frontmatter", () => {
+      const { root } = sharedRoot(
+        "resourceRoots:\n  - ../shared\n",
+        "resources:\n  - path: ../../../shared/standards.md\n    as: reference/standards.md\n",
+      );
+      const rendered = renderBundle(loadBundle(root), ["claude-code"], ["plugin"]);
+      const skill = rendered.artifacts.find(
+        (artifact) => artifact.path === "claude-code/plugin/skills/release/SKILL.md",
+      );
+      const text = skill?.content.toString("utf8") ?? "";
+      expect(text).toContain("reference/standards.md");
+      // The authored path would be dead text in the rendered tree.
+      expect(text).not.toContain("../../../shared/standards.md");
+    });
+
+    it("defaults the landing path to the resource basename", () => {
+      const { root } = sharedRoot(
+        "resourceRoots:\n  - ../shared\n",
+        "resources:\n  - ../../../shared/standards.md\n",
+      );
+      const bundle = loadBundle(root);
+      expect(bundle.diagnostics.filter((item) => item.severity === "error")).toEqual([]);
+      expect(bundle.skills[0].files.map((file) => file.path.split(path.sep).join("/"))).toContain(
+        "standards.md",
+      );
+    });
+
+    it("reports AB153 when no declared root covers the resource", () => {
+      const { root } = sharedRoot("", "resources:\n  - ../../../shared/standards.md\n");
+      const codes = loadBundle(root).diagnostics.map((item) => item.code);
+      expect(codes).toContain("AB153");
+    });
+
+    it("reports AB154 when two resources land at the same path", () => {
+      const { root } = sharedRoot(
+        "resourceRoots:\n  - ../shared\n",
+        "resources:\n  - path: ../../../shared/standards.md\n    as: reference/x.md\n  - path: ../../../shared/other.md\n    as: reference/x.md\n",
+      );
+      const codes = loadBundle(root).diagnostics.map((item) => item.code);
+      expect(codes).toContain("AB154");
+    });
+
+    it("reports AB155 for a missing or absolute declared root", () => {
+      const missing = sharedRoot("resourceRoots:\n  - ../nope\n", "");
+      expect(loadBundle(missing.root).diagnostics.map((item) => item.code)).toContain("AB155");
+      const absolute = sharedRoot("resourceRoots:\n  - /etc\n", "");
+      expect(loadBundle(absolute.root).diagnostics.map((item) => item.code)).toContain("AB155");
+    });
+
+    it("refuses a landing path that would escape the component", () => {
+      const { root } = sharedRoot(
+        "resourceRoots:\n  - ../shared\n",
+        "resources:\n  - path: ../../../shared/standards.md\n    as: ../escape.md\n",
+      );
+      const codes = loadBundle(root).diagnostics.map((item) => item.code);
+      expect(codes).toContain("AB152");
+    });
+
+    it("still reports AB151 for a missing component-local resource", () => {
+      const { root } = sharedRoot("", "resources:\n  - reference/absent.md\n");
+      const codes = loadBundle(root).diagnostics.map((item) => item.code);
+      expect(codes).toContain("AB151");
+    });
+
+    it("refuses resourceRoots on a schemaVersion 1 bundle", () => {
+      const root = bundleRoot();
+      fs.writeFileSync(
+        path.join(root, "agent-bundle.yaml"),
+        "schemaVersion: '1'\nname: sample\nversion: 1.0.0\ndescription: Sample\nresourceRoots:\n  - ../shared\n",
+      );
+      expect(loadBundle(root).diagnostics.map((item) => item.code)).toContain("AB127");
+    });
+  });
+
   it("rejects component paths outside the bundle", () => {
     const root = bundleRoot();
     fs.writeFileSync(

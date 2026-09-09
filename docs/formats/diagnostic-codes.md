@@ -78,6 +78,9 @@ Emitted by the bundle and manifest parsers, so every command that loads a bundle
 | `AB150` | error    | bundle parser   | A component references a skill the bundle does not define.                                                           |
 | `AB151` | error    | bundle parser   | A referenced resource or script does not exist.                                                                      |
 | `AB152` | error    | bundle parser   | A reference could not be resolved.                                                                                   |
+| `AB153` | error    | bundle parser   | A resource resolves outside the bundle and no declared `resourceRoot` covers it.                                     |
+| `AB154` | error    | bundle parser   | Two resources in one component land at the same path.                                                                |
+| `AB155` | error    | bundle parser   | A declared `resourceRoot` is malformed, absolute, missing, or not a directory.                                       |
 | `AB160` | error    | bundle parser   | Components form a dependency cycle.                                                                                  |
 
 ## Native overlays

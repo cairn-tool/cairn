@@ -105,6 +105,13 @@ export interface BundleManifest {
   marketplace?: BundleMarketplace;
   /** Declared overlay roots. Present for every target on a v2 bundle. */
   native: NativeOverlayDeclaration[];
+  /**
+   * Extra roots outside the bundle that `resources:` entries may reach, as
+   * bundle-relative POSIX paths. Empty unless the bundle declares them, which
+   * is what keeps containment the default: a resource still has to resolve
+   * inside the bundle or inside one of these.
+   */
+  resourceRoots: string[];
 }
 
 function error(
@@ -308,6 +315,49 @@ function parseNative(
   return declarations;
 }
 
+/**
+ * Extra roots a bundle's `resources:` entries may reach outside the bundle.
+ *
+ * Shape only. Whether a declared root exists is checked in the parser, which
+ * knows the bundle root these resolve against; validating it here would mean
+ * threading that root into manifest normalization for one check.
+ *
+ * A root is deliberately allowed to climb out of the bundle -- that is the
+ * point -- so the declaration itself is the deliberate act, and an absolute
+ * path is refused because it could not survive being cloned anywhere else.
+ */
+function parseResourceRoots(
+  value: unknown,
+  path: string,
+  diagnostics: AgentDiagnostic[],
+): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    error(diagnostics, "AB155", "Bundle resourceRoots must be an array of paths", path);
+    return [];
+  }
+  const roots: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string" || !entry.trim()) {
+      error(diagnostics, "AB155", "Each resourceRoots entry must be a non-empty string", path);
+      continue;
+    }
+    const root = entry.trim();
+    if (root.startsWith("/") || /^[A-Za-z]:/.test(root)) {
+      error(
+        diagnostics,
+        "AB155",
+        `resourceRoots entry '${root}' must be relative to the bundle`,
+        path,
+        "Use a bundle-relative path such as ../../shared.",
+      );
+      continue;
+    }
+    if (!roots.includes(root)) roots.push(root);
+  }
+  return roots;
+}
+
 const TARGET_HINT = `Use one of: ${TARGETS.join(", ")}.`;
 
 /**
@@ -342,7 +392,7 @@ export function normalizeManifest(
   // The marketplace and native blocks are v2 concepts. Reading them on a v1
   // bundle would silently change that bundle's output, so they are refused.
   if (layer === 1)
-    for (const field of ["marketplace", "native"] as const)
+    for (const field of ["marketplace", "native", "resourceRoots"] as const)
       if (raw[field] !== undefined)
         error(
           diagnostics,
@@ -374,6 +424,8 @@ export function normalizeManifest(
     marketplace:
       layer === 2 ? parseMarketplace(raw.marketplace, manifestPath, diagnostics) : undefined,
     native: layer === 2 ? parseNative(raw.native, manifestPath, diagnostics) : [],
+    resourceRoots:
+      layer === 2 ? parseResourceRoots(raw.resourceRoots, manifestPath, diagnostics) : [],
   };
 }
 

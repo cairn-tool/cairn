@@ -184,6 +184,19 @@ function metadataFor(component: MarkdownComponent, target: AgentTarget): Record<
     "modelClass",
   ])
     delete result[key];
+  // A mapping-form resource was authored as a path outside the component; what
+  // the host can actually open is where it landed. Frontmatter is never
+  // placeholder-rewritten, so an authored `../../shared/x.md` would otherwise
+  // ship verbatim to a tree that has no such path.
+  if (Array.isArray(result.resources))
+    result.resources = result.resources.map((entry) => {
+      if (typeof entry === "string") return entry;
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
+      const mapping = entry as Record<string, unknown>;
+      if (typeof mapping.as === "string" && mapping.as.trim()) return mapping.as.trim();
+      if (typeof mapping.path === "string") return mapping.path.split("/").pop() ?? mapping.path;
+      return entry;
+    });
   return result;
 }
 
