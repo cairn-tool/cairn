@@ -75,7 +75,9 @@ Replace any default with a string path or `{ path: … }`, either at the top lev
 `AB126`; `components:` is the current spelling.
 
 **Paths must stay inside the bundle root**, including after resolving symlinks. A path that
-escapes, or a symlink whose target escapes, is refused rather than followed.
+escapes, or a symlink whose target escapes, is refused rather than followed. The one exception is
+a `resources` entry covered by a declared `resourceRoot` — see
+[Sharing one reference file between components](#sharing-one-reference-file-between-components).
 
 ### Target overrides
 
@@ -310,11 +312,55 @@ An asset a component links to renders in both profiles as before.
 | `exclude`   | array of target ids it is not                          |
 | `targets`   | object of per-target overrides                         |
 | `resources` | files the component needs; each must exist, or `AB151` |
-| `scripts`   | same                                                   |
+| `scripts`   | same, but always component-local                       |
 
 `include`/`exclude` must be arrays (`AB110`) of known targets (`AB106`). `targets` must be an
 object (`AB109`) whose values are objects (`AB117`) keyed by known targets (`AB104`). A
-`resources` or `scripts` path that escapes its component root raises `AB152`.
+`scripts` path that escapes its component root raises `AB152`.
+
+### Sharing one reference file between components
+
+A `resources` entry may name a file outside its own component — elsewhere in the bundle, or
+under a root the manifest declares — so one reference document can serve several skills, or
+several bundles. Anything resolving outside the component is **copied into it** at render time:
+
+```yaml
+# agent-bundle.yaml
+resourceRoots:
+  - ../../shared
+```
+
+```yaml
+# skills/work-item/SKILL.md
+resources:
+  - reference/epic-standards.md # component-local, as before
+  - path: ../../../../shared/acceptance-criteria-standards.md
+    as: reference/acceptance-criteria-standards.md
+```
+
+The skill then points at it the way it points at any of its own files, with
+`${SKILL_DIR}/reference/acceptance-criteria-standards.md`.
+
+Copying rather than referencing in place is not a convenience. `${SKILL_DIR}` is the only
+per-skill placeholder, and it collapses to a bare component-relative path on every target but
+Claude Code, so there is no spelling that names a sibling skill's rendered directory. A
+materialized copy also keeps the rendered plugin self-contained: it does not depend on the other
+bundle being installed, or on the source tree still existing.
+
+`as` is the landing path inside the component, and defaults to the file's basename. It must be
+relative and may not contain `..` (`AB152`). Two resources landing on the same path, or one
+landing on a file the component already contains, is `AB154`.
+
+`resourceRoots` are bundle-relative and may climb out of the bundle — that is their purpose, and
+declaring one is the deliberate act that widens containment. An absolute entry, or one naming a
+directory that does not exist, is `AB155`. A resource that resolves outside the bundle with no
+declared root covering it is `AB153`. Containment is widened, not abolished: every resource must
+still land inside the bundle or inside a declared root, and a symlink escaping either is still
+`AB152`.
+
+`resourceRoots` requires `schemaVersion: "2"` (`AB127`). `scripts` is deliberately not widened —
+naming an executable from outside the bundle is a supply-chain question rather than a
+documentation-sharing one.
 
 ## Invocation and arguments
 

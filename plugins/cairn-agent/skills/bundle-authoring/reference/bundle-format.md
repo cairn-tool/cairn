@@ -71,7 +71,21 @@ Shared by every kind:
 | `exclude`   | Target ids it is not                       |
 | `targets`   | Per-target overrides                       |
 | `resources` | Files the component needs; each must exist |
-| `scripts`   | Same                                       |
+| `scripts`   | Same, but always component-local           |
+
+A `resources` entry may also name a file outside the component — elsewhere in the
+bundle, or under a `resourceRoots:` entry the manifest declares — and it is copied
+into the component at render time, so one reference document can serve several
+skills or several bundles:
+
+```yaml
+resources:
+  - path: ../../../../shared/acceptance-criteria-standards.md
+    as: reference/acceptance-criteria-standards.md
+```
+
+`as` defaults to the basename and may not escape the component. Uncovered escape is
+`AB153`, a landing collision `AB154`, a bad root `AB155`.
 
 Skills additionally:
 
