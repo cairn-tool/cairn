@@ -464,9 +464,98 @@ A comment is held to the grammar when it starts with `target`/`platform`, or is 
 `endif`, or begins `if`/`elif` **and** mentions a predicate keyword — that last clause is what
 keeps an ordinary `<!-- if you change this, update X -->` from becoming an error.
 
-Blocks are validated in **every** file the renderer processes them in, which is every textual
-asset and not only recognized components: an unclosed block in a hook script used to be
-silently mangled with no diagnostic.
+Blocks are validated in **every** textual file, not only the ones the renderer transforms: an
+unclosed block in a hook script used to be silently mangled with no diagnostic. Validation is
+therefore deliberately **wider** than expansion — hook scripts, the hook and MCP documents, and
+a component's non-Markdown resources are copied verbatim, so a marker in one is reported rather
+than resolved.
+
+## Inline component references
+
+A component's rendered identity is not the same on every host, so naming a sibling in prose
+used to mean writing the difference out by hand — ``the **start** skill (`/flow:start` on
+Claude Code, `flow-start` on Cursor)`` — and keeping it correct forever. A **reference** is
+written once and resolves to whatever the target actually calls that component:
+
+```markdown
+The formats live in the `<!-- ref:skill:review-record -->` skill.
+Spawn `<!-- ref:agent:diff-reviewer -->`, one per batch.
+Run `<!-- ref:command:review -->` to start.
+```
+
+| Kind      | Names                           | Resolves against |
+| --------- | ------------------------------- | ---------------- |
+| `skill`   | a skill, to locate and read     | `skills/`        |
+| `agent`   | a subagent, to spawn            | `agents/`        |
+| `command` | a skill, as a person invokes it | `skills/`        |
+
+`command` resolves against the skills because [there is no `commands` component
+kind](#invocation-and-arguments): a command is a skill the model does not reach for. Referencing one
+that has not declared `invocationPolicy: explicit` is `AB161`, because the host does not present
+it as an entry point.
+
+For a bundle named `cr`, a skill named `review` and an agent named `diff-reviewer`:
+
+| Kind      | `claude-code` plugin | `cursor` plugin    | project profiles |
+| --------- | -------------------- | ------------------ | ---------------- |
+| `skill`   | `cr:review`          | `cr-review`        | `review`         |
+| `agent`   | `cr:diff-reviewer`   | `cr-diff-reviewer` | `diff-reviewer`  |
+| `command` | `/cr:review`         | `cr-review`        | varies           |
+
+The forms are [target-profile data](target-profile.md#naming), never a branch in the renderer.
+Where a host has no such surface the bare name is emitted and `AB303` says so, rather than a
+guessed identifier that would render, validate, and load nothing.
+
+### Where a reference resolves
+
+Everywhere the renderer transforms content: a component's body, its Markdown resources, a rule,
+a textual asset — and, unlike a conditional block, the frontmatter `description` and
+`argumentHint`, because those are prose a host shows a person.
+
+Two frontmatter keys are **never** resolved. `name` is the identity itself, so a reference there
+would be circular. `skills` is the portable resolution mechanism `AB150` validates and Cursor's
+agent inlining consumes, so it stays a list of bare portable names. Anywhere else the renderer
+copies verbatim, a reference is reported as `AB157` rather than shipped as a literal comment.
+
+A reference does **not** count toward the `AB160` cycle check, which reads only the frontmatter
+`skills` list. That list composes content, so a cycle in it genuinely breaks; a reference is
+prose, and two documents pointing at each other for further reading is ordinary — cairn's own
+`portability-triage` and `target-portability` skills do exactly that.
+
+### A reference in a code span is live; in a fence it is inert
+
+This is the one place the two families differ, and the difference is deliberate:
+
+```markdown
+the `<!-- ref:skill:review-record -->` skill → the `cr-review-record` skill
+```
+
+Naming a component in code voice is the most natural way to write a reference, so protecting
+inline spans would make the obvious spelling the one that silently does nothing. A **fenced**
+example stays inert, for the same reason a fenced conditional does — otherwise this section
+could not exist. So an example of the syntax, valid or malformed, must be shown in a fence.
+
+A reference is self-closing: it does not open a block, and it does not take the following
+newline the way a block marker does, so one may sit mid-sentence. A reference inside a branch
+that is not taken disappears with the branch.
+
+### Diagnostics
+
+| Code    | Severity | Meaning                                                        |
+| ------- | -------- | -------------------------------------------------------------- |
+| `AB124` | error    | A comment looks like a reference but does not parse.           |
+| `AB156` | error    | A reference names a component the bundle does not define.      |
+| `AB157` | warning  | A reference sits in a file the renderer does not expand.       |
+| `AB161` | warning  | A `command` reference names a model-invocable skill.           |
+| `AB303` | varies   | The target has no identifier for that kind; bare name emitted. |
+
+`AB124` exists for the same reason `AB123` does. A comment is held to the grammar when it starts
+with `ref:` or `refs:`, so `<!-- reference: docs/x.md -->` and `<!-- refactor this -->` stay
+prose while `<!-- ref: skill:x -->` — with a space — is reported rather than silently ignored.
+
+An unknown name leaves the marker **verbatim** rather than guessing or deleting. `AB156` is an
+error, so nothing is written; if it is suppressed, a visible marker beats a silently missing
+name.
 
 ## Placeholders
 

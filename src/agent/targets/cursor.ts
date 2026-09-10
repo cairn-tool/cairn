@@ -44,8 +44,20 @@ export const cursorProfile: TargetProfile = {
       mcp: ".cursor/mcp.json",
       assets: "assets",
     },
-    // Cursor plugin skill directories are namespaced as `${bundle}-${skill}`.
-    namespacePluginSkills: true,
+  },
+  naming: {
+    // Cursor is the one host that namespaces plugin components by bundle name.
+    namespace: {
+      prefixed: { skills: ["plugin"], agents: ["plugin"] },
+      separator: "-",
+    },
+    references: {
+      forms: {
+        skill: { plugin: "{bundle}{separator}{name}", project: "{name}" },
+        agent: { plugin: "{bundle}{separator}{name}", project: "{name}" },
+        command: { plugin: "{bundle}{separator}{name}", project: "{name}" },
+      },
+    },
   },
   placeholders: {
     bundleRoot: { plugin: ".", project: "." },

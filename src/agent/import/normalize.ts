@@ -14,6 +14,7 @@ import { HOOK_EVENT_ALIASES, outputPatternToRegExp, profileFor } from "../target
 import { CURRENT_BUNDLE_SCHEMA } from "../manifest.js";
 import { YAML_OPTIONS, sortArtifacts } from "../scaffold.js";
 import { splitFrontmatter } from "../parser.js";
+import { stripEmittedPrefix } from "../naming.js";
 
 export type Disposition = "portable" | "native" | "manifest" | "dropped";
 
@@ -253,6 +254,7 @@ export function normalizeTree(
       roots.agents ?? null,
       target,
       profile,
+      bundleName,
       take,
       artifacts,
       consumed,
@@ -351,6 +353,29 @@ type Take = (
   why?: string,
 ) => void;
 
+/**
+ * Un-prefixes the frontmatter `name` of a rendered component document.
+ *
+ * The renderer writes the namespaced identity into `name:` as well as the path,
+ * so importing has to undo both or the round trip returns a bundle whose
+ * component is called `cr-review` inside a directory called `review`.
+ */
+function unprefixFrontmatterName(
+  text: string,
+  file: string,
+  kind: "skill" | "agent",
+  target: AgentTarget,
+  profile: AgentProfile,
+  bundleName: string,
+): string {
+  const { metadata, body } = splitFrontmatter(text, file);
+  if (typeof metadata.name !== "string") return text;
+  const portable = stripEmittedPrefix(kind, metadata.name, target, profile, bundleName);
+  if (portable === metadata.name) return text;
+  metadata.name = portable;
+  return `---\n${stringifyYaml(metadata, YAML_OPTIONS).trim()}\n---\n${body}`;
+}
+
 function normalizeSkills(
   claims: Claim[],
   root: string,
@@ -361,25 +386,26 @@ function normalizeSkills(
   artifacts: Artifact[],
   consumed: Set<string>,
 ): void {
-  const namespaced = profileFor(target).paths.namespacePluginSkills && profile === "plugin";
   for (const claim of under(claims, root)) {
     if (consumed.has(claim.relative)) continue;
     const relative = strip(claim.relative, root);
     const segments = relative.split("/");
-    // Undo the `<bundle>-<skill>` directory namespacing Cursor plugins use.
-    if (namespaced && segments[0].startsWith(`${bundleName}-`))
-      segments[0] = segments[0].slice(bundleName.length + 1);
+    // Undo the `<bundle>-<skill>` namespacing Cursor plugins use, through the
+    // same module that applied it so the two cannot drift apart.
+    segments[0] = stripEmittedPrefix("skill", segments[0], target, profile, bundleName);
     const destination = `skills/${segments.join("/")}`;
     const markdown = relative.endsWith(".md");
-    const content = markdown
-      ? Buffer.from(
-          reverseArguments(
-            reversePlaceholders(claim.file.content.toString("utf8"), target, profile).content,
-            target,
-            "skill",
-          ),
+    const isSkillDocument = segments[segments.length - 1] === "SKILL.md";
+    let text = markdown
+      ? reverseArguments(
+          reversePlaceholders(claim.file.content.toString("utf8"), target, profile).content,
+          target,
+          "skill",
         )
-      : claim.file.content;
+      : null;
+    if (text !== null && isSkillDocument)
+      text = unprefixFrontmatterName(text, claim.relative, "skill", target, profile, bundleName);
+    const content = text !== null ? Buffer.from(text) : claim.file.content;
     artifacts.push({ path: destination, content, mode: claim.file.mode });
     take(claim, destination, "portable", "exact");
   }
@@ -390,6 +416,7 @@ function normalizeAgents(
   root: string | null,
   target: AgentTarget,
   profile: AgentProfile,
+  bundleName: string,
   take: Take,
   artifacts: Artifact[],
   consumed: Set<string>,
@@ -412,13 +439,22 @@ function normalizeAgents(
       continue;
     }
     if (!relative.endsWith(".md")) continue;
-    const destination = `agents/${relative.replace(/\.md$/, ".agent.md")}`;
+    const destination = `agents/${stripEmittedPrefix(
+      "agent",
+      relative.replace(/\.md$/, ""),
+      target,
+      profile,
+      bundleName,
+    )}.agent.md`;
     const text = reverseArguments(
       reversePlaceholders(claim.file.content.toString("utf8"), target, profile).content,
       target,
       "other",
     );
     const { metadata, body } = splitFrontmatter(text, claim.relative);
+    // The same inverse the path just took, applied to the identity inside.
+    if (typeof metadata.name === "string")
+      metadata.name = stripEmittedPrefix("agent", metadata.name, target, profile, bundleName);
     let fidelity: MappingQuality = "exact";
 
     // Native model ids and tool names are target vocabulary. Leaving them in

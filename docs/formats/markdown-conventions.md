@@ -179,8 +179,18 @@ Like the TOC markers, and unlike snippet links, these need a code-block guard: m
 fenced block or an inline code span are inert, so a document explaining the syntax keeps its
 examples.
 
-That is a bundle-format concern rather than a workspace one; see
-[Agent bundle format](agent-bundle.md#conditional-blocks).
+A third family names another component and resolves to whatever the target calls it:
+
+```markdown
+the `<!-- ref:skill:review-record -->` skill
+```
+
+These follow the same fence guard but **not** the inline-span one: naming a component in code
+voice is the whole point, so a reference inside a span is live where a conditional is inert.
+
+Both are a bundle-format concern rather than a workspace one; see
+[Agent bundle format](agent-bundle.md#conditional-blocks) and
+[Inline component references](agent-bundle.md#inline-component-references).
 
 ## Related
 

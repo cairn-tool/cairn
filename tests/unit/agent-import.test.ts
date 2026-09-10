@@ -178,6 +178,29 @@ describe("normalizeTree", () => {
     expect(paths.some((candidate) => candidate.includes("rich-build"))).toBe(false);
   });
 
+  it("undoes cursor plugin agent namespacing", () => {
+    const result = normalize("cursor", "plugin");
+    const paths = result.artifacts.map((artifact) => artifact.path);
+    expect(paths).toContain("agents/reviewer.agent.md");
+    expect(paths.some((candidate) => candidate.includes("rich-reviewer"))).toBe(false);
+  });
+
+  it("restores the portable name inside a namespaced component, not just its path", () => {
+    // The renderer writes the namespaced identity into `name:` as well as the
+    // path, so importing has to undo both -- otherwise the round trip returns a
+    // skill called `rich-build` sitting in a directory called `build`.
+    const result = normalize("cursor", "plugin");
+    const body = (file: string): string => {
+      const artifact = result.artifacts.find((entry) => entry.path === file);
+      if (!artifact) throw new Error(`no artifact ${file}`);
+      return artifact.content.toString("utf8");
+    };
+    expect(body("skills/build/SKILL.md")).toContain("name: build");
+    expect(body("skills/build/SKILL.md")).not.toContain("rich-build");
+    expect(body("agents/reviewer.agent.md")).toContain("name: reviewer");
+    expect(body("agents/reviewer.agent.md")).not.toContain("rich-reviewer");
+  });
+
   it("preserves an unclaimed file as a native overlay rather than dropping it", () => {
     const { files } = nativeTree("full", "claude-code", "plugin");
     const extended = [

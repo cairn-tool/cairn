@@ -46,7 +46,20 @@ export const claudeCodeProfile: TargetProfile = {
       mcp: ".mcp.json",
       assets: "assets",
     },
-    namespacePluginSkills: false,
+  },
+  naming: {
+    // Directories stay bare; the *address* a document must name is namespaced.
+    namespace: {
+      prefixed: { skills: [], agents: [] },
+      separator: "-",
+    },
+    references: {
+      forms: {
+        skill: { plugin: "{bundle}:{name}", project: "{name}" },
+        agent: { plugin: "{bundle}:{name}", project: "{name}" },
+        command: { plugin: "/{bundle}:{name}", project: "/{name}" },
+      },
+    },
   },
   placeholders: {
     bundleRoot: { plugin: "${CLAUDE_PLUGIN_ROOT}", project: "${CLAUDE_PROJECT_DIR}" },
@@ -194,7 +207,7 @@ export const claudeCodeProfile: TargetProfile = {
       profiles: ["plugin", "project"],
       summary: "native root and argument substitution",
       surface: "${CLAUDE_PLUGIN_ROOT}",
-      diagnostics: [],
+      diagnostics: ["AB303"],
     },
     native: {
       support: "native",

@@ -4,11 +4,14 @@ cases:
   # Golden digests: agent test never rewrites these. A mismatch reports the
   # actual value alongside the expected one, which is what you paste back here
   # once you have confirmed the change was intended.
+  # Re-pasted when Cursor plugin components gained the bundle-name prefix on
+  # their frontmatter `name` as well as their directory: this skill emitted
+  # `name: greet` inside `skills/tested-greet/`, two identities for one skill.
   - name: the cursor plugin tree is byte-for-byte unchanged
     targets: [cursor]
     profiles: [plugin]
     expect:
       digest:
-        tree: 9a2c533a3fc00f52c68cea6c022db4450087004cf80e660e80c2780b3f1e758a
+        tree: aee912ea376130c0dbdc7ab172a58838d98d1f921ac555884545e0517c3b20ce
         files:
-          skills/tested-greet/SKILL.md: 7db8a47da4051b8867e7f6eb4f4d8bea69cdaa9bf07898f52c05f90888288a74
+          skills/tested-greet/SKILL.md: 0c384030d0d0cf5ca652f5713e11fd7d66c7d7ac663923294872c8d2d8bb5be0

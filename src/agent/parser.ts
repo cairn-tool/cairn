@@ -8,12 +8,13 @@ import type {
   MarkdownComponent,
   SourceFile,
 } from "./types.js";
-import { diagnostic, TARGETS } from "./types.js";
+import { COMPONENT_NAME, diagnostic, TARGETS } from "./types.js";
 import { CONDITIONAL_TEXT, validateConditionals } from "./conditionals.js";
+import type { RefUse } from "./conditionals.js";
 import { configuredPath, normalizeManifest } from "./manifest.js";
 import { loadOverlays } from "./overlays.js";
 
-const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const NAME = COMPONENT_NAME;
 
 function record(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -206,6 +207,7 @@ function loadMarkdownComponents(
   kind: "skill" | "agent" | "rule",
   diagnostics: AgentDiagnostic[],
   resourceRoots: string[] = [],
+  refs: RefUse[] = [],
 ): MarkdownComponent[] {
   const directory = relativeSafe(root, relative, `${kind} path`);
   if (!fs.existsSync(directory)) return [];
@@ -259,7 +261,14 @@ function loadMarkdownComponents(
         }),
         severity: "error",
       });
-    validateConditionals(body, full, diagnostics);
+    refs.push(...validateConditionals(body, full, diagnostics));
+    // `description` and `argumentHint` are resolved by the renderer too, so a
+    // reference in one has to be validated like a reference in the body.
+    for (const key of ["description", "argumentHint", "argument-hint"])
+      if (typeof metadata[key] === "string")
+        refs.push(
+          ...validateConditionals(metadata[key] as string, full, diagnostics, { markdown: false }),
+        );
     const componentRoot = kind === "skill" ? path.dirname(full) : directory;
     if (
       metadata.targets &&
@@ -720,12 +729,14 @@ export function loadBundle(source: string): AgentBundle {
     legacy ? legacyPath : neutralPath,
     diagnostics,
   );
+  const refs: RefUse[] = [];
   const skills = loadMarkdownComponents(
     root,
     configuredPath(manifest, "skills", "skills"),
     "skill",
     diagnostics,
     extraResourceRoots,
+    refs,
   );
   const agents = loadMarkdownComponents(
     root,
@@ -733,6 +744,7 @@ export function loadBundle(source: string): AgentBundle {
     "agent",
     diagnostics,
     extraResourceRoots,
+    refs,
   );
   if (!legacy)
     for (const component of [...skills, ...agents])
@@ -750,6 +762,7 @@ export function loadBundle(source: string): AgentBundle {
     "rule",
     diagnostics,
     extraResourceRoots,
+    refs,
   );
   const rules: BundleRule[] = rawRules.map((rule) => ({
     ...rule,
@@ -768,9 +781,11 @@ export function loadBundle(source: string): AgentBundle {
     if (!CONDITIONAL_TEXT.test(file.path)) continue;
     const content = file.content;
     if (content.includes(0)) continue;
-    validateConditionals(content.toString("utf8"), full, diagnostics, {
-      markdown: file.path.endsWith(".md"),
-    });
+    refs.push(
+      ...validateConditionals(content.toString("utf8"), full, diagnostics, {
+        markdown: file.path.endsWith(".md"),
+      }),
+    );
   }
   for (const rule of rules)
     if (!["always", "files", "model", "manual"].includes(rule.activation))
@@ -802,11 +817,17 @@ export function loadBundle(source: string): AgentBundle {
   const skillNames = new Set(skills.map((skill) => skill.name));
   const graph: Record<string, string[]> = {};
   for (const component of [...skills, ...agents]) {
-    const refs = Array.isArray(component.metadata.skills)
+    const declared = Array.isArray(component.metadata.skills)
       ? component.metadata.skills.map(String)
       : [];
-    graph[component.name] = refs;
-    for (const ref of refs)
+    // Only the frontmatter list feeds the cycle check. An inline reference is
+    // prose -- "for more, see X" -- and two documents pointing at each other for
+    // further reading is normal rather than a cycle: this project's own
+    // `portability-triage` and `target-portability` skills do exactly that.
+    // `skills:` is different because it composes content, which is the thing a
+    // cycle actually breaks.
+    graph[component.name] = declared;
+    for (const ref of declared)
       if (!skillNames.has(ref))
         diagnostics.push({
           ...diagnostic("AB150", `Missing referenced skill '${ref}'`, "unsupported", {
@@ -829,6 +850,90 @@ export function loadBundle(source: string): AgentBundle {
     !legacy && hooks && fs.existsSync(hookDirectory)
       ? allFiles(hookDirectory).filter((file) => path.join(hookDirectory, file.path) !== hooks.path)
       : [];
+  // Inline references, resolved against the components that now exist. This is
+  // the `AB150` job for the reference family, and it has to happen here rather
+  // than in `validateConditionals`, which runs before any component list does.
+  const agentNames = new Set(agents.map((agent) => agent.name));
+  const explicitSkills = new Set(
+    skills
+      .filter((skill) =>
+        ["explicit", "manual"].includes(
+          String(skill.metadata.invocationPolicy ?? skill.metadata.invocation ?? "auto"),
+        ),
+      )
+      .map((skill) => skill.name),
+  );
+  const componentRoots = [
+    ...skills.map((skill) => path.dirname(skill.path)),
+    ...agents.map((agent) => path.dirname(agent.path)),
+    ...rules.map((rule) => path.dirname(rule.path)),
+  ];
+  const under = (file: string, directory: string): boolean =>
+    file === directory || file.startsWith(`${directory}${path.sep}`);
+  /**
+   * Whether the renderer actually expands references in this file.
+   *
+   * Validation is deliberately wider than expansion — a broken marker in a hook
+   * script used to be mangled silently — so a reference somewhere the renderer
+   * copies verbatim would otherwise ship as a literal comment. Widening what the
+   * renderer transforms instead would change rendered bytes for every existing
+   * bundle, so it is reported rather than fixed.
+   */
+  const expanded = (file: string): boolean => {
+    if (primaryMarkdown.has(file)) return true;
+    if (hooks && file === hooks.path) return false;
+    if (hookFiles.length && under(file, hookDirectory)) return false;
+    if (under(file, assetsDir)) return true;
+    return file.endsWith(".md") && componentRoots.some((directory) => under(file, directory));
+  };
+  for (const use of refs) {
+    const pool = use.kind === "agent" ? agentNames : skillNames;
+    if (!pool.has(use.name)) {
+      diagnostics.push({
+        ...diagnostic(
+          "AB156",
+          `Missing referenced ${use.kind === "agent" ? "agent" : "skill"} '${use.name}' on line ${use.line}`,
+          "unsupported",
+          {
+            path: use.file,
+            remediation:
+              use.kind === "command"
+                ? "A command reference names a skill. Add the skill or correct the reference."
+                : "Add the component or correct the reference.",
+          },
+        ),
+        severity: "error",
+      });
+      continue;
+    }
+    if (use.kind === "command" && !explicitSkills.has(use.name))
+      diagnostics.push({
+        ...diagnostic(
+          "AB161",
+          `Command reference '${use.name}' on line ${use.line} names a skill the model may invoke on its own`,
+          "approximate",
+          {
+            path: use.file,
+            remediation: `Set invocationPolicy: explicit on '${use.name}', or reference it with ref:skill instead.`,
+          },
+        ),
+        severity: "warning",
+      });
+    if (!expanded(use.file))
+      diagnostics.push({
+        ...diagnostic(
+          "AB157",
+          `Reference to '${use.name}' on line ${use.line} is in a file the renderer does not expand`,
+          "unsupported",
+          {
+            path: use.file,
+            remediation:
+              "Move the reference into a component body, a Markdown resource, or an asset; elsewhere it ships as a literal comment.",
+          },
+        ),
+        severity: "warning",
+      });
+  }
   const legacyAssets = legacy
     ? allFiles(root).filter((file) => {
         const normalized = file.path.split(path.sep).join("/");

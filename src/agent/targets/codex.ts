@@ -45,7 +45,19 @@ export const codexProfile: TargetProfile = {
       mcp: ".codex/config.toml",
       assets: "assets",
     },
-    namespacePluginSkills: false,
+  },
+  naming: {
+    namespace: {
+      prefixed: { skills: [], agents: [] },
+      separator: "-",
+    },
+    references: {
+      forms: {
+        skill: { plugin: "{name}", project: "{name}" },
+        agent: { plugin: null, project: "{name}" },
+        command: { plugin: null, project: null },
+      },
+    },
   },
   placeholders: {
     bundleRoot: { plugin: "${PLUGIN_ROOT}", project: "." },
@@ -189,7 +201,7 @@ export const codexProfile: TargetProfile = {
       profiles: ["plugin", "project"],
       summary: "no argument substitution; explanatory prose is emitted",
       surface: "${PLUGIN_ROOT}",
-      diagnostics: ["AB302"],
+      diagnostics: ["AB302", "AB303"],
     },
     native: {
       support: "native",

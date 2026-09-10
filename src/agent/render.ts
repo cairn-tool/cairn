@@ -10,7 +10,10 @@ import type {
 } from "./types.js";
 import { diagnostic } from "./types.js";
 import { applyConditionals } from "./conditionals.js";
+import type { RefResolver } from "./conditionals.js";
+import { emittedName, referenceIdentifier } from "./naming.js";
 import type { ModelClass } from "./targets/index.js";
+import type { ReferenceKind } from "./targets/schema.js";
 import { HOOK_EVENT_ALIASES, nativeHookEvent, profileFor } from "./targets/index.js";
 import { applyOverlayManifest, mergeOverlay, overlayArtifacts } from "./overlays.js";
 import { configuredPath } from "./manifest.js";
@@ -27,15 +30,18 @@ function yamlFrontmatter(metadata: Record<string, unknown>, body: string): strin
 }
 
 /**
- * Resolves target-conditional regions. Kept as a named export because it is the
- * seam the unit tests and `agent inspect` reach for; the grammar itself lives in
- * `./conditionals.js`, shared with the parser's validator so the two cannot
- * disagree about what a document means.
+ * Resolves target-conditional regions and inline component references. Kept as a
+ * named export because it is the seam the unit tests reach for; the grammar
+ * itself lives in `./conditionals.js`, shared with the parser's validator so the
+ * two cannot disagree about what a document means.
+ *
+ * Omitting `resolve` leaves reference markers verbatim, which is what a caller
+ * that only wants conditional regions resolved should get.
  */
 export function processTargetBlocks(
   content: string,
   target: AgentTarget,
-  options: { markdown?: boolean } = {},
+  options: { markdown?: boolean; resolve?: RefResolver } = {},
 ): string {
   return applyConditionals(content, target, options);
 }
@@ -168,7 +174,12 @@ function rewritePlaceholders(
   return content;
 }
 
-function metadataFor(component: MarkdownComponent, target: AgentTarget): Record<string, unknown> {
+function metadataFor(
+  component: MarkdownComponent,
+  target: AgentTarget,
+  kind: "skill" | "agent" | "other" = "other",
+  context?: { profile: AgentProfile; bundleName: string; resolve?: RefResolver },
+): Record<string, unknown> {
   const result = { ...component.metadata, ...targetOverride(component, target) };
   for (const key of [
     "targets",
@@ -197,6 +208,22 @@ function metadataFor(component: MarkdownComponent, target: AgentTarget): Record<
       if (typeof mapping.path === "string") return mapping.path.split("/").pop() ?? mapping.path;
       return entry;
     });
+  if (context && kind !== "other" && typeof result.name === "string")
+    result.name = emittedName(kind, result.name, target, context.profile, context.bundleName);
+  // `description` and `argumentHint` are prose a host shows a person, so a
+  // reference in one has to resolve like a reference in the body. `name` never
+  // does -- it *is* the identity, so a reference there would be circular -- and
+  // neither does `skills`, which is the portable resolution mechanism `AB150`
+  // validates and Cursor's agent inlining consumes.
+  if (context?.resolve)
+    for (const key of ["description", "argumentHint", "argument-hint"] as const) {
+      const value = result[key];
+      if (typeof value === "string")
+        result[key] = applyConditionals(value, target, {
+          markdown: false,
+          resolve: context.resolve,
+        });
+    }
   return result;
 }
 
@@ -206,13 +233,19 @@ function transformMarkdown(
   diagnostics: AgentDiagnostic[],
   kind: "skill" | "other" = "other",
   profile: AgentProfile = "plugin",
+  bundleName = "",
+  resolve?: RefResolver,
 ): string {
   const override = targetOverride(component, target);
   const body = typeof override.instructions === "string" ? override.instructions : component.body;
   return yamlFrontmatter(
-    metadataFor(component, target),
+    metadataFor(component, target, kind === "skill" ? "skill" : "other", {
+      profile,
+      bundleName,
+      resolve,
+    }),
     rewritePlaceholders(
-      processTargetBlocks(body, target),
+      processTargetBlocks(body, target, { resolve }),
       target,
       kind,
       diagnostics,
@@ -229,6 +262,7 @@ function copyComponentFiles(
   diagnostics: AgentDiagnostic[],
   artifacts: Artifact[],
   profile: AgentProfile,
+  resolve?: RefResolver,
 ): void {
   for (const file of component.files) {
     if (file.path === "SKILL.md") continue;
@@ -236,7 +270,7 @@ function copyComponentFiles(
     const content = markdown
       ? Buffer.from(
           rewritePlaceholders(
-            processTargetBlocks(file.content.toString("utf8"), target),
+            processTargetBlocks(file.content.toString("utf8"), target, { resolve }),
             target,
             "other",
             diagnostics,
@@ -510,13 +544,11 @@ function renderSkill(
   profile: AgentProfile,
   diagnostics: AgentDiagnostic[],
   artifacts: Artifact[],
+  resolve?: RefResolver,
 ): void {
   if (!selected(component, target)) return;
   const targetProfile = profileFor(target);
-  const directory =
-    targetProfile.paths.namespacePluginSkills && profile === "plugin"
-      ? `${bundle.name}-${component.name}`
-      : component.name;
+  const directory = emittedName("skill", component.name, target, profile, bundle.name);
   const skillRoot =
     profile === "project" ? targetProfile.paths.project.skills : targetProfile.paths.plugin.skills;
   const base = `${skillRoot}/${directory}`;
@@ -565,11 +597,19 @@ function renderSkill(
   artifacts.push({
     path: `${base}/SKILL.md`,
     content: Buffer.from(
-      transformMarkdown(renderedComponent, target, diagnostics, "skill", profile),
+      transformMarkdown(
+        renderedComponent,
+        target,
+        diagnostics,
+        "skill",
+        profile,
+        bundle.name,
+        resolve,
+      ),
     ),
     mode: 0o644,
   });
-  copyComponentFiles(component, base, target, diagnostics, artifacts, profile);
+  copyComponentFiles(component, base, target, diagnostics, artifacts, profile, resolve);
 }
 
 function renderAgent(
@@ -579,9 +619,14 @@ function renderAgent(
   bundle: AgentBundle,
   diagnostics: AgentDiagnostic[],
   artifacts: Artifact[],
+  resolve?: RefResolver,
 ): void {
   if (!selected(component, target)) return;
-  const metadata = metadataFor(component, target);
+  const metadata = metadataFor(component, target, "agent", {
+    profile,
+    bundleName: bundle.name,
+    resolve,
+  });
   mapTools(metadata, target, component, diagnostics, bundle.legacy);
   const model = mapModel(
     metadata.model ?? targetOverride(component, target).modelClass ?? component.metadata.modelClass,
@@ -611,16 +656,16 @@ function renderAgent(
   }
   if (target === "codex") {
     const lines = [
-      `name = ${JSON.stringify(component.name)}`,
+      `name = ${JSON.stringify(emittedName("agent", component.name, target, profile, bundle.name))}`,
       `description = ${JSON.stringify(component.description)}`,
     ];
     if (metadata.reasoning)
       lines.push(`model_reasoning_effort = ${JSON.stringify(String(metadata.reasoning))}`);
     lines.push(
-      `developer_instructions = ${JSON.stringify(rewritePlaceholders(processTargetBlocks(component.body, target), target, "other", diagnostics, component, profile))}`,
+      `developer_instructions = ${JSON.stringify(rewritePlaceholders(processTargetBlocks(component.body, target, { resolve }), target, "other", diagnostics, component, profile))}`,
     );
     artifacts.push({
-      path: `.codex/agents/${component.name}.toml`,
+      path: `.codex/agents/${emittedName("agent", component.name, target, profile, bundle.name)}.toml`,
       content: Buffer.from(lines.join("\n") + "\n"),
       mode: 0o644,
     });
@@ -639,7 +684,7 @@ function renderAgent(
       .filter(Boolean)
       .map((skill) =>
         rewritePlaceholders(
-          processTargetBlocks((skill as MarkdownComponent).body, target),
+          processTargetBlocks((skill as MarkdownComponent).body, target, { resolve }),
           target,
           "skill",
           diagnostics,
@@ -656,12 +701,12 @@ function renderAgent(
   const agentRoot =
     profile === "project" ? targetProfile.paths.project.agents : targetProfile.paths.plugin.agents;
   artifacts.push({
-    path: `${agentRoot}/${component.name}.md`,
+    path: `${agentRoot}/${emittedName("agent", component.name, target, profile, bundle.name)}.md`,
     content: Buffer.from(
       yamlFrontmatter(
         outMetadata,
         rewritePlaceholders(
-          processTargetBlocks(component.body, target),
+          processTargetBlocks(component.body, target, { resolve }),
           target,
           "other",
           diagnostics,
@@ -680,6 +725,7 @@ function renderRules(
   profile: AgentProfile,
   diagnostics: AgentDiagnostic[],
   artifacts: Artifact[],
+  resolve?: RefResolver,
 ): void {
   const targetProfile = profileFor(target);
   for (const rule of bundle.rules) {
@@ -697,7 +743,7 @@ function renderRules(
       continue;
     }
     const body = rewritePlaceholders(
-      processTargetBlocks(rule.body, target),
+      processTargetBlocks(rule.body, target, { resolve }),
       target,
       "other",
       diagnostics,
@@ -764,7 +810,7 @@ function renderRules(
       .filter((rule) => selected(rule, target))
       .map(
         (rule) =>
-          `## ${rule.name}\n\n${rewritePlaceholders(processTargetBlocks(rule.body, target), target, "other", diagnostics, rule, profile).trim()}`,
+          `## ${rule.name}\n\n${rewritePlaceholders(processTargetBlocks(rule.body, target, { resolve }), target, "other", diagnostics, rule, profile).trim()}`,
       )
       .join("\n\n");
     artifacts.push({
@@ -914,6 +960,51 @@ function renderPolicies(
   }
 }
 
+/**
+ * The reference resolver for one target and output profile.
+ *
+ * Lives here rather than in `naming.ts` because it reports `AB303`, and because
+ * `agent-targets` asserts that every code a profile declares appears in one of
+ * the three files that emit diagnostics.
+ *
+ * An unknown name returns the marker **verbatim** rather than a guess or an
+ * empty string: `AB156` has already failed the parse, so nothing is written, and
+ * if someone suppresses that error the leftover marker is visible instead of a
+ * silently missing name. A `command` reference resolves against the skills --
+ * there is no `commands` component kind; a command is a skill the model does not
+ * reach for.
+ */
+function refResolver(
+  bundle: AgentBundle,
+  target: AgentTarget,
+  profile: AgentProfile,
+  diagnostics: AgentDiagnostic[],
+): RefResolver {
+  const reported = new Set<string>();
+  return (kind: ReferenceKind, name: string): string => {
+    const pool = kind === "agent" ? bundle.agents : bundle.skills;
+    if (!pool.some((component) => component.name === name)) return `<!-- ref:${kind}:${name} -->`;
+    const { text, exact } = referenceIdentifier(kind, name, target, profile, bundle.name);
+    if (!exact && !reported.has(`${kind}:${name}`)) {
+      reported.add(`${kind}:${name}`);
+      diagnostics.push(
+        diagnostic(
+          "AB303",
+          `${target} has no ${kind} identifier; emitted the bare name`,
+          "approximate",
+          {
+            component: name,
+            target,
+            profile,
+            remediation: `Reference it in prose, or provide targets.${target} instructions, if the exact identifier matters.`,
+          },
+        ),
+      );
+    }
+    return text;
+  };
+}
+
 export function renderBundle(
   bundle: AgentBundle,
   targets: AgentTarget[],
@@ -925,6 +1016,7 @@ export function renderBundle(
     for (const profile of profiles) {
       const prefix = `${target}/${profile}`;
       const local: Artifact[] = [];
+      const resolve = refResolver(bundle, target, profile, diagnostics);
       const overlay = bundle.overlays.find((item) => item.target === target);
       if (profile === "plugin") {
         const { directory: manifestDir, file: manifestFile } = profileFor(target).manifest;
@@ -939,10 +1031,10 @@ export function renderBundle(
         });
       }
       for (const skill of bundle.skills)
-        renderSkill(bundle, skill, target, profile, diagnostics, local);
+        renderSkill(bundle, skill, target, profile, diagnostics, local, resolve);
       for (const agent of bundle.agents)
-        renderAgent(agent, target, profile, bundle, diagnostics, local);
-      renderRules(bundle, target, profile, diagnostics, local);
+        renderAgent(agent, target, profile, bundle, diagnostics, local, resolve);
+      renderRules(bundle, target, profile, diagnostics, local, resolve);
       renderPolicies(bundle, target, profile, diagnostics, local);
       if (bundle.hooks && profileFor(target).features.hooks.profiles.includes(profile)) {
         const hookRoots = profileFor(target).paths.plugin;
@@ -1022,6 +1114,7 @@ export function renderBundle(
                 rewritePlaceholders(
                   processTargetBlocks(asset.content.toString("utf8"), target, {
                     markdown: /\.md$/i.test(asset.path),
+                    resolve,
                   }),
                   target,
                   "other",

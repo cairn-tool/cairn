@@ -5,7 +5,7 @@ import type { AgentProfile, AgentTarget, BundleRule, MappingQuality } from "../t
  * semantic-release-managed package version. Bump only when the profile
  * structure changes in a way consumers must react to.
  */
-export const PROFILE_SCHEMA_VERSION = "2";
+export const PROFILE_SCHEMA_VERSION = "3";
 
 export const PORTABLE_HOOK_EVENTS = [
   "session-start",
@@ -135,8 +135,39 @@ export interface ProjectRoots {
 export interface PathProfile {
   plugin: PluginRoots;
   project: ProjectRoots;
-  /** True when plugin skill directories are namespaced as `${bundle}-${skill}`. */
-  namespacePluginSkills: boolean;
+}
+export const REFERENCE_KINDS = ["skill", "agent", "command"] as const;
+export type ReferenceKind = (typeof REFERENCE_KINDS)[number];
+
+/**
+ * Kinds whose *emitted* identity carries the bundle name, and how it is joined.
+ *
+ * This is one fact -- "Cursor namespaces plugin components" -- stated once. It
+ * used to be a `namespacePluginSkills` boolean beside the paths, which said it
+ * for skills only and could not say it for agents at all; the directory and the
+ * frontmatter `name` were then computed in different places and disagreed.
+ */
+export interface NamespaceProfile {
+  /** Output profiles in which the kind's identity is prefixed. */
+  prefixed: Record<"skills" | "agents", AgentProfile[]>;
+  separator: string;
+}
+
+/**
+ * How one document names another component for this host.
+ *
+ * `{bundle}`, `{name}` and `{separator}` substitute. `null` means the host has
+ * no such surface: the reference degrades to the bare name and `AB303` reports
+ * it, rather than a guessed identifier that renders, validates, and loads
+ * nothing -- the same conservatism the agent surfaces already apply.
+ */
+export interface ReferenceProfile {
+  forms: Record<ReferenceKind, Record<AgentProfile, string | null>>;
+}
+
+export interface NamingProfile {
+  namespace: NamespaceProfile;
+  references: ReferenceProfile;
 }
 
 export interface PlaceholderProfile {
@@ -290,6 +321,12 @@ export interface TargetProfile {
   profiles: AgentProfile[];
   manifest: ManifestProfile;
   paths: PathProfile;
+  /**
+   * Emitted-identity namespacing and cross-component reference forms. Required:
+   * every host has to answer both, and a missing answer is a profile defect
+   * rather than a default worth guessing.
+   */
+  naming: NamingProfile;
   placeholders: PlaceholderProfile;
   hooks: HookProfile;
   models: ModelProfile;
@@ -452,6 +489,49 @@ export function validateProfile(profile: TargetProfile): string[] {
         problems.push(`output pattern '${entry.pattern}' is not a POSIX relative path`);
       if (entry.pattern.split("/").includes(".."))
         problems.push(`output pattern '${entry.pattern}' escapes the target root`);
+    }
+  }
+  const naming = profile.naming;
+  if (!naming) problems.push("missing naming declaration");
+  else {
+    for (const kind of ["skills", "agents"] as const) {
+      const namespaced = naming.namespace.prefixed[kind];
+      if (!namespaced) {
+        problems.push(`naming.namespace.prefixed is missing '${kind}'`);
+        continue;
+      }
+      for (const outputProfile of namespaced) {
+        if (!profile.profiles.includes(outputProfile))
+          problems.push(
+            `naming.namespace.prefixed.${kind} names unsupported output profile '${outputProfile}'`,
+          );
+        // A prefixed identity that no reference form can spell is a component
+        // nothing in the bundle can name -- exactly the mismatch this block
+        // replaced, so it must not be expressible again.
+        const referenceKind = kind === "skills" ? "skill" : "agent";
+        if (naming.references.forms[referenceKind]?.[outputProfile] === null)
+          problems.push(
+            `naming prefixes ${kind} in '${outputProfile}' but declares no ${referenceKind} reference form for it`,
+          );
+      }
+      if (namespaced.length && !naming.namespace.separator)
+        problems.push(`naming.namespace prefixes ${kind} but declares an empty separator`);
+    }
+    for (const kind of REFERENCE_KINDS) {
+      const forms = naming.references.forms[kind];
+      if (!forms) {
+        problems.push(`naming.references.forms is missing '${kind}'`);
+        continue;
+      }
+      for (const outputProfile of profile.profiles) {
+        const form = forms[outputProfile];
+        if (form === undefined)
+          problems.push(`naming.references.forms.${kind} is missing profile '${outputProfile}'`);
+        else if (form !== null && !form.includes("{name}"))
+          problems.push(
+            `naming.references.forms.${kind}.${outputProfile} '${form}' does not substitute {name}`,
+          );
+      }
     }
   }
   const policyForms = [

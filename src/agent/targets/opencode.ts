@@ -63,7 +63,19 @@ export const opencodeProfile: TargetProfile = {
       mcp: "opencode.json",
       assets: "assets",
     },
-    namespacePluginSkills: false,
+  },
+  naming: {
+    namespace: {
+      prefixed: { skills: [], agents: [] },
+      separator: "-",
+    },
+    references: {
+      forms: {
+        skill: { plugin: "{name}", project: "{name}" },
+        agent: { plugin: "{name}", project: "{name}" },
+        command: { plugin: null, project: null },
+      },
+    },
   },
   placeholders: {
     bundleRoot: { plugin: ".", project: "." },
@@ -194,7 +206,7 @@ export const opencodeProfile: TargetProfile = {
       profiles: ["plugin", "project"],
       summary: "argument substitution is documented for commands, not skills",
       surface: null,
-      diagnostics: [],
+      diagnostics: ["AB303"],
     },
     native: {
       support: "native",

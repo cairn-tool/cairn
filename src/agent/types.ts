@@ -231,3 +231,13 @@ export function diagnostic(
     ...extra,
   };
 }
+
+/**
+ * A component name: lowercase kebab-case.
+ *
+ * Shared because both the parser (`AB101`) and the conditional/reference
+ * grammar hold names to it. `conditionals.ts` cannot import `parser.ts` -- the
+ * dependency runs the other way -- so a copy there would be a second grammar
+ * free to drift from the one that validates.
+ */
+export const COMPONENT_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
