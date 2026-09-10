@@ -48,7 +48,7 @@ Anything the importer could not translate is preserved under `native/<target>/`,
 For each file decide: promote it to a portable component, or keep it as a deliberate overlay?
 An overlay is copied verbatim, with no placeholder rewriting and no conditional-block
 processing, and `agent doctor` reports it separately rather than checking it — so keep one only
-when the surface genuinely has no portable equivalent. The `portability-triage` skill decides
+when the surface genuinely has no portable equivalent. The `<!-- ref:skill:portability-triage -->` skill decides
 these case by case.
 
 ## 5. Fill in the manifest
@@ -67,7 +67,7 @@ Replace host-native substitutions with the canonical `${ARGUMENTS}`, `${BUNDLE_R
 cairn agent compat <bundle> --target all
 ```
 
-`target-portability` explains how to read the result before promising a feature works
+`<!-- ref:skill:target-portability -->` explains how to read the result before promising a feature works
 everywhere.
 
 ## 7. Regenerate, and diff against what is committed
@@ -100,5 +100,5 @@ from the import, so the diff is reviewable and revertable.
 ## More
 
 Discovery table: [`reference/discovery.md`](reference/discovery.md). Cutover and rollback:
-[`reference/cutover.md`](reference/cutover.md). Authoring is `bundle-authoring`; per-host
-support is `target-portability`; publishing is `bundle-publishing`.
+[`reference/cutover.md`](reference/cutover.md). Authoring is `<!-- ref:skill:bundle-authoring -->`; per-host
+support is `<!-- ref:skill:target-portability -->`; publishing is `<!-- ref:skill:bundle-publishing -->`.

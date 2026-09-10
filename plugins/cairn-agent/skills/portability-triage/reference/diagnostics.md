@@ -10,10 +10,32 @@ one that does not.
 | Code    | Condition                                                                                      | Remedy                          |
 | ------- | ---------------------------------------------------------------------------------------------- | ------------------------------- |
 | `AB302` | The target has no portable `${ARGUMENTS}` substitution; explanatory prose was emitted instead. | 1, or 4 if the wording matters. |
+| `AB303` | The target has no identifier for a referenced component kind; the bare name was emitted.       | 1.                              |
 
 Only Claude Code substitutes arguments natively. Everywhere else the renderer writes prose
 telling the model to take arguments from the user's message, rather than leaving a literal that
 would never expand.
+
+`AB303` is almost always option 1. It fires where a host has no surface for the kind being
+referenced — a `command` reference on any host but Claude Code and Cursor, an `agent` reference
+where agents are not emitted at all — and the bare name is the honest answer: the alternative
+would be an identifier that renders and validates but resolves to nothing. Reach for 5 only if
+the exact identifier is load-bearing for that one host.
+
+## Authoring errors, not portability findings
+
+These three are your mistake rather than the host's limitation, so triage does not apply — fix
+the reference.
+
+| Code    | Condition                                                                       |
+| ------- | ------------------------------------------------------------------------------- |
+| `AB124` | A comment looks like a component reference but does not parse.                  |
+| `AB156` | A reference names a component the bundle does not define.                       |
+| `AB157` | A reference sits in a file the renderer copies verbatim, such as a hook script. |
+
+`AB157` is the one worth reading twice: validation is deliberately wider than expansion, so a
+reference somewhere the renderer does not transform would otherwise ship as a literal HTML
+comment into the host's tree.
 
 ## Skills
 

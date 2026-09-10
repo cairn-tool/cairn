@@ -93,4 +93,4 @@ edits are worth keeping, fold them back into the bundle with `/agent-migrate`.
 
 A coarse component-by-target summary, for when you cannot reach the docs:
 [`reference/support-matrix.md`](reference/support-matrix.md). What to _do_ about an
-approximation is `portability-triage`.
+approximation is `<!-- ref:skill:portability-triage -->`.

@@ -136,3 +136,26 @@ cases:
         absent:
           - hooks/**
           - .claude-plugin/**
+
+  # Cursor namespaces a plugin's agents as well as its skills, on the frontmatter
+  # `name` as well as the path -- the directory used to be prefixed while `name:`
+  # stayed bare, which is one component with two identities. And no reference may
+  # reach the tree unexpanded: a literal marker there is a defect the host shows
+  # to the user.
+  - name: the-cursor-plugin-namespaces-components-and-resolves-references
+    targets: [cursor]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - agents/cairn-markdown-markdown-auditor.md
+          - skills/cairn-markdown-markdown-navigate/SKILL.md
+        absent:
+          - agents/markdown-auditor.md
+      files:
+        - path: agents/cairn-markdown-markdown-auditor.md
+          includes: ["name: cairn-markdown-markdown-auditor"]
+          excludes: ["<!-- ref:"]
+        - path: skills/cairn-markdown-markdown-navigate/SKILL.md
+          includes: ["name: cairn-markdown-markdown-navigate"]
+          excludes: ["<!-- ref:"]

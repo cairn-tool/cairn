@@ -110,8 +110,23 @@ Check the working tree before continuing.
 
 An unmatched, misnested, or unclosed block is an error (`AB121`), and so is a marker that
 _looks_ conditional but does not parse (`AB123`) — `<!-- target: cursor -->` with a space after
-the colon used to be silently inert. Blocks are validated in **every** file the renderer
-processes them in, which is every textual asset and not only Markdown.
+the colon used to be silently inert. Blocks are validated in **every** textual file, not only
+Markdown, and validation is wider than expansion: a marker in a hook script is reported rather
+than resolved.
+
+Do **not** reach for a conditional block to spell a component's name per host. Write a
+reference, which resolves to whatever the target calls it:
+
+```markdown
+The formats live in the `<!-- ref:skill:review-record -->` skill.
+Spawn `<!-- ref:agent:diff-reviewer -->`, one per batch.
+Run `<!-- ref:command:review -->` to start.
+```
+
+Unlike a conditional marker, a reference inside an inline code span is **live** — that is the
+intended spelling. It is inert inside a fence, so the examples above are safe. Keep `skills:`
+and `name:` frontmatter bare. Full rules, including the per-host forms and the diagnostics, are
+in `${SKILL_DIR}/reference/bundle-format.md`.
 
 Markers inside a fenced code block or an inline code span are inert, so a skill may document
 this syntax without its own examples being stripped.
@@ -154,5 +169,5 @@ sequence with confirmation gates.
 ## More
 
 Full flags, the frontmatter tables, and the diagnostic codes are in
-[`reference/bundle-format.md`](reference/bundle-format.md). Testing is the `bundle-testing`
-skill; packaging and installing are `bundle-publishing`.
+[`reference/bundle-format.md`](reference/bundle-format.md). Testing is the `<!-- ref:skill:bundle-testing -->`
+skill; packaging and installing are `<!-- ref:skill:bundle-publishing -->`.

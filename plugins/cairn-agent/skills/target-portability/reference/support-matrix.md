@@ -47,6 +47,36 @@ Regenerate with `cairn agent specs --target all --format json`, reading `outputs
 `assets/**` is emitted by every target in both profiles, which is why it never helps identify a
 layout.
 
+## Component identity is not the same on every host
+
+Cursor namespaces a **plugin's** skills and agents by bundle name — `skills/cr-review/` with
+`name: cr-review`, and `agents/cr-diff-reviewer.md` — because every plugin installed there
+shares one flat namespace. Nothing else namespaces anything, and Cursor's project profile does
+not either.
+
+Claude Code leaves the directories bare but _addresses_ a plugin's components as
+`<bundle>:<name>`, and its user-invocable skills as `/<bundle>:<name>`.
+
+So a literal sibling name in prose is wrong on at least one host. Reference it instead:
+
+For a bundle `cr` with a skill `review` and an agent `diff-reviewer` — written here as
+`ref:<kind>:<name>`, because a real marker in a table cell cannot be fenced and would resolve:
+
+| Reference kind            | claude-code plugin | cursor plugin      |
+| ------------------------- | ------------------ | ------------------ |
+| `ref:skill:review`        | `cr:review`        | `cr-review`        |
+| `ref:agent:diff-reviewer` | `cr:diff-reviewer` | `cr-diff-reviewer` |
+| `ref:command:review`      | `/cr:review`       | `cr-review`        |
+
+The marker itself is an HTML comment around that text:
+
+```markdown
+the `<!-- ref:skill:review -->` skill
+```
+
+A host with no surface for a kind emits the bare name and reports `AB303`; that is why
+`command` is unavailable everywhere but these two.
+
 ## Three shapes that are not what you expect
 
 - **Codex subagents are TOML**, at `.codex/agents/{name}.toml`, and project-scope only.

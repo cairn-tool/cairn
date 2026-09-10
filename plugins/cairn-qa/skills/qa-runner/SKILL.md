@@ -90,5 +90,5 @@ itself as broken.
 ## More
 
 Full flags, the concurrency model, configuration, and the log layout are in
-[`reference/running.md`](reference/running.md). The case file itself is the `qa-case-plan` skill; the
-records a run leaves behind are `qa-run-record`.
+[`reference/running.md`](reference/running.md). The case file itself is the `<!-- ref:skill:qa-case-plan -->` skill; the
+records a run leaves behind are `<!-- ref:skill:qa-run-record -->`.

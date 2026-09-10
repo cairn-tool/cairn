@@ -79,16 +79,16 @@ cairn md toc <file> --write             # update it
 ```
 
 `--write` only touches content between the document's TOC markers. It is a writing command —
-see the `markdown-refactor` skill before using it.
+see the `<!-- ref:skill:markdown-refactor -->` skill before using it.
 
 ## Impact before a rename
 
 `cairn md refs-to <file> [directory]` lists every document pointing at a file. Run it before
 renaming, moving, or deleting anything. If you are going to do the rename, `md rename-file`
-updates those references for you — see `markdown-refactor`.
+updates those references for you — see `<!-- ref:skill:markdown-refactor -->`.
 
 ## More
 
 Whole-workspace questions — querying many documents at once, building a context pack, the
-reference graph — belong to the `markdown-query` skill. Full flag tables for the commands here
+reference graph — belong to the `<!-- ref:skill:markdown-query -->` skill. Full flag tables for the commands here
 are in [`reference/structure.md`](reference/structure.md).
