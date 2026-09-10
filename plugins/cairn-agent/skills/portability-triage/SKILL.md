@@ -20,9 +20,12 @@ cairn agent convert <bundle> --target all --output ./dist -fj
 cairn agent compat  <bundle> --target all -fj
 ```
 
-The `AB3xx` range is organized by feature: `AB302` placeholders, `AB310` skills, `AB32x` hooks,
-`AB33x`/`AB340` subagents, `AB35x` rules, `AB36x` policies, `AB370` MCP. Full list in
-[`reference/diagnostics.md`](reference/diagnostics.md).
+The `AB3xx` range is organized by feature: `AB302` placeholders and `AB303` component
+references, `AB310` skills, `AB32x` hooks, `AB33x`/`AB340` subagents, `AB35x` rules, `AB36x`
+policies, `AB370` MCP. Full list in [`reference/diagnostics.md`](reference/diagnostics.md).
+
+`AB124`, `AB156` and `AB157` are not in this range and not triage material: a broken component
+reference is an authoring error to correct, not an approximation to accept.
 
 **`--strict` is a decision, not a default.** It turns approximations into blocking findings,
 which is right in CI for a bundle you publish and wrong for `agent audit`, where forwarded
@@ -77,4 +80,4 @@ If the hand edits in the tree are worth keeping, fold them back into the bundle 
 
 Every code, the remedy it points at, and the exact frontmatter and overlay syntax:
 [`reference/diagnostics.md`](reference/diagnostics.md). What each host supports in the first
-place is `target-portability`.
+place is `<!-- ref:skill:target-portability -->`.

@@ -68,6 +68,7 @@ Emitted by the bundle and manifest parsers, so every command that loads a bundle
 | `AB121` | error    | bundle parser   | A conditional block is unmatched, misnested, or unclosed.                                                            |
 | `AB122` | error    | manifest parser | A `marketplace` field has the wrong type.                                                                            |
 | `AB123` | error    | bundle parser   | A conditional marker looks like one but does not parse.                                                              |
+| `AB124` | error    | bundle parser   | A comment looks like an inline component reference but does not parse.                                               |
 | `AB126` | notice   | manifest parser | A component path sits at the manifest's top level, which `schemaVersion: '2'` deprecates in favour of `components.`. |
 | `AB127` | error    | manifest parser | A manifest field requires `schemaVersion: '2'`.                                                                      |
 | `AB130` | error    | bundle parser   | A rule declares an unknown `activation`.                                                                             |
@@ -81,7 +82,10 @@ Emitted by the bundle and manifest parsers, so every command that loads a bundle
 | `AB153` | error    | bundle parser   | A resource resolves outside the bundle and no declared `resourceRoot` covers it.                                     |
 | `AB154` | error    | bundle parser   | Two resources in one component land at the same path.                                                                |
 | `AB155` | error    | bundle parser   | A declared `resourceRoot` is malformed, absolute, missing, or not a directory.                                       |
+| `AB156` | error    | bundle parser   | An inline component reference names a component the bundle does not define.                                          |
+| `AB157` | warning  | bundle parser   | An inline component reference sits in a file the renderer does not expand.                                           |
 | `AB160` | error    | bundle parser   | Components form a dependency cycle.                                                                                  |
+| `AB161` | warning  | bundle parser   | A `command` reference names a skill that is not `invocationPolicy: explicit`.                                        |
 
 ## Native overlays
 
@@ -146,6 +150,7 @@ Per-feature mapping losses. Severity depends on what the target profile declares
 | Code    | Severity | Emitted by                | Meaning                                                                                      |
 | ------- | -------- | ------------------------- | -------------------------------------------------------------------------------------------- |
 | `AB302` | varies   | renderer; target profiles | The target has no portable `${ARGUMENTS}` substitution; explanatory text is emitted instead. |
+| `AB303` | varies   | renderer; target profiles | The target has no identifier for a referenced component kind; the bare name was emitted.     |
 | `AB310` | varies   | renderer; target profiles | The target's skill invocation policy is advisory rather than enforced.                       |
 | `AB320` | varies   | renderer; target profiles | A hook event is not portable to the target.                                                  |
 | `AB321` | varies   | renderer; target profiles | A Windows-specific hook command requires a target override.                                  |

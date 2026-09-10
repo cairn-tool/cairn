@@ -437,3 +437,278 @@ describe("agent bundles", () => {
     expect(cursor.hooks).toBe("./hooks/hooks.json");
   });
 });
+
+/**
+ * A bundle with a skill, a command-shaped skill, an agent and an asset, all
+ * naming each other — the shapes the reference directive exists for.
+ */
+function referenceBundleRoot(): string {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agent-ref-unit-"));
+  temporary.push(root);
+  fs.mkdirSync(path.join(root, "skills", "review", "reference"), { recursive: true });
+  fs.mkdirSync(path.join(root, "skills", "standards"), { recursive: true });
+  fs.mkdirSync(path.join(root, "agents"), { recursive: true });
+  fs.mkdirSync(path.join(root, "assets"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "agent-bundle.yaml"),
+    "schemaVersion: '2'\nname: cr\nversion: 1.0.0\ndescription: Reference bundle\n",
+  );
+  fs.writeFileSync(
+    path.join(root, "skills", "standards", "SKILL.md"),
+    "---\nname: standards\ndescription: The formats.\n---\n# standards\nBody.\n",
+  );
+  fs.writeFileSync(
+    path.join(root, "skills", "review", "SKILL.md"),
+    [
+      "---",
+      "name: review",
+      "description: Uses the <!-- ref:skill:standards --> skill.",
+      "invocationPolicy: explicit",
+      'argumentHint: "[<!-- ref:skill:standards -->]"',
+      "---",
+      "",
+      "# review",
+      "",
+      "Formats live in the `<!-- ref:skill:standards -->` skill.",
+      "Spawn `<!-- ref:agent:diff-reviewer -->` per batch.",
+      "Run <!-- ref:command:review --> to start.",
+      "",
+      "<!-- ref:skill:standards -->",
+      "next line survives",
+      "",
+      "```markdown",
+      "Fenced: <!-- ref:skill:standards -->",
+      "```",
+      "",
+      "<!-- if target:codex -->only codex: <!-- ref:skill:standards --><!-- endif -->",
+      "",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "skills", "review", "reference", "notes.md"),
+    "Sibling names `<!-- ref:agent:diff-reviewer -->`.\n",
+  );
+  fs.writeFileSync(
+    path.join(root, "agents", "diff-reviewer.agent.md"),
+    "---\nname: diff-reviewer\ndescription: Reviews a slice.\n---\n# diff-reviewer\nNot `<!-- ref:agent:diff-reviewer -->`'s call.\n",
+  );
+  fs.writeFileSync(
+    path.join(root, "assets", "basics.md"),
+    "Asset: <!-- ref:skill:standards -->.\n",
+  );
+  return root;
+}
+
+describe("cursor component namespacing", () => {
+  const render = (target: "cursor" | "claude-code") => {
+    const rendered = renderBundle(
+      loadBundle(referenceBundleRoot()),
+      [target],
+      ["plugin", "project"],
+    );
+    const read = (file: string): string => {
+      const artifact = rendered.artifacts.find((entry) => entry.path === file);
+      if (!artifact)
+        throw new Error(
+          `no artifact ${file}; have ${rendered.artifacts.map((a) => a.path).join(", ")}`,
+        );
+      return artifact.content.toString("utf8");
+    };
+    return { rendered, read, paths: rendered.artifacts.map((entry) => entry.path) };
+  };
+
+  it("prefixes a plugin skill's directory and its frontmatter name together", () => {
+    // The defect: the directory was namespaced while `name:` was not, so one
+    // skill shipped under two identities.
+    const { read, paths } = render("cursor");
+    expect(paths).toContain("cursor/plugin/skills/cr-review/SKILL.md");
+    expect(read("cursor/plugin/skills/cr-review/SKILL.md")).toContain("name: cr-review");
+  });
+
+  it("prefixes a plugin agent's filename and its frontmatter name", () => {
+    const { read, paths } = render("cursor");
+    expect(paths).toContain("cursor/plugin/agents/cr-diff-reviewer.md");
+    expect(paths).not.toContain("cursor/plugin/agents/diff-reviewer.md");
+    expect(read("cursor/plugin/agents/cr-diff-reviewer.md")).toContain("name: cr-diff-reviewer");
+  });
+
+  it("leaves the project profile bare, where nothing is namespaced", () => {
+    const { read, paths } = render("cursor");
+    expect(paths).toContain("cursor/project/.cursor/skills/review/SKILL.md");
+    expect(paths).toContain("cursor/project/.cursor/agents/diff-reviewer.md");
+    expect(read("cursor/project/.cursor/skills/review/SKILL.md")).toContain("name: review");
+  });
+
+  it("leaves every other target unprefixed", () => {
+    const { read, paths } = render("claude-code");
+    expect(paths).toContain("claude-code/plugin/skills/review/SKILL.md");
+    expect(paths).toContain("claude-code/plugin/agents/diff-reviewer.md");
+    expect(read("claude-code/plugin/skills/review/SKILL.md")).toContain("name: review");
+  });
+});
+
+describe("inline component references", () => {
+  const bodyOf = (target: "cursor" | "claude-code" | "codex", file: string): string => {
+    const rendered = renderBundle(loadBundle(referenceBundleRoot()), [target], ["plugin"]);
+    const artifact = rendered.artifacts.find((entry) => entry.path === file);
+    if (!artifact) throw new Error(`no artifact ${file}`);
+    return artifact.content.toString("utf8");
+  };
+
+  it("resolves each kind to the identity the host actually uses", () => {
+    const cursor = bodyOf("cursor", "cursor/plugin/skills/cr-review/SKILL.md");
+    expect(cursor).toContain("`cr-standards` skill");
+    expect(cursor).toContain("`cr-diff-reviewer` per batch");
+    expect(cursor).toContain("Run cr-review to start.");
+
+    const claude = bodyOf("claude-code", "claude-code/plugin/skills/review/SKILL.md");
+    expect(claude).toContain("`cr:standards` skill");
+    expect(claude).toContain("`cr:diff-reviewer` per batch");
+    expect(claude).toContain("Run /cr:review to start.");
+  });
+
+  it("expands inside an inline code span but not inside a fenced block", () => {
+    // The asymmetry with conditionals: `` `<!-- ref:skill:x -->` `` is how a
+    // sentence names a skill in code voice, so protecting spans would make the
+    // most natural spelling the one that silently does nothing. A fenced
+    // example still has to survive, or this syntax cannot be documented.
+    const cursor = bodyOf("cursor", "cursor/plugin/skills/cr-review/SKILL.md");
+    expect(cursor).toContain("`cr-standards`");
+    expect(cursor).toContain("Fenced: <!-- ref:skill:standards -->");
+  });
+
+  it("does not swallow the newline after a reference on its own line", () => {
+    const cursor = bodyOf("cursor", "cursor/plugin/skills/cr-review/SKILL.md");
+    expect(cursor).toContain("cr-standards\nnext line survives");
+  });
+
+  it("resolves references in frontmatter description and argument hint", () => {
+    expect(bodyOf("cursor", "cursor/plugin/skills/cr-review/SKILL.md")).toContain(
+      "description: Uses the cr-standards skill.",
+    );
+    expect(bodyOf("cursor", "cursor/plugin/skills/cr-review/SKILL.md")).toContain(
+      'argument-hint: "[cr-standards]"',
+    );
+  });
+
+  it("resolves references in sibling resources, agents and assets", () => {
+    expect(bodyOf("cursor", "cursor/plugin/skills/cr-review/reference/notes.md")).toContain(
+      "`cr-diff-reviewer`",
+    );
+    expect(bodyOf("cursor", "cursor/plugin/agents/cr-diff-reviewer.md")).toContain(
+      "`cr-diff-reviewer`'s call",
+    );
+    expect(bodyOf("cursor", "cursor/plugin/assets/basics.md")).toContain("Asset: cr-standards.");
+  });
+
+  it("drops a reference with the conditional branch that was not taken", () => {
+    expect(bodyOf("cursor", "cursor/plugin/skills/cr-review/SKILL.md")).not.toContain("only codex");
+    expect(bodyOf("codex", "codex/plugin/skills/review/SKILL.md")).toContain(
+      "only codex: standards",
+    );
+  });
+
+  it("leaves markers verbatim when no resolver is supplied", () => {
+    const source = "the `<!-- ref:skill:standards -->` skill\n";
+    expect(processTargetBlocks(source, "cursor")).toBe(source);
+  });
+
+  it("leaves references unresolved in an unbalanced document", () => {
+    const source = "<!-- if target:cursor --><!-- ref:skill:standards -->\n";
+    expect(processTargetBlocks(source, "cursor")).toBe(source);
+  });
+});
+
+describe("inline reference diagnostics", () => {
+  /** `bundleRoot`'s single skill, with `body` as its whole document body. */
+  const withBody = (body: string): string[] => {
+    const root = bundleRoot();
+    fs.writeFileSync(
+      path.join(root, "skills", "release", "SKILL.md"),
+      `---\nname: release\ndescription: Release\n---\n${body}\n`,
+    );
+    return loadBundle(root).diagnostics.map((item) => item.code);
+  };
+
+  it("reports AB124 for a marker that looks like a reference but does not parse", () => {
+    for (const marker of [
+      "<!-- ref: skill:release -->",
+      "<!-- refs:skill:release -->",
+      "<!-- ref:skil:release -->",
+      "<!-- ref:rule:release -->",
+      "<!-- ref:skill: -->",
+      "<!-- ref:skill:Not_Kebab -->",
+    ])
+      expect(withBody(marker), marker).toContain("AB124");
+  });
+
+  it("does not mistake an ordinary comment for a reference", () => {
+    // `reference:` and `refactor` both begin with `ref`; only a colon straight
+    // after `ref`/`refs` makes a comment one of these.
+    const codes = withBody(
+      "<!-- reference: docs/x.md -->\n<!-- refactor this later -->\n<!-- refresh the cache -->",
+    );
+    expect(codes).not.toContain("AB124");
+    expect(codes).not.toContain("AB156");
+  });
+
+  it("reports AB156 for a reference to a component the bundle does not define", () => {
+    expect(withBody("<!-- ref:skill:nope -->")).toContain("AB156");
+    expect(withBody("<!-- ref:agent:nope -->")).toContain("AB156");
+    // The skill exists, so the *name* resolves; only the kind's pool differs.
+    expect(withBody("<!-- ref:agent:release -->")).toContain("AB156");
+    expect(withBody("<!-- ref:skill:release -->")).not.toContain("AB156");
+  });
+
+  it("reports AB161 when a command reference names a model-invocable skill", () => {
+    // A command is a skill the model does not reach for; referencing one that
+    // is still auto-invocable names an entry point the host does not present.
+    expect(withBody("<!-- ref:command:release -->")).toContain("AB161");
+    const root = bundleRoot();
+    fs.writeFileSync(
+      path.join(root, "skills", "release", "SKILL.md"),
+      "---\nname: release\ndescription: Release\ninvocationPolicy: explicit\n---\n<!-- ref:command:release -->\n",
+    );
+    expect(loadBundle(root).diagnostics.map((item) => item.code)).not.toContain("AB161");
+  });
+
+  it("reports AB157 where the renderer copies a file verbatim", () => {
+    // Validation is wider than expansion, so a reference in a hook script would
+    // otherwise ship as a literal comment with nothing to say so.
+    const root = bundleRoot();
+    fs.mkdirSync(path.join(root, "hooks"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "hooks", "hooks.yaml"),
+      "session-start:\n  - command: ./hooks/start.sh\n",
+    );
+    fs.writeFileSync(
+      path.join(root, "hooks", "start.sh"),
+      "#!/bin/sh\n# names <!-- ref:skill:release -->\n",
+      { mode: 0o755 },
+    );
+    const codes = loadBundle(root).diagnostics.map((item) => item.code);
+    expect(codes).toContain("AB157");
+  });
+
+  it("does not treat a prose reference as a composition dependency", () => {
+    // Two documents pointing at each other for further reading is normal --
+    // cairn's own portability-triage and target-portability skills do it -- so
+    // only the frontmatter `skills:` list feeds the AB160 cycle check. A
+    // document naming itself, which a standards skill legitimately does, is not
+    // a cycle either.
+    const root = bundleRoot();
+    fs.mkdirSync(path.join(root, "skills", "other"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "skills", "release", "SKILL.md"),
+      "---\nname: release\ndescription: Release\n---\nsee <!-- ref:skill:other -->\n",
+    );
+    fs.writeFileSync(
+      path.join(root, "skills", "other", "SKILL.md"),
+      "---\nname: other\ndescription: Other\n---\nsee <!-- ref:skill:release -->\n",
+    );
+    expect(loadBundle(root).diagnostics.map((item) => item.code)).not.toContain("AB160");
+    expect(
+      withBody("this is <!-- ref:skill:release -->, run <!-- ref:command:release -->"),
+    ).not.toContain("AB160");
+  });
+});

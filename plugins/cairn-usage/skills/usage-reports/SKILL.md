@@ -70,7 +70,7 @@ keep. "Last 24 hours" is not expressible; `--since 1d` is a calendar day.
 **Every provider distorts its own token log, and cairn undoes each distortion separately.** The
 figures are corrected, not raw — that is the point. But it means a number here will not match a
 naive sum of the transcript files, and if someone has computed one by hand, cairn's is the right
-one. The specifics are in the `usage-store` skill.
+one. The specifics are in the `<!-- ref:skill:usage-store -->` skill.
 
 ## Exit codes
 
@@ -90,4 +90,4 @@ cairn usage sessions --sort tokens -fj | jq '.rows[0]'
 ## More
 
 Every command's dimensions and flags are in [`reference/reports.md`](reference/reports.md).
-Importing and the store are in the `usage-store` skill.
+Importing and the store are in the `<!-- ref:skill:usage-store -->` skill.

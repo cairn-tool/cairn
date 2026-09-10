@@ -1,6 +1,6 @@
 # Validation commands in full
 
-Everything `markdown-validate` mentions, plus the commands it does not lead with. See
+Everything `<!-- ref:skill:markdown-validate -->` mentions, plus the commands it does not lead with. See
 [`cli-basics.md`](../../../assets/cli-basics.md) for formats, exit codes, and config discovery.
 
 ## `md check-urls <inputs...>`
@@ -52,7 +52,7 @@ the output, you probably need to widen the flags rather than conclude it is abse
 
 The inverse: which documents point **at** this file. Run it before renaming or deleting anything
 to see the blast radius. `md rename-file` updates those references for you — see the
-`markdown-refactor` skill.
+`<!-- ref:skill:markdown-refactor -->` skill.
 
 ## `md orphans [directory]`
 

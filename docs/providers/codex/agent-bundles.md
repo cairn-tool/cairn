@@ -220,3 +220,13 @@ model does not describe.
 - [`agent convert`](../../commands/agent/convert.md) and [`agent specs`](../../commands/agent/specs.md)
 - [Agent bundle format](../../formats/agent-bundle.md)
 - [Target profile format](../../formats/target-profile.md)
+
+## Inline references
+
+Nothing is namespaced here: `naming.namespace.prefixed` is empty, so a skill or agent renders
+under the name the bundle declared, and an [inline
+reference](../../formats/agent-bundle.md#inline-component-references) resolves to that bare name.
+
+The reference forms that are `null` are `agent` in the plugin profile — `paths.plugin.agents` is `null`, so there is nothing to name — and `command` in both. cairn renders no such surface for this host, so
+rather than inventing an identifier that would load nothing, the bare name is emitted and
+`AB303` records the approximation.

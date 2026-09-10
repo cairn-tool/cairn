@@ -105,6 +105,16 @@ The project scope merges into the repository root.
 `opencode plugin <module>` installs an npm package; there is no catalog format.
 [`agent package`](../../commands/agent/package.md) skips this target rather than inventing one.
 
+## Inline references
+
+Nothing is namespaced here: `naming.namespace.prefixed` is empty, so a skill or agent renders
+under the name the bundle declared, and an [inline
+reference](../../formats/agent-bundle.md#inline-component-references) resolves to that bare name.
+
+The reference forms that are `null` are `command` in both profiles. cairn renders no such surface for this host, so
+rather than inventing an identifier that would load nothing, the bare name is emitted and
+`AB303` records the approximation.
+
 ## Unverified rows
 
 - that skills do not substitute `$ARGUMENTS` — it is documented for **commands**, and unstated

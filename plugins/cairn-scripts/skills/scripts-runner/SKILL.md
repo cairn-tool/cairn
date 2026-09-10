@@ -81,7 +81,7 @@ boundary you are inside of.
 ## Writing a registry
 
 Declaring scripts, the `run:`/`exec:` choice, `cwd:`, and the environment a script receives are
-in the `scripts-registry` skill.
+in the `<!-- ref:skill:scripts-registry -->` skill.
 
 ## More
 

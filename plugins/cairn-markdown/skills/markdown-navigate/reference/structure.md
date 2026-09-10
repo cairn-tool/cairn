@@ -66,7 +66,7 @@ is not found.
 
 ## `md toc <file>`
 
-Read-only unless given a mode flag — see the `markdown-refactor` skill before writing.
+Read-only unless given a mode flag — see the `<!-- ref:skill:markdown-refactor -->` skill before writing.
 
 | Option            | Meaning                          |
 | ----------------- | -------------------------------- |

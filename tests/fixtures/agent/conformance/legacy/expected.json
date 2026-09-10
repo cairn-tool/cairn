@@ -20,7 +20,7 @@
     ],
     "cursor/plugin": [
       ".cursor-plugin/plugin.json",
-      "agents/legacy-agent.md",
+      "agents/legacy-plugin-legacy-agent.md",
       "skills/legacy-plugin-legacy/SKILL.md"
     ],
     "cursor/project": [

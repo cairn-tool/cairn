@@ -110,3 +110,32 @@ cases:
             - "cairn agent convert"
             - "cairn agent verify"
             - "--from"
+
+  # Cursor namespaces a plugin's agents as well as its skills, on the frontmatter
+  # `name` as well as the path -- the directory used to be prefixed while `name:`
+  # stayed bare, which is one component with two identities. And no reference may
+  # reach the tree unexpanded: a literal marker there is a defect the host shows
+  # to the user.
+  - name: the-cursor-plugin-namespaces-components-and-resolves-references
+    targets: [cursor]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - agents/cairn-agent-bundle-reviewer.md
+          - skills/cairn-agent-bundle-authoring/SKILL.md
+        absent:
+          - agents/bundle-reviewer.md
+      files:
+        - path: agents/cairn-agent-bundle-reviewer.md
+          includes: ["name: cairn-agent-bundle-reviewer"]
+          excludes: ["<!-- ref:"]
+        - path: skills/cairn-agent-bundle-authoring/SKILL.md
+          includes: ["name: cairn-agent-bundle-authoring"]
+        # The exclusion goes on a skill that *uses* references rather than one
+        # that documents them: `bundle-authoring` ships fenced examples of the
+        # syntax, and a fenced marker is inert by design, so a literal `<!-- ref:`
+        # in its output is correct.
+        - path: skills/cairn-agent-portability-triage/SKILL.md
+          includes: ["name: cairn-agent-portability-triage", "cairn-agent-target-portability"]
+          excludes: ["<!-- ref:"]

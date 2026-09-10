@@ -131,6 +131,24 @@ a [native overlay](#native-overlays) `manifest.json`, which is merged over the g
 Plugin skill directories are **not** namespaced — `skills/<name>/`, not
 `skills/<bundle>-<name>/`. Cursor is the target that namespaces them.
 
+## Reference forms
+
+The directory is bare, but the identity the **host resolves** is not: Claude Code addresses a
+plugin's skills and subagents as `<plugin>:<name>`, and its user-invocable skills as
+`/<plugin>:<name>`. So an [inline
+reference](../../formats/agent-bundle.md#inline-component-references) resolves to the address
+rather than the directory name — naming the directory would give the model a string the host
+cannot look up.
+
+| Kind      | Plugin profile     | Project profile |
+| --------- | ------------------ | --------------- |
+| `skill`   | `<bundle>:<name>`  | `<name>`        |
+| `agent`   | `<bundle>:<name>`  | `<name>`        |
+| `command` | `/<bundle>:<name>` | `/<name>`       |
+
+A project-scope install has no plugin to namespace against, so its components are addressed by
+the bare name and its skills invoked as `/<name>`.
+
 ## Placeholders
 
 | Placeholder      | Rendered as                                                         |

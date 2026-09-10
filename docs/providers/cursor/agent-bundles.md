@@ -56,7 +56,7 @@ Codex both render rules at project scope only.
 | Feature        | Support       | Profiles        | Native surface                    | Diagnostics               |
 | -------------- | ------------- | --------------- | --------------------------------- | ------------------------- |
 | `skills`       | `approximate` | plugin, project | `skills/<bundle>-<name>/SKILL.md` | `AB310`                   |
-| `agents`       | `approximate` | plugin, project | `agents/<name>.md`                | `AB330`, `AB332`          |
+| `agents`       | `approximate` | plugin, project | `agents/<bundle>-<name>.md`       | `AB330`, `AB332`          |
 | `rules`        | `exact`       | plugin, project | `.cursor/rules/<name>.mdc`        | `AB351`                   |
 | `hooks`        | `exact`       | plugin          | `hooks/hooks.json`                | `AB320`–`AB322`           |
 | `policies`     | `unsupported` | project         | `.cursor/hooks.json`              | `AB360`, `AB361`          |
@@ -65,21 +65,36 @@ Codex both render rules at project scope only.
 | `placeholders` | `approximate` | plugin, project | —                                 | —                         |
 | `native`       | `native`      | plugin, project | `native/cursor/`                  | `AB181`, `AB182`, `AB187` |
 
-## Skill namespacing
+## Component namespacing
 
-`paths.namespacePluginSkills` is `true` — the only target where it is. A plugin skill named
-`prepare-release` in a bundle named `release-helper` renders as:
+Cursor is the only target that namespaces plugin components by bundle name — `naming.namespace`
+lists both `skills` and `agents` under the `plugin` profile, joined with `-`. A skill named
+`prepare-release` and an agent named `scout`, in a bundle named `release-helper`, render as:
 
 ```text
 skills/release-helper-prepare-release/SKILL.md
+agents/release-helper-scout.md
 ```
 
-Project-scope skills are **not** namespaced; they render as `.cursor/skills/<name>/`.
+The prefix goes on the **frontmatter `name` as well as the path**. That is a fix, not a
+refinement: the directory used to be namespaced while `name:` was left bare, so
+`skills/release-helper-prepare-release/SKILL.md` shipped saying `name: prepare-release` — one
+skill with two identities, which is a host's problem the moment it validates or derives one from
+the other.
 
-This is why the `skills` feature is `approximate` rather than `exact`: the skill's identity on
-disk is not the identity the bundle declared, and a cross-target instruction that refers to a
-skill directory by name will not resolve the same way. The renderer reads
-`namespacePluginSkills` from the profile rather than branching on the target.
+Project-scope components are **not** namespaced; they render as `.cursor/skills/<name>/` and
+`.cursor/agents/<name>.md`. Every bundle installed at plugin scope shares one flat namespace,
+which is what the prefix is for.
+
+This is why the `skills` and `agents` features are `approximate` rather than `exact`: the
+identity on disk is not the identity the bundle declared. Write a cross-component instruction as
+an [inline reference](../../formats/agent-bundle.md#inline-component-references) rather than a
+literal name, and it resolves to `<bundle>-<name>` here and to whatever each other host uses.
+The renderer reads all of this from the profile rather than branching on the target.
+
+The body `# <heading>` is left alone — it is prose, not identity, and no host derives one from
+it. A document that wants the resolved name in its heading asks for it:
+`# <!-- ref:skill:prepare-release -->`.
 
 ## The plugin manifest
 

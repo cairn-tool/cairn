@@ -169,6 +169,39 @@ describe("profile self-check", () => {
     expect(problems.join("\n")).toMatch(/declares no output patterns/);
   });
 
+  it("rejects a reference form that cannot spell a component name", () => {
+    const cursor = TARGET_PROFILES.cursor;
+    const broken = {
+      ...cursor,
+      naming: {
+        ...cursor.naming,
+        references: {
+          forms: {
+            ...cursor.naming.references.forms,
+            skill: { plugin: "{bundle}", project: "{name}" },
+          },
+        },
+      },
+    };
+    expect(validateProfile(broken).join("\n")).toMatch(/does not substitute \{name\}/);
+  });
+
+  it("rejects prefixing a kind the host cannot then reference", () => {
+    // A prefixed identity no reference form can spell is a component nothing in
+    // the bundle can name -- the mismatch the naming block replaced.
+    const codex = TARGET_PROFILES.codex;
+    const broken = {
+      ...codex,
+      naming: {
+        ...codex.naming,
+        namespace: { prefixed: { skills: [], agents: ["plugin"] }, separator: "-" },
+      },
+    };
+    expect(validateProfile(broken).join("\n")).toMatch(
+      /prefixes agents in 'plugin' but declares no agent reference form/,
+    );
+  });
+
   it("rejects a minimum above the verified ceiling", () => {
     const broken = {
       ...TARGET_PROFILES.codex,

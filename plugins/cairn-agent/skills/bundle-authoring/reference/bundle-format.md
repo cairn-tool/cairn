@@ -175,10 +175,45 @@ A comma list is an OR; `not` negates the whole list; blocks nest and take exactl
 Markers inside a fenced code block are inert, so an example like the ones above is safe to
 write in a skill.
 
-Validated in **every** file the renderer processes blocks in — every textual asset, not only
-recognized components. An unknown target is `AB120`, an unbalanced block `AB121`, and a marker
-that looks conditional but does not parse (`<!-- target: cursor -->`, with a space) is `AB123`
-rather than being silently ignored.
+Validated in **every** textual file, not only recognized components. An unknown target is
+`AB120`, an unbalanced block `AB121`, and a marker that looks conditional but does not parse
+(`<!-- target: cursor -->`, with a space) is `AB123` rather than being silently ignored.
+
+## Cross-component references
+
+A component's identity differs per host — Cursor namespaces a plugin's skills and agents as
+`<bundle>-<name>`, Claude Code addresses them as `<bundle>:<name>` — so never write a sibling's
+name literally. Write a reference and let it resolve:
+
+```markdown
+The formats live in the `<!-- ref:skill:review-record -->` skill.
+Spawn `<!-- ref:agent:diff-reviewer -->`, one per batch.
+Run `<!-- ref:command:review -->` to start.
+```
+
+| Kind      | Names                           | For a bundle `cr`, on claude-code / cursor |
+| --------- | ------------------------------- | ------------------------------------------ |
+| `skill`   | a skill, to locate and read     | `cr:review` / `cr-review`                  |
+| `agent`   | a subagent, to spawn            | `cr:diff-reviewer` / `cr-diff-reviewer`    |
+| `command` | a skill, as a person invokes it | `/cr:review` / `cr-review`                 |
+
+`command` names a skill — there is no `commands` component kind — and the skill must declare
+`invocationPolicy: explicit`, or `AB161`. On Cursor a `skill` and a `command` reference resolve
+to the **same string**, so put one or the other in a clause, never both.
+
+Where they work:
+
+- Bodies, Markdown resources, rules, textual assets, and the frontmatter `description` and
+  `argumentHint`.
+- Inside an inline code span — that is the point, and unlike a conditional marker a reference
+  there is live.
+- **Not** inside a fenced block, which is why the examples above are safe to write. A Mermaid
+  diagram is a fenced block, so a node label cannot carry one.
+- **Never** in `name:` (circular) or `skills:` (the portable list `AB150` validates — keep those
+  bare). Anywhere else the renderer copies verbatim, such as a hook script, is `AB157`.
+
+An unknown component is `AB156`; a comment that looks like a reference but does not parse is
+`AB124`. A host with no such surface emits the bare name and reports `AB303`.
 
 ## Diagnostics
 

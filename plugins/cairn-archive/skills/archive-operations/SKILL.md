@@ -95,7 +95,7 @@ before relying on the archive, not as a routine check.
 
 ## Retrieving
 
-Getting a file back out, and the store's own format, are in the `archive-retrieve` skill.
+Getting a file back out, and the store's own format, are in the `<!-- ref:skill:archive-retrieve -->` skill.
 
 ## More
 

@@ -308,7 +308,7 @@ describe("agent CLI", () => {
     const result = await run("agent", "specs", "--target", "all", "-fj");
     expect(result.exitCode).toBe(0);
     const specs = JSON.parse(result.stdout).specs;
-    expect(specs.schemaVersion).toBe("2");
+    expect(specs.schemaVersion).toBe("3");
     expect(Object.keys(specs.targets)).toEqual([
       "claude-code",
       "codex",
@@ -316,7 +316,22 @@ describe("agent CLI", () => {
       "antigravity",
       "opencode",
     ]);
-    expect(specs.targets.cursor.paths.namespacePluginSkills).toBe(true);
+    // Cursor is the one target that namespaces plugin components, and the one
+    // whose reference forms are not the bare name.
+    expect(specs.targets.cursor.naming.namespace).toEqual({
+      prefixed: { skills: ["plugin"], agents: ["plugin"] },
+      separator: "-",
+    });
+    expect(specs.targets.cursor.naming.references.forms.skill.plugin).toBe(
+      "{bundle}{separator}{name}",
+    );
+    expect(specs.targets["claude-code"].naming.namespace.prefixed).toEqual({
+      skills: [],
+      agents: [],
+    });
+    expect(specs.targets["claude-code"].naming.references.forms.command.plugin).toBe(
+      "/{bundle}:{name}",
+    );
   });
 
   it("runs doctor without a bundle or an installed host", async () => {

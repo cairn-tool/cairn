@@ -147,6 +147,16 @@ entry schema could be established. `marketplace` is therefore left undefined and
 [`agent package`](../../commands/agent/package.md) skips this target rather than inventing a
 catalog format.
 
+## Inline references
+
+Nothing is namespaced here: `naming.namespace.prefixed` is empty, so a skill or agent renders
+under the name the bundle declared, and an [inline
+reference](../../formats/agent-bundle.md#inline-component-references) resolves to that bare name.
+
+The reference forms that are `null` are `agent` in both profiles, since agents are never emitted, and `command` in both. cairn renders no such surface for this host, so
+rather than inventing an identifier that would load nothing, the bare name is emitted and
+`AB303` records the approximation.
+
 ## Unverified rows
 
 Everything above comes from the host's own documentation except these, which are declared at the

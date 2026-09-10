@@ -16,7 +16,7 @@ which: Codex renders a custom agent as TOML rather than Markdown, and Cursor inl
 into its agent documents. Both are document _shapes_ rather than tabular facts, and neither has
 a second target to generalize against yet. Everything else — paths, manifest location, hook
 document name and shape, the command-policy form, the skill invocation form, the MCP
-destination — is read from the profile. Adding a branch for anything in that second list is how
+destination, component namespacing, and the cross-reference forms — is read from the profile. Adding a branch for anything in that second list is how
 the next target quietly inherits some other host's output.
 
 Profiles live at `src/agent/targets/<id>.ts` as **TypeScript modules, not JSON**. `tsconfig`
@@ -27,7 +27,7 @@ reach `dist` and the published package would silently lack it.
 
 `PROFILE_SCHEMA_VERSION` is a **hand-owned** version of the profile structure itself,
 independent of the package version, the contract version, the bundle version, and the test-file
-version. It is currently `"2"`. A profile whose `schemaVersion` does not match is reported as
+version. It is currently `"3"`. A profile whose `schemaVersion` does not match is reported as
 invalid.
 
 ## Structure
@@ -107,7 +107,6 @@ Omitting them is what makes `agents/` and `hooks/hooks.json` load.
 interface PathProfile {
   plugin: { skills; hooks; hooksFile; agents: string | null; assets; mcp: string | null };
   project: { skills; agents; rules; policies; mcp; assets };
-  namespacePluginSkills: boolean;
 }
 ```
 
@@ -124,8 +123,54 @@ hardcode `.mcp.json` with one special case for Cursor, which meant any new targe
 its own profile did not declare — a conformance failure at best and a silently ignored file at
 worst.
 
-`namespacePluginSkills` is `true` only for Cursor, where a plugin skill directory is
-`skills/<bundle>-<skill>/`.
+## `naming`
+
+```ts
+interface NamingProfile {
+  namespace: {
+    prefixed: { skills: AgentProfile[]; agents: AgentProfile[] };
+    separator: string;
+  };
+  references: {
+    forms: Record<"skill" | "agent" | "command", Record<AgentProfile, string | null>>;
+  };
+}
+```
+
+Two questions, answered by one block because they have to agree: what a component is **called**
+in a rendered tree, and what another document must **write** to name it.
+
+`namespace.prefixed` lists the output profiles in which a kind's emitted identity carries the
+bundle name, joined with `separator`. Only Cursor prefixes anything — `{ skills: ["plugin"],
+agents: ["plugin"] }` with `-`, so a skill named `review` in a bundle named `cr` is
+`skills/cr-review/` **and** `name: cr-review`. The identity is applied to the path and the
+frontmatter together. It used to be a `namespacePluginSkills` boolean beside `paths`, which
+could only say it for skills, so the directory was namespaced while `name:` was not and one
+skill shipped under two identities.
+
+`references.forms` is what an inline
+[component reference](agent-bundle.md#inline-component-references) resolves to. `{bundle}`,
+`{name}` and `{separator}` substitute:
+
+| Kind      | `claude-code` plugin | `cursor` plugin             | project profiles |
+| --------- | -------------------- | --------------------------- | ---------------- |
+| `skill`   | `{bundle}:{name}`    | `{bundle}{separator}{name}` | `{name}`         |
+| `agent`   | `{bundle}:{name}`    | `{bundle}{separator}{name}` | `{name}`         |
+| `command` | `/{bundle}:{name}`   | `{bundle}{separator}{name}` | varies           |
+
+Claude Code's on-disk directories are **not** namespaced, but the host addresses a plugin's
+skills and subagents as `<plugin>:<name>`. A reference has to name what the host resolves, not
+what the directory is called, so the two differ on purpose.
+
+`null` means the host has no such surface, and the reference degrades to the bare name with
+`AB303`. Codex's plugin-profile `agent` form is `null` because `paths.plugin.agents` is; every
+target but Claude Code and Cursor has a `null` `command` form, because cairn renders no
+slash-command surface for them. A guessed identifier would render, validate, and load nothing —
+the failure this file exists to prevent — so the honest answer is recorded instead.
+
+`validateProfile` holds the block together: a non-`null` form must substitute `{name}`, and a
+kind that is prefixed in some profile must have a reference form for that profile. A prefixed
+identity nothing can spell is a component no document can name.
 
 ## `placeholders`
 

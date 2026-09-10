@@ -70,3 +70,26 @@ cases:
       files:
         - path: assets/cli-basics.md
           includes: ["## Exit codes", "@cairn-tool/cairn"]
+
+  # Cursor namespaces a plugin's agents as well as its skills, on the frontmatter
+  # `name` as well as the path -- the directory used to be prefixed while `name:`
+  # stayed bare, which is one component with two identities. And no reference may
+  # reach the tree unexpanded: a literal marker there is a defect the host shows
+  # to the user.
+  - name: the-cursor-plugin-namespaces-components-and-resolves-references
+    targets: [cursor]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - agents/cairn-usage-usage-analyst.md
+          - skills/cairn-usage-usage-reports/SKILL.md
+        absent:
+          - agents/usage-analyst.md
+      files:
+        - path: agents/cairn-usage-usage-analyst.md
+          includes: ["name: cairn-usage-usage-analyst"]
+          excludes: ["<!-- ref:"]
+        - path: skills/cairn-usage-usage-reports/SKILL.md
+          includes: ["name: cairn-usage-usage-reports"]
+          excludes: ["<!-- ref:"]

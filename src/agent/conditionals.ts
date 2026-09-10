@@ -1,9 +1,11 @@
 import { visit } from "unist-util-visit";
 import { parseMarkdown } from "../markdown-ast.js";
 import type { Root } from "../markdown-ast.js";
-import { TARGETS } from "./types.js";
+import { COMPONENT_NAME, TARGETS } from "./types.js";
 import type { AgentDiagnostic, AgentTarget } from "./types.js";
 import { diagnostic } from "./types.js";
+import { REFERENCE_KINDS } from "./targets/schema.js";
+import type { ReferenceKind } from "./targets/schema.js";
 
 /**
  * Target-conditional regions, in one place.
@@ -30,6 +32,20 @@ import { diagnostic } from "./types.js";
  * <!-- else -->
  * <!-- endif -->
  * ```
+ *
+ * A third, self-closing family names another component and resolves to whatever
+ * the target calls it, so a cross-reference is written once rather than once per
+ * host:
+ *
+ * ```markdown
+ * <!-- ref:skill:review-record -->
+ * <!-- ref:agent:diff-reviewer -->
+ * <!-- ref:command:review -->
+ * ```
+ *
+ * It lives here rather than in the renderer for the reason the rest of this
+ * module does: the validator and the renderer must not disagree about what a
+ * document means.
  */
 
 /** Files the renderer runs conditional blocks through, and so must validate. */
@@ -39,6 +55,15 @@ export const CONDITIONAL_TEXT = /\.(?:md|txt|json|ya?ml|toml|sh|js|mjs|cjs|ts|py
 const COMMENT = /<!--([\s\S]*?)-->/g;
 
 const LEGACY = /^(\/)?(target|platform):(\S+)$/;
+const REF = /^ref:(skill|agent|command):(\S+)$/;
+/**
+ * A comment *meant* to be a reference.
+ *
+ * The colon is required, so `<!-- refactor this -->` stays prose while
+ * `<!-- ref: skill:x -->` and `<!-- refs:skill:x -->` are held to the grammar
+ * and reported. `reference:` does not match either -- `\b` fails on `refe`.
+ */
+const REF_CANDIDATE = /^\s*refs?\s*:/i;
 const OPEN = /^(if|elif)\s+(.+)$/i;
 const PREDICATE = /^(not\s+)?(?:target|platform):(\S(?:[^\s]|\s(?=[^\s]))*)$/i;
 
@@ -58,7 +83,21 @@ const CANDIDATE =
 type Marker =
   | { kind: "legacy-open" | "legacy-close"; syntax: string; target: string }
   | { kind: "if" | "elif"; predicate: Predicate }
-  | { kind: "else" | "endif" };
+  | { kind: "else" | "endif" }
+  | { kind: "ref"; refKind: ReferenceKind; name: string };
+
+/** Expands one reference to this target's canonical identifier for it. */
+export type RefResolver = (kind: ReferenceKind, name: string) => string;
+
+/** One reference a document makes, for the parser to resolve against the bundle. */
+export interface RefUse {
+  kind: ReferenceKind;
+  name: string;
+  line: number;
+  file: string;
+}
+
+type Range = [number, number];
 
 interface Predicate {
   negated: boolean;
@@ -86,8 +125,17 @@ function parsePredicate(text: string): Predicate | null {
   return { negated: Boolean(match[1]), targets };
 }
 
-function classify(body: string): Marker | "malformed" | null {
+function classify(body: string): Marker | "malformed" | "malformed-ref" | null {
   const text = body.trim();
+  const ref = REF.exec(text);
+  if (ref) {
+    // A reference names a component, so it is held to the same grammar the
+    // parser holds a component name to; anything else is a typo worth saying so.
+    if (COMPONENT_NAME.test(ref[2]))
+      return { kind: "ref", refKind: ref[1] as ReferenceKind, name: ref[2] };
+    return "malformed-ref";
+  }
+  if (REF_CANDIDATE.test(body)) return "malformed-ref";
   const legacy = LEGACY.exec(text);
   if (legacy)
     return {
@@ -122,16 +170,30 @@ function classify(body: string): Marker | "malformed" | null {
  * It is the guard `synchronizeToc` needs and for the same reason; snippet links
  * avoid needing one by living in the fence info string, which is unreachable by
  * construction.
+ *
+ * The two ranges are returned apart because the two marker families disagree
+ * about inline code. A conditional inside a span is inert, for the reason above.
+ * A **reference** inside one is live: `` `<!-- ref:skill:review -->` `` is how a
+ * sentence names a skill in code voice, and protecting it would make the most
+ * natural way to write a reference the one way that silently does nothing. A
+ * fenced example of either family stays inert, so this file's own documentation
+ * keeps working -- which is why a malformed reference must be shown fenced too.
  */
-function protectedRanges(tree: Root): Array<[number, number]> {
-  const ranges: Array<[number, number]> = [];
+function protectedRanges(tree: Root): { fenced: Range[]; inline: Range[] } {
+  const fenced: Range[] = [];
+  const inline: Range[] = [];
   visit(tree, (node) => {
     if (node.type !== "code" && node.type !== "inlineCode") return;
     const start = node.position?.start.offset;
     const end = node.position?.end.offset;
-    if (start !== undefined && end !== undefined) ranges.push([start, end]);
+    if (start === undefined || end === undefined) return;
+    (node.type === "code" ? fenced : inline).push([start, end]);
   });
-  return ranges;
+  return { fenced, inline };
+}
+
+function within(ranges: Range[], offset: number): boolean {
+  return ranges.some(([from, to]) => offset >= from && offset < to);
 }
 
 /**
@@ -142,10 +204,17 @@ function protectedRanges(tree: Root): Array<[number, number]> {
 function tokenize(
   content: string,
   markdown: boolean,
-): { tokens: Token[]; malformed: Array<{ raw: string; line: number }> } {
+): {
+  tokens: Token[];
+  malformed: Array<{ raw: string; line: number }>;
+  malformedRefs: Array<{ raw: string; line: number }>;
+} {
   const tokens: Token[] = [];
   const malformed: Array<{ raw: string; line: number }> = [];
-  const protect = markdown ? protectedRanges(parseMarkdown(content)) : [];
+  const malformedRefs: Array<{ raw: string; line: number }> = [];
+  const protect = markdown
+    ? protectedRanges(parseMarkdown(content))
+    : { fenced: [] as Range[], inline: [] as Range[] };
   // One pass over the string, counting newlines as we go, rather than a
   // `split` per match.
   let cursor = 0;
@@ -158,17 +227,26 @@ function tokenize(
     }
     const marker = classify(match[1]);
     if (marker === null) continue;
-    if (protect.some(([from, to]) => match.index >= from && match.index < to)) continue;
-    if (marker === "malformed") {
-      malformed.push({ raw: match[0], line });
+    const isRef = marker === "malformed-ref" || (marker !== "malformed" && marker.kind === "ref");
+    // A fenced example is inert for both families; an inline span only shields a
+    // conditional. See {@link protectedRanges}.
+    if (within(protect.fenced, match.index)) continue;
+    if (!isRef && within(protect.inline, match.index)) continue;
+    if (marker === "malformed" || marker === "malformed-ref") {
+      (marker === "malformed" ? malformed : malformedRefs).push({ raw: match[0], line });
       continue;
     }
     let end = match.index + match[0].length;
-    if (content[end] === "\r") end += 1;
-    if (content[end] === "\n") end += 1;
+    // Block markers stand on their own line and take its newline with them, so
+    // stripping one leaves no blank. A reference is inline punctuation in a
+    // sentence -- eating the following newline would join two lines together.
+    if (marker.kind !== "ref") {
+      if (content[end] === "\r") end += 1;
+      if (content[end] === "\n") end += 1;
+    }
     tokens.push({ marker, start: match.index, end, line, raw: match[0] });
   }
-  return { tokens, malformed };
+  return { tokens, malformed, malformedRefs };
 }
 
 function matches(predicate: Predicate, target: AgentTarget): boolean {
@@ -188,16 +266,18 @@ interface Frame {
 }
 
 /**
- * Resolves every conditional region for one target.
+ * Resolves every conditional region, and every inline reference, for one target.
  *
  * An unbalanced document is left alone rather than half-stripped: `AB121`
  * already reports it at parse time, and mangling the body would turn one
- * finding into a confusing diff.
+ * finding into a confusing diff. References in such a document are therefore
+ * left unresolved too, which is right -- `AB121` is an error, so nothing is
+ * written anyway.
  */
 export function applyConditionals(
   content: string,
   target: AgentTarget,
-  options: { markdown?: boolean } = {},
+  options: { markdown?: boolean; resolve?: RefResolver } = {},
 ): string {
   const { tokens } = tokenize(content, options.markdown ?? true);
   if (!tokens.length) return content;
@@ -249,6 +329,14 @@ export function applyConditionals(
         stack.pop();
         break;
       }
+      case "ref": {
+        // Self-closing: it touches no frame, so a reference inside a branch that
+        // is not taken is dropped with the branch and never resolved. With no
+        // resolver the marker is left exactly as written.
+        if (emitting())
+          out += options.resolve ? options.resolve(marker.refKind, marker.name) : token.raw;
+        break;
+      }
     }
   }
   if (stack.length) return content;
@@ -260,14 +348,35 @@ function unknownTargets(names: string[]): string[] {
   return names.filter((name) => !(TARGETS as readonly string[]).includes(name));
 }
 
-/** Reports `AB120`, `AB121`, and `AB123` for one file's markers. */
+/**
+ * Reports `AB120`, `AB121`, `AB123` and `AB124` for one file's markers, and
+ * returns the references it made.
+ *
+ * Resolving a reference *name* is not this function's business: it runs before
+ * the bundle's component lists exist. The parser resolves what is returned here
+ * against those lists, beside the `AB150` check that does the same job for a
+ * frontmatter `skills:` entry.
+ */
 export function validateConditionals(
   content: string,
   file: string,
   diagnostics: AgentDiagnostic[],
   options: { markdown?: boolean } = {},
-): void {
-  const { tokens, malformed } = tokenize(content, options.markdown ?? true);
+): RefUse[] {
+  const { tokens, malformed, malformedRefs } = tokenize(content, options.markdown ?? true);
+  for (const item of malformedRefs)
+    diagnostics.push({
+      ...diagnostic(
+        "AB124",
+        `Malformed component reference on line ${item.line}: ${item.raw}`,
+        "unsupported",
+        {
+          path: file,
+          remediation: `Write <!-- ref:<kind>:<name> --> with no spaces, where <kind> is ${REFERENCE_KINDS.join(", ")} and <name> is a lowercase kebab-case component name.`,
+        },
+      ),
+      severity: "error",
+    });
   for (const item of malformed)
     diagnostics.push({
       ...diagnostic(
@@ -360,4 +469,9 @@ export function validateConditionals(
     }
   }
   if (stack.length) unbalanced("Unclosed conditional block");
+  return tokens.flatMap((token) =>
+    token.marker.kind === "ref"
+      ? [{ kind: token.marker.refKind, name: token.marker.name, line: token.line, file }]
+      : [],
+  );
 }

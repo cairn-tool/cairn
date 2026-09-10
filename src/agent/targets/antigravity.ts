@@ -69,7 +69,19 @@ export const antigravityProfile: TargetProfile = {
       mcp: ".agents/mcp_config.json",
       assets: "assets",
     },
-    namespacePluginSkills: false,
+  },
+  naming: {
+    namespace: {
+      prefixed: { skills: [], agents: [] },
+      separator: "-",
+    },
+    references: {
+      forms: {
+        skill: { plugin: "{name}", project: "{name}" },
+        agent: { plugin: null, project: null },
+        command: { plugin: null, project: null },
+      },
+    },
   },
   placeholders: {
     bundleRoot: { plugin: ".", project: "." },
@@ -192,7 +204,7 @@ export const antigravityProfile: TargetProfile = {
       profiles: ["plugin", "project"],
       summary: "no argument substitution",
       surface: null,
-      diagnostics: ["AB302"],
+      diagnostics: ["AB302", "AB303"],
     },
     native: {
       support: "native",
