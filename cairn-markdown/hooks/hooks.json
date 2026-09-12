@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "./hooks/md-lint.sh",
+        "timeout": 30
+      }
+    ]
+  }
+}

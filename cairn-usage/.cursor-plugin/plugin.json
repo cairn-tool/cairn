@@ -1,0 +1,7 @@
+{
+  "name": "cairn-usage",
+  "version": "1.2.0",
+  "description": "Report on LLM assistant usage from local session logs.",
+  "skills": "./skills/",
+  "agents": "./agents/"
+}
