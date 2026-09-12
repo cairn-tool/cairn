@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// A stand-in for cursor-agent and claude, driven by a MODE: line in the inlined plan.
-// --agent points at this. --workspace → Cursor dialect; --dangerously-skip-permissions → Claude.
+// A stand-in for cursor-agent, claude, and codex, driven by a MODE: line in the inlined plan.
+// --agent points at this. The backend-specific argv selects the stream dialect.
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -11,8 +11,15 @@ import { setTimeout as sleep } from "node:timers/promises";
 const argv = process.argv.slice(2);
 const prompt = argv[argv.length - 1] ?? "";
 const wsIdx = argv.indexOf("--workspace");
-const workspace = wsIdx >= 0 ? (argv[wsIdx + 1] ?? process.cwd()) : process.cwd();
+const cdIdx = argv.indexOf("-C");
+const workspace =
+  wsIdx >= 0
+    ? (argv[wsIdx + 1] ?? process.cwd())
+    : cdIdx >= 0
+      ? (argv[cdIdx + 1] ?? process.cwd())
+      : process.cwd();
 const claude = argv.includes("--dangerously-skip-permissions");
+const codex = argv[0] === "exec";
 
 const tempRel = /Write every deliverable to (\S+?),/.exec(prompt)?.[1] ?? "";
 const planRel = `${tempRel.replace(/-temp\/$/, "")}`.replace(/([^/]+)$/, "_plans/$1.yaml");
@@ -37,7 +44,15 @@ const claudeUsage = {
   cache_creation_input_tokens: 12,
 };
 
-const usage = claude ? claudeUsage : cursorUsage;
+const codexUsage = {
+  input_tokens: 6834,
+  cached_input_tokens: 5600,
+  cache_write_input_tokens: 12,
+  output_tokens: 340,
+  reasoning_output_tokens: 100,
+};
+
+const usage = codex ? codexUsage : claude ? claudeUsage : cursorUsage;
 
 function writeRecords({ report = true, results = true, verdict = "PASS" } = {}) {
   mkdirSync(tempDir, { recursive: true });
@@ -78,6 +93,39 @@ function writeRecords({ report = true, results = true, verdict = "PASS" } = {}) 
 }
 
 function emitPrelude() {
+  if (codex) {
+    emit({ type: "thread.started", thread_id: `sess-${name}` });
+    emit({ type: "turn.started" });
+    emit({
+      type: "item.completed",
+      item: { id: "item-1", type: "reasoning", text: `Working on ${name} in mode ${mode}` },
+    });
+    emit({
+      type: "item.started",
+      item: {
+        id: "item-2",
+        type: "command_execution",
+        command: `cat ${planRel}`,
+        status: "in_progress",
+      },
+    });
+    emit({
+      type: "item.completed",
+      item: {
+        id: "item-2",
+        type: "command_execution",
+        command: `cat ${planRel}`,
+        aggregated_output: "",
+        exit_code: 0,
+        status: "completed",
+      },
+    });
+    emit({
+      type: "item.completed",
+      item: { id: "item-3", type: "agent_message", text: `Handling ${name}.` },
+    });
+    return;
+  }
   emit({ type: "system", subtype: "init", model: "fake-model", session_id: `sess-${name}` });
   if (claude) {
     emit({
@@ -108,6 +156,23 @@ function emitPrelude() {
   emit({ type: "assistant", message: { content: [{ type: "text", text: `Handling ${name}.` }] } });
 }
 
+function terminal(error) {
+  if (codex) {
+    return error
+      ? { type: "turn.failed", usage, error: { message: error } }
+      : { type: "turn.completed", usage };
+  }
+  return {
+    type: "result",
+    usage,
+    ...(error ? { is_error: true, result: error } : {}),
+  };
+}
+
+function emitTerminal(error) {
+  emit(terminal(error));
+}
+
 async function main() {
   emitPrelude();
 
@@ -127,50 +192,57 @@ async function main() {
 
     case "exit-nonzero":
       writeRecords();
-      emit({ type: "result", usage, is_error: true, result: "the agent gave up" });
+      emitTerminal("the agent gave up");
       process.exit(3);
       break;
 
     case "no-folder":
-      emit({ type: "result", usage });
+      emitTerminal();
       break;
 
     case "no-report":
       writeRecords({ report: false });
-      emit({ type: "result", usage });
+      emitTerminal();
       break;
 
     case "no-results":
       writeRecords({ results: false });
-      emit({ type: "result", usage });
+      emitTerminal();
       break;
 
     case "garbage":
       process.stdout.write("this is not json at all\n");
       process.stdout.write('{"type": "broken"\n');
       writeRecords();
-      emit({ type: "result", usage });
+      emitTerminal();
       break;
 
     case "split-utf8": {
       const line = Buffer.from(
-        `${JSON.stringify({ type: "assistant", message: { content: "a✅b — é 📋 done" } })}\n`,
+        `${JSON.stringify(
+          codex
+            ? {
+                type: "item.completed",
+                item: { id: "item-utf8", type: "agent_message", text: "a✅b — é 📋 done" },
+              }
+            : { type: "assistant", message: { content: "a✅b — é 📋 done" } },
+        )}\n`,
       );
       for (let i = 0; i < line.length; i += 1) process.stdout.write(line.subarray(i, i + 1));
       writeRecords();
-      emit({ type: "result", usage });
+      emitTerminal();
       break;
     }
 
     case "fail-verdict":
       writeRecords({ verdict: "FAIL" });
-      emit({ type: "result", usage });
+      emitTerminal();
       break;
 
     case "slow":
       await sleep(400);
       writeRecords();
-      emit({ type: "result", usage });
+      emitTerminal();
       break;
 
     // A final line with no trailing newline. Real agents do this when they exit without
@@ -178,12 +250,12 @@ async function main() {
     // logging it — otherwise the run loses its `result` event and reports usage: null.
     case "no-final-newline":
       writeRecords();
-      process.stdout.write(JSON.stringify({ type: "result", usage }));
+      process.stdout.write(JSON.stringify(terminal()));
       break;
 
     default:
       writeRecords();
-      emit({ type: "result", usage });
+      emitTerminal();
       break;
   }
 }

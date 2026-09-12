@@ -330,7 +330,7 @@ const CONTRACTS: CommandContract[] = [
     ],
     stream: { success: "stdout", findings: "stdout" },
     notes:
-      "POSIX-only. Discovers `_plans/tc-N.yaml` under --runs-dir, inlines each plan into a prompt, and spawns the case's agent backend with permission checks bypassed. A queue may mix cursor and claude-code cases. Logs land under `<runs-dir>/_logs/<run-id>/`, which should be gitignored; cairn does not write a .gitignore. --format json implies --no-tui. An empty eligible queue exits 0. Project configuration may set `qa.runs-dir`, `qa.model`, `qa.parallel`, and `qa.agent`; how a case is spawned is not configurable. `--repo` is not confined to `config.root`.",
+      "POSIX-only. Discovers `_plans/tc-N.yaml` under --runs-dir, inlines each plan into a prompt, and spawns the case's agent backend with permission checks bypassed. A queue may mix cursor, claude-code, and codex cases. Codex retains its normal hook-trust gate and git-repository check, and loads normal user/project configuration and rules. Logs land under `<runs-dir>/_logs/<run-id>/`, which should be gitignored; cairn does not write a .gitignore. --format json implies --no-tui. An empty eligible queue exits 0. Project configuration may set `qa.runs-dir`, `qa.model`, `qa.parallel`, and `qa.agent`; how a case is spawned is not configurable. `--repo` is not confined to `config.root`.",
   }),
   qaCommand("summary", {
     writes: true,

@@ -26,7 +26,7 @@ src/usage/providers/*.ts  per-LLM log-source profiles
 src/jira/adf/*.ts      ADF content model, both converters, and the AD diagnostic family
 src/pdf/*.ts           the pdfjs boundary, layout inference, and the AP diagnostic family
 src/qa/*.ts            the QA harness: cases, scheduler, TUI, reports, and logs
-src/qa/agents/*.ts     per-backend argv, stream-json normalize, and default models
+src/qa/agents/*.ts     per-backend argv, JSONL normalization, and default models
 src/mapping-quality.ts quality-to-severity, shared by the AB, AD, and AP families
 src/config-schema.ts   validators shared by the config loader and the script registry
 tests/{unit,integration,e2e}
@@ -318,13 +318,18 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
 - **`qa run` discovers `_plans/tc-N.yaml`, inlines each plan into a prompt, and spawns the case's
   agent backend with permission checks bypassed.** It does not resolve a named registry entry.
   Cursor is spawned with `--force --trust`; Claude Code with `--verbose --dangerously-skip-permissions`
-  (stream-json requires `--verbose`). PATH lookup is lazy per profile so a cursor-only queue
-  does not fail because `claude` is absent. `--agent` overrides every backend (the fake-agent
-  test hook). `--runs-dir` must resolve under `--repo` and is not confined to `config.root`.
-  POSIX-only: `process.kill(-pid)` has no process-group meaning on Windows. Logs land under
-  `<runs-dir>/_logs/`. The `qa:` config block is stored (unlike `scripts:`). `qa` is absent
-  from `COMMAND_OPTIONS`; `src/serve/tools.ts` must never expose `qa run`, and the same
-  tripwire matches it. A change that touches `src/qa/` without touching this file is incomplete.
+  (stream-json requires `--verbose`); Codex with
+  `exec --json --dangerously-bypass-approvals-and-sandbox -C <repo>`. Codex deliberately keeps
+  hook trust, its git-repository check, and normal user/project configuration and rules. Its
+  `input_tokens` includes cached input, so normalize uncached input as
+  `max(input_tokens - cached_input_tokens, 0)` and keep the cache read counter separately;
+  reasoning output is already a subset of `output_tokens`. PATH lookup is lazy per profile so a
+  queue needs only its selected backends. `--agent` overrides every backend (the fake-agent test
+  hook). `--runs-dir` must resolve under `--repo` and is not confined to `config.root`. POSIX-only:
+  `process.kill(-pid)` has no process-group meaning on Windows. Logs land under
+  `<runs-dir>/_logs/`. The `qa:` config block is stored (unlike `scripts:`). `qa` is absent from
+  `COMMAND_OPTIONS`; `src/serve/tools.ts` must never expose `qa run`, and the same tripwire matches
+  it. A change that touches `src/qa/` without touching this file is incomplete.
 - **`run:` uses `/bin/sh`, not `$SHELL`.** A login shell may be fish or csh, neither of which
   binds positional parameters for `-c`, so honoring `$SHELL` would make a committed registry
   behave differently per machine — the exact problem the toolset exists to solve. A body needing

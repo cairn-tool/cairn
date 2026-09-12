@@ -50,10 +50,11 @@ function qaWorkspace(): { repo: string; runs: string } {
 }
 
 describe("qa e2e", () => {
-  it("dry-run shows Claude Code argv without --workspace and Cursor argv with it", async () => {
+  it("dry-run shows each backend's distinct argv", async () => {
     const { repo, runs } = qaWorkspace();
     fs.writeFileSync(path.join(runs, "_plans", "tc-1.yaml"), planYaml("tc-1", "cursor"));
     fs.writeFileSync(path.join(runs, "_plans", "tc-2.yaml"), planYaml("tc-2", "claude-code"));
+    fs.writeFileSync(path.join(runs, "_plans", "tc-3.yaml"), planYaml("tc-3", "codex"));
     const result = await run(
       repo,
       "qa",
@@ -69,21 +70,34 @@ describe("qa e2e", () => {
     expect(result.stdout).toMatch(/--workspace/);
     expect(result.stdout).toMatch(/--dangerously-skip-permissions/);
     expect(result.stdout).toMatch(/--verbose/);
+    expect(result.stdout).toMatch(/--dangerously-bypass-approvals-and-sandbox/);
     const cursorBlock = result.stdout.slice(
       result.stdout.indexOf("tc-1"),
       result.stdout.indexOf("tc-2"),
     );
-    const claudeBlock = result.stdout.slice(result.stdout.indexOf("tc-2"));
+    const claudeBlock = result.stdout.slice(
+      result.stdout.indexOf("tc-2"),
+      result.stdout.indexOf("tc-3"),
+    );
+    const codexBlock = result.stdout.slice(result.stdout.indexOf("tc-3"));
     expect(cursorBlock).toMatch(/--workspace/);
     expect(cursorBlock).not.toMatch(/--dangerously-skip-permissions/);
     expect(claudeBlock).toMatch(/--dangerously-skip-permissions/);
     expect(claudeBlock).not.toMatch(/--workspace/);
+    expect(codexBlock).toMatch(/codex exec --json --dangerously-bypass-approvals-and-sandbox/);
+    expect(codexBlock).toMatch(/-C/);
+    expect(codexBlock).toMatch(/--model gpt-5\.6-luna/);
+    expect(codexBlock).not.toMatch(/--dangerously-bypass-hook-trust/);
+    expect(codexBlock).not.toMatch(
+      /--ignore-user-config|--ignore-rules|--ephemeral|--skip-git-repo-check/,
+    );
   });
 
-  it("runs a mixed cursor and claude-code queue through the fake agent", async () => {
+  it("runs a mixed cursor, claude-code, and codex queue through the fake agent", async () => {
     const { repo, runs } = qaWorkspace();
     fs.writeFileSync(path.join(runs, "_plans", "tc-1.yaml"), planYaml("tc-1", "cursor"));
     fs.writeFileSync(path.join(runs, "_plans", "tc-2.yaml"), planYaml("tc-2", "claude-code"));
+    fs.writeFileSync(path.join(runs, "_plans", "tc-3.yaml"), planYaml("tc-3", "codex"));
     const result = await run(
       repo,
       "qa",
@@ -109,7 +123,7 @@ describe("qa e2e", () => {
       summary: { ok: number; tools: number; usage: Record<string, number> | null };
     };
     expect(payload.ok).toBe(true);
-    expect(payload.cases.map((row) => row.name).sort()).toEqual(["tc-1", "tc-2"]);
+    expect(payload.cases.map((row) => row.name).sort()).toEqual(["tc-1", "tc-2", "tc-3"]);
     for (const row of payload.cases) {
       expect(row.status, row.name).toBe("ok");
       expect(row.tools, row.name).toBeGreaterThan(0);
@@ -118,11 +132,12 @@ describe("qa e2e", () => {
         row.name,
       ).toBeGreaterThan(0);
     }
-    expect(payload.summary.ok).toBe(2);
+    expect(payload.summary.ok).toBe(3);
     expect(payload.summary.tools).toBeGreaterThan(0);
     const summary = fs.readFileSync(path.join(runs, "summary.md"), "utf8");
     expect(summary).toMatch(/tc-1/i);
     expect(summary).toMatch(/tc-2/i);
+    expect(summary).toMatch(/tc-3/i);
   });
 
   it("accepts --repo outside a discovered config.root", async () => {

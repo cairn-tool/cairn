@@ -1,8 +1,10 @@
 # `cairn-qa`
 
-Source: `plugins/cairn-qa/`. Bundle `schemaVersion: "2"`, version `1.0.0`.
+Source: `plugins/cairn-qa/`. Bundle `schemaVersion: "2"`, version `1.1.0`.
 
-Wraps the `qa` toolset: running a queue of TC-N test-case plans across Cursor and Claude Code backends, the case-file schema the runner parses, and the run-record shapes the tracker reads back.
+Wraps the `qa` toolset: running a queue of TC-N test-case plans across Cursor, Claude Code, and
+Codex backends, the case-file schema the runner parses, and the run-record shapes the tracker reads
+back.
 
 See [the `qa` command listing](../commands.md#qa-commands) for the commands these skills invoke,
 and [Cairn's own plugins](../plugins.md) for installing, building, and versioning all eight.
@@ -111,9 +113,9 @@ is a silent regression rather than a broken build.
 
 ## Rendering
 
-The collection publishes this plugin for Claude Code only, in the `plugin` profile. The bundle
-itself stays portable — `cairn agent convert plugins/cairn-qa --target all` renders it for every
-host — but Claude Code is the only marketplace published.
+The collection publishes this plugin for Claude Code, Codex, and Cursor in the `plugin` profile.
+The bundle itself stays portable — `cairn agent convert plugins/cairn-qa --target all` renders it
+for every host, including hosts without a marketplace catalog.
 
 Note that `run-qa`'s explicit invocation policy is advisory on Cursor, Antigravity and OpenCode
 (`AB310`): those hosts may still activate it on relevance. The skill body states what it launches in

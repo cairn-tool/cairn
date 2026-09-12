@@ -14,8 +14,9 @@ Windows support is tracked in [future enhancements](../../future-enhancements.md
 ## What it runs
 
 `qa run` discovers `_plans/tc-N.yaml` under `--runs-dir`, inlines each plan into a prompt, and
-spawns the case's agent backend with permission checks bypassed. A queue may mix `cursor` and
-`claude-code` cases in one execution.
+spawns the case's agent backend with permission checks bypassed. A queue may mix `cursor`,
+`claude-code`, and `codex` cases in one execution. Codex retains its normal hook-trust gate and
+git-repository check, and loads normal user/project configuration and rules.
 
 That is a different trust boundary from [`scripts run`](../scripts/run.md). Scripts resolve a name
 declared in a tracked `.cairn.yml`. QA discovers plan files and forwards their bodies to an agent

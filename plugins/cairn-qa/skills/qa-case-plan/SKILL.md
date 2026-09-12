@@ -35,12 +35,12 @@ a real run: §3 names the source, §8 makes the observation attributable, §10 m
 
 ## The plan is the agent's entire briefing
 
-`cairn qa run` passes the plan to the backend as a single argv string. The running agent has no
-skills, no conversation, and no memory of how the case was written. So a plan repeats its rules and
-embeds both record skeletons rather than pointing at them — roughly a third of its length. That
-looks redundant and is not: slimming it would depend on the repository under test having this plugin
-installed and enabled, which the harness cannot verify and whose absence would degrade every run
-silently.
+`cairn qa run` passes the plan to the backend as a single argv string. The harness supplies no skill
+invocation, prior conversation, or memory of how the case was written; a backend may still load its
+normal user/project configuration and rules. So a plan repeats its rules and embeds both record
+skeletons rather than pointing at them — roughly a third of its length. That looks redundant and is
+not: slimming it would depend on the repository under test having this plugin installed and enabled,
+which the harness cannot verify and whose absence would degrade every run silently.
 
 ## Scope: the shape applies everywhere, the destination does not
 

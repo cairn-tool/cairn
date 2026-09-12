@@ -18,7 +18,7 @@ Everything in [`qa` common behavior](common.md#options), plus:
 
 | Option              | Default                                                            | Description                                                              |
 | ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `--repo <path>`     | —                                                                  | Repository root: agent cwd and Cursor `--workspace`. Required.           |
+| `--repo <path>`     | —                                                                  | Repository root and agent working directory. Required.                   |
 | `--parallel <n>`    | `8`                                                                | Most agents at once.                                                     |
 | `--model <slug>`    | per-agent default                                                  | Model for cases with no `model:` key. Repeat as `--model agent=slug`.    |
 | `--only <names>`    | all pending                                                        | Comma-separated case names, e.g. `tc-27,tc-28`.                          |
@@ -35,15 +35,19 @@ A TUI is used when stdout is a TTY, the format is `llm` or `human`, and `CI` is 
 
 ## Backends
 
-| `agent:` in the case file | Binary (PATH order)     | Default model          | Distinct flags                                                |
-| ------------------------- | ----------------------- | ---------------------- | ------------------------------------------------------------- |
-| `cursor`                  | `cursor-agent`, `agent` | `cursor-grok-4.6-high` | `--force --trust --workspace <repo>`                          |
-| `claude-code`             | `claude`                | `sonnet`               | `--verbose --dangerously-skip-permissions` (no `--workspace`) |
+| `agent:` in the case file | Binary (PATH order)     | Default model          | Distinct flags                                                     |
+| ------------------------- | ----------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `cursor`                  | `cursor-agent`, `agent` | `cursor-grok-4.6-high` | `--force --trust --workspace <repo>`                               |
+| `claude-code`             | `claude`                | `sonnet`               | `--verbose --dangerously-skip-permissions` (no `--workspace`)      |
+| `codex`                   | `codex`                 | `gpt-5.6-luna`         | `exec --json --dangerously-bypass-approvals-and-sandbox -C <repo>` |
 
-A cursor-only queue does not fail because `claude` is absent: PATH lookup is lazy per profile.
-`--agent <path>` overrides every backend.
+PATH lookup is lazy per profile, so a queue needs only the binaries for the backends it uses.
+`--agent <path>` overrides every backend. Codex keeps its normal hook-trust gate and loads normal
+user/project configuration and rules; the harness does not pass its separate hook-trust,
+git-repository-check bypass, or configuration-ignore flags.
 
-`--model slug` applies to every backend. `--model cursor=composer-2.5` sets one.
+`--model slug` applies to every backend. `--model cursor=composer-2.5` or
+`--model codex=gpt-5.6-luna` sets one.
 
 ## Empty queue
 
