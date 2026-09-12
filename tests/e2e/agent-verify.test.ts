@@ -26,7 +26,7 @@ async function run(...args: string[]): Promise<Run> {
 }
 
 const PINS = `      cli: { min: "0.0.1" }
-      profileSchemaVersion: "3"
+      profileSchemaVersion: "4"
 `;
 
 function config(root: string, body: string): string {

@@ -265,8 +265,9 @@ Assets: an optional `icon` (`.png`/`.svg`, ≤ 1 MiB) and optional `screenshot` 
 | `user`    | `~/.claude/plugins/marketplaces` | `marketplace` | `plugin`  | `~/.claude/settings.json`, `claude-enabled-plugins` |
 | `project` | the working tree                 | `merge`       | `project` | none — the root is auto-scanned                     |
 
-Claude Code's user-scope layout is the only one in the project that needs an activation edit,
-which is why `--register` exists and why it is the only flag that touches host configuration.
+Claude Code's user-scope layout declares the `claude-enabled-plugins` settings driver. Codex's
+marketplace layout declares a CLI driver instead; `--register` selects whichever integration the
+target profile records.
 `agent uninstall` removes exactly the inventory `.cairn-install.json` records and reverses the
 registration it made.
 

@@ -301,7 +301,10 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   writes, so there is no `--update` to regenerate them with; a mismatch reports the actual value
   in the finding and in `test.cases[].failures[].actual`. The test-file `schemaVersion` is a
   fourth hand-owned version — see `docs/contract.md`; semantic-release does not touch it.
-- **`scripts run` and `qa run` are the two commands that execute anything.** `scripts run` is a
+- **`scripts run` and `qa run` are the two commands that execute bundle-defined content.** A
+  registered Codex user install also invokes the fixed host commands `codex plugin marketplace`
+  and `codex plugin`; the executable and argv shape come from the target profile, no shell is
+  involved, `--dry-run` invokes nothing, and `--check` uses only list operations. `scripts run` is a
   resolver, not an evaluator: the command is declared by name in a tracked file rather than
   discovered in analyzed content. The load-bearing rules:
   resolution stops at the git root (or a deeper `--root`) and refuses entirely outside a

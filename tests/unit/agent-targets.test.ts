@@ -95,7 +95,13 @@ describe("target profiles", () => {
       },
       project: { root: ".", layout: "merge", profile: "project", activation: null },
     });
-    expect(profileFor("codex").install?.user).toBeNull();
+    expect(profileFor("codex").install?.user).toEqual({
+      root: "~/.codex/marketplaces",
+      environmentRoot: { variable: "CODEX_HOME", suffix: "marketplaces" },
+      layout: "marketplace",
+      profile: "plugin",
+      activation: { command: "codex", form: "codex-plugin-cli" },
+    });
     expect(profileFor("codex").install?.project).toEqual({
       root: ".",
       layout: "merge",

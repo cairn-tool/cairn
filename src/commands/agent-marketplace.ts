@@ -16,6 +16,7 @@ import {
   installIsCurrent,
   planCollectionInstall,
   planToEntry,
+  preflightInstallRegistrations,
   resolveScope,
 } from "../agent/install/index.js";
 import { writeArtifactsAtomically } from "../agent/writer.js";
@@ -192,6 +193,7 @@ export async function agentMarketplaceAction(
     : false;
   const readOnly = Boolean(opts.dryRun) || Boolean(opts.check);
   if (!readOnly && !blocked) {
+    preflightInstallRegistrations(plans);
     if (output)
       writeArtifactsAtomically(output, all, {
         managedRoots: targets,

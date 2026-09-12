@@ -8,6 +8,7 @@ import {
   LEGACY_INSTALL_MANIFEST,
   commitInstall,
   commitUninstall,
+  expandInstallLocationRoot,
   expandInstallRoot,
   installIsCurrent,
   listInstalled,
@@ -75,10 +76,21 @@ describe("install location resolution", () => {
     expect(expandInstallRoot(".", { home, cwd })).toBe(cwd);
   });
 
-  it("records a user location for cursor and none for codex", () => {
+  it("records user locations for cursor and codex", () => {
     expect(locationFor("cursor", "user")?.layout).toBe("plugin-dir");
-    expect(locationFor("codex", "user")).toBeNull();
+    expect(locationFor("codex", "user")?.layout).toBe("marketplace");
     expect(locationFor("codex", "project")?.layout).toBe("merge");
+  });
+
+  it("prefers CODEX_HOME for the Codex marketplace root", () => {
+    const location = locationFor("codex", "user");
+    if (!location) throw new Error("no Codex user location");
+    expect(
+      expandInstallLocationRoot(location, {
+        home: "/fallback",
+        env: { CODEX_HOME: "/custom/codex" },
+      }),
+    ).toBe(path.resolve("/custom/codex/marketplaces"));
   });
 
   it("rejects a path that would escape the install root", () => {
@@ -90,10 +102,20 @@ describe("install location resolution", () => {
 });
 
 describe("planInstall", () => {
-  it("reports AB800 when the target has no location for the scope", () => {
-    const plan = planInstall(loadBundle(bundle()), "codex", { scope: "user" });
-    expect(codes(plan.diagnostics)).toContain("AB800");
-    expect(plan.destination).toBe("");
+  it("plans a Codex user marketplace and reports native commands without --register", () => {
+    const home = workspace();
+    const plan = planInstall(loadBundle(bundle("marketplace:\n  categories: [demo]\n")), "codex", {
+      scope: "user",
+      home,
+      env: {},
+    });
+    expect(plan.destination).toBe(path.join(home, ".codex", "marketplaces", "hello"));
+    expect(plan.layout).toBe("marketplace");
+    expect(codes(plan.diagnostics)).not.toContain("AB800");
+    expect(codes(plan.diagnostics)).toContain("AB805");
+    expect(plan.diagnostics.find((item) => item.code === "AB805")?.message).toContain(
+      "codex plugin marketplace add",
+    );
   });
 
   it("plans a cursor user install under --into without writing", () => {

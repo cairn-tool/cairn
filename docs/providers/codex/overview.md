@@ -22,6 +22,7 @@ than per-request ones, and it writes no plan documents at all.
   *.sqlite                                                       thread history and log databases
   hooks.json                                                     hook configuration
   config.toml                                                    MCP and settings
+  marketplaces/<name>/                                          Cairn-managed local marketplace sources
 ```
 
 **The `YYYY/MM/DD` directories and the filename stamp are local time; every timestamp inside a
@@ -45,20 +46,21 @@ Rendered project-scope output:
 | ------------------------------- | -------------------------------------------------------- | -------------- |
 | `usage`                         | `$CODEX_HOME`, else `~/.codex`; must contain `sessions/` | `--logs <dir>` |
 | `archive`                       | The same root, resolved through the usage provider       | `--logs <dir>` |
-| `agent install --scope project` | the working tree                                         | `--output`     |
+| `agent install --scope user`    | `$CODEX_HOME/marketplaces`, else `~/.codex/marketplaces` | `--into`       |
+| `agent install --scope project` | the working tree                                         | `--into`       |
 
-There is **no user-scope install location**. Codex's project rules root is `AGENTS.md`, and a
-user-scope merge would clobber `~/AGENTS.md`, so the profile records `install.user: null`
-rather than offering something destructive.
+User scope installs the plugin marketplace layout and activates it through `codex plugin` when
+`--register` is given. Project scope remains a direct merge. The user flow therefore never writes
+the project-only `AGENTS.md` surface into the home directory.
 
 ## Host profile
 
 | Field                   | Value             |
 | ----------------------- | ----------------- |
 | `displayName`           | `Codex`           |
-| `documentationRevision` | `2026-08-02`      |
+| `documentationRevision` | `2026-09-12`      |
 | `minimumVersion`        | not recorded      |
-| `verifiedThrough`       | not recorded      |
+| `verifiedThrough`       | `0.154.0`         |
 | `versionCommand`        | `codex --version` |
 | `nativeValidator`       | none declared     |
 

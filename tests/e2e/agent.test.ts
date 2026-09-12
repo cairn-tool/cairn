@@ -308,7 +308,7 @@ describe("agent CLI", () => {
     const result = await run("agent", "specs", "--target", "all", "-fj");
     expect(result.exitCode).toBe(0);
     const specs = JSON.parse(result.stdout).specs;
-    expect(specs.schemaVersion).toBe("3");
+    expect(specs.schemaVersion).toBe("4");
     expect(Object.keys(specs.targets)).toEqual([
       "claude-code",
       "codex",
@@ -908,8 +908,13 @@ describe("agent package", () => {
   });
 
   it("refuses to package a bundle missing required listing metadata", async () => {
-    // codex requires publisher, categories, icon, and license.
+    // Codex requires a category.
     const bundle = scaffolded();
+    const manifest = path.join(bundle, "agent-bundle.yaml");
+    fs.writeFileSync(
+      manifest,
+      fs.readFileSync(manifest, "utf8").replace("  categories: [ci]\n", ""),
+    );
     const output = path.join(path.dirname(bundle), "pkg");
     const result = await run(
       "agent",
@@ -1425,7 +1430,7 @@ describe("agent install", () => {
     expect(fs.existsSync(dest)).toBe(false);
   });
 
-  it("writes nothing under --dry-run and reports AB800 for codex user scope", async () => {
+  it("writes nothing under --dry-run and plans Codex user activation", async () => {
     const source = installBundle();
     const into = path.join(path.dirname(source), "plugins");
     const dry = await run(
@@ -1443,20 +1448,29 @@ describe("agent install", () => {
     expect(JSON.parse(dry.stdout).dryRun).toBe(true);
     expect(fs.existsSync(into)).toBe(false);
 
-    const refused = await run(
+    const codexSource = installBundle(
+      "schemaVersion: '2'\nname: codex-hello\nversion: 1.0.0\ndescription: Hello bundle\n" +
+        "marketplace:\n  categories: [demo]\n",
+    );
+    const codexInto = path.join(path.dirname(codexSource), "codex-marketplaces");
+    const planned = await run(
       "agent",
       "install",
-      source,
+      codexSource,
       "--target",
       "codex",
       "--scope",
       "user",
+      "--into",
+      codexInto,
+      "--dry-run",
       "-fj",
     );
-    expect(refused.exitCode).toBe(2);
+    expect(planned.exitCode).toBe(0);
     expect(
-      JSON.parse(refused.stdout).diagnostics.map((item: { code: string }) => item.code),
-    ).toContain("AB800");
+      JSON.parse(planned.stdout).diagnostics.map((item: { code: string }) => item.code),
+    ).toContain("AB805");
+    expect(fs.existsSync(codexInto)).toBe(false);
   });
 
   it("registers a claude-code marketplace against an injected HOME", async () => {

@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { AgentProfile, AgentTarget, BundleRule, MappingQuality } from "../types.js";
 
 /**
@@ -5,7 +6,7 @@ import type { AgentProfile, AgentTarget, BundleRule, MappingQuality } from "../t
  * semantic-release-managed package version. Bump only when the profile
  * structure changes in a way consumers must react to.
  */
-export const PROFILE_SCHEMA_VERSION = "3";
+export const PROFILE_SCHEMA_VERSION = "4";
 
 export const PORTABLE_HOOK_EVENTS = [
   "session-start",
@@ -259,7 +260,8 @@ export interface SkillProfile {
 export type MarketplaceFieldSource =
   | { from: "manifest"; field: string }
   | { from: "marketplace"; field: string }
-  | { from: "computed"; value: "source" };
+  | { from: "computed"; value: "source" }
+  | { from: "literal"; value: unknown };
 
 /**
  * How a resolved value is reshaped before it lands in the catalog.
@@ -353,11 +355,16 @@ export type InstallLayout = "plugin-dir" | "merge" | "marketplace";
  * A host file that activates a marketplace install. `null` when the root is
  * auto-scanned and needs no edit.
  */
-export type InstallActivation = { file: string; form: "claude-enabled-plugins" } | null;
+export type InstallActivation =
+  | { file: string; form: "claude-enabled-plugins" }
+  | { command: string; form: "codex-plugin-cli" }
+  | null;
 
 export interface InstallLocation {
   /** `~`-prefixed for user scope; relative for project scope. */
   root: string;
+  /** An environment-controlled root used in preference to `root` when set. */
+  environmentRoot?: { variable: string; suffix: string };
   layout: InstallLayout;
   profile: AgentProfile;
   /** Host file that activates the install, or null when the root is auto-scanned. */
@@ -577,11 +584,28 @@ export function validateProfile(profile: TargetProfile): string[] {
         problems.push(`install.${scope} names unsupported output profile '${location.profile}'`);
       if (location.root.split(/[/\\]/).includes(".."))
         problems.push(`install.${scope}.root escapes its scope`);
+      if (location.environmentRoot) {
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(location.environmentRoot.variable))
+          problems.push(`install.${scope}.environmentRoot.variable is invalid`);
+        if (
+          path.posix.isAbsolute(location.environmentRoot.suffix) ||
+          location.environmentRoot.suffix.split(/[/\\]/).includes("..")
+        )
+          problems.push(`install.${scope}.environmentRoot.suffix escapes its root`);
+      }
       if (location.activation) {
-        if (location.activation.form !== "claude-enabled-plugins")
+        if (
+          location.activation.form !== "claude-enabled-plugins" &&
+          location.activation.form !== "codex-plugin-cli"
+        )
           problems.push(`install.${scope}.activation.form is unknown`);
-        if (!location.activation.file.trim())
+        if (
+          location.activation.form === "claude-enabled-plugins" &&
+          !location.activation.file.trim()
+        )
           problems.push(`install.${scope}.activation.file is empty`);
+        if (location.activation.form === "codex-plugin-cli" && !location.activation.command.trim())
+          problems.push(`install.${scope}.activation.command is empty`);
       }
     }
   }

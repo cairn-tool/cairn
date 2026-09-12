@@ -108,7 +108,13 @@ jobs:
           # branch states the dashboard import rather than inventing a command.
           write_readme() {
             local target="$1" branch="$2" dir="$3" catalog name
-            catalog=$(cd "$dir" && ls -d .*-plugin/marketplace.json)
+            local catalogs=()
+            mapfile -t catalogs < <(cd "$dir" && find . -type f -name marketplace.json -print | LC_ALL=C sort)
+            if [ ${#catalogs[@]} -ne 1 ]; then
+              echo "::error::expected one marketplace.json under $dir, found ${#catalogs[@]}"
+              return 1
+            fi
+            catalog="${catalogs[0]#./}"
             # An install id is `<plugin>@<catalog name>`, and the name comes from
             # the collection spec rather than the target, so read it back here
             # instead of hardcoding a copy that can drift from the spec.

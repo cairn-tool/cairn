@@ -363,7 +363,7 @@ agent
   .option("--scope <scope>", "Install scope: user, project")
   .option("--into <dir>", "Override the install root the profile declares")
   .option("--link", "Symlink the installed tree instead of copying it")
-  .option("--register", "Edit host config to activate the collection")
+  .option("--register", "Activate the collection through the host integration")
   .option("--strict", "Treat warnings as blocking findings")
   .option("--force", "Replace a nonempty destination")
   .option("--dry-run", "Build in memory without writing")
@@ -438,7 +438,7 @@ agent
   .option("--into <dir>", "Override the install root declared by the target profile")
   .option("--profile <profile>", "Must match the location's profile when given")
   .option("--link", "Symlink the rendered tree instead of copying")
-  .option("--register", "Edit host config to activate a marketplace install")
+  .option("--register", "Activate a marketplace through the host integration")
   .option("--strict", "Treat warnings as blocking findings")
   .option("--force", "Replace a destination that is not a prior install of this bundle")
   .option("--dry-run", "Plan the install without writing")
@@ -447,7 +447,7 @@ agent
   .option("--envelope", "Wrap --format json output in the versioned result envelope")
   .addHelpText(
     "after",
-    "\nRenders and packages in memory, so an install is always derived from the\nbundle rather than from a possibly-drifted dist tree. Destinations come from\nthe target profiles. --register is the only flag that edits host config.\n\n--target is repeatable, and one destination may hold several installs: they are\ntold apart by bundle, target, profile and scope. A run is planned in full before\nanything is written, so a blocked plan writes nothing at all. --target all covers\nevery target declaring a location for the scope.\n\n--config installs the agent.install block a repository declares, and --target\nthere narrows that block rather than adding to it.\n\nExit codes:\n  0  Installed, or checks passed\n  1  Invocation or I/O error\n  2  Install finding, or --check found drift",
+    "\nRenders and packages in memory, so an install is always derived from the\nbundle rather than from a possibly-drifted dist tree. Destinations come from\nthe target profiles. --register is the only flag that changes host activation.\n\n--target is repeatable, and one destination may hold several installs: they are\ntold apart by bundle, target, profile and scope. A run is planned in full before\nanything is written, so a blocked plan writes nothing at all. --target all covers\nevery target declaring a location for the scope.\n\n--config installs the agent.install block a repository declares, and --target\nthere narrows that block rather than adding to it.\n\nExit codes:\n  0  Installed, or checks passed\n  1  Invocation or I/O error\n  2  Install finding, or --check found drift",
   )
   .action(async (source: string | undefined, opts: AgentInstallOptions) => {
     const [{ agentActionBoundary }, { agentInstallAction }] = await Promise.all([

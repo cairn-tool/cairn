@@ -162,23 +162,37 @@ describe("catalogs", () => {
     expect(owner?.remediation).toBe("Set marketplace.publisher in agent-bundle.yaml.");
   });
 
-  it("keeps the cursor and codex publisher a bare name", () => {
-    const result = buildCatalogs(loadBundle(bundle(FULL)), ["cursor", "codex"], PROFILES, "repo");
-    for (const target of ["cursor", "codex"] as const) {
-      const spec = profileFor(target).marketplace!;
-      const artifact = result.artifacts.find((item) => item.path.startsWith(`${target}/`))!;
-      const entry = JSON.parse(artifact.content.toString())[spec.entriesKey][0];
-      expect(entry[target === "cursor" ? "author" : "publisher"]).toBe("Example");
-      // Plural, so the whole list survives — unlike claude-code's `category`.
-      expect(entry.categories).toEqual(["example"]);
-    }
+  it("keeps the cursor publisher a bare name", () => {
+    const result = buildCatalogs(loadBundle(bundle(FULL)), ["cursor"], PROFILES, "repo");
+    const entry = JSON.parse(result.artifacts[0].content.toString()).plugins[0];
+    expect(entry.author).toBe("Example");
+    expect(entry.categories).toEqual(["example"]);
+  });
+
+  it("emits the Codex local-marketplace shape", () => {
+    const result = buildCatalogs(loadBundle(bundle(FULL)), ["codex"], PROFILES, "repo");
+    expect(result.diagnostics).toEqual([]);
+    const document = JSON.parse(result.artifacts[0].content.toString());
+    expect(document).toEqual({
+      name: "demo",
+      plugins: [
+        {
+          name: "demo",
+          source: "./codex/plugin",
+          policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
+          category: "example",
+        },
+      ],
+    });
+    expect(result.artifacts[0].path).toBe("codex/plugin/.agents/plugins/marketplace.json");
   });
 
   it("reports a missing required field with AB500", () => {
-    // codex requires publisher, categories, icon, and license.
+    // Codex requires one category; policy is a profile literal.
     const result = buildCatalogs(loadBundle(bundle()), ["codex"], PROFILES, "repo");
     const codes = [...new Set(result.diagnostics.map((item) => item.code))];
     expect(codes).toEqual(["AB500"]);
+    expect(result.diagnostics).toHaveLength(1);
     expect(result.diagnostics.every((item) => item.severity === "error")).toBe(true);
   });
 

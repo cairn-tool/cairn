@@ -659,7 +659,7 @@ const CONTRACTS: CommandContract[] = [
       FINDINGS("Spec, publish-readiness, or stale finding"),
     ],
     notes:
-      "Builds one aggregated catalog per target covering every bundle a collection spec names, rather than one catalog per bundle as agent package does. Renders every bundle itself, so a catalog can never certify a stale tree. Never contacts the network and never publishes. The collection root is not an agent convert output root, so agent doctor --output must not be pointed at it.",
+      "Builds one aggregated catalog per target covering every bundle a collection spec names, rather than one catalog per bundle as agent package does. Renders every bundle itself, so a catalog can never certify a stale tree. A build-only invocation never contacts the network or host state and never publishes; --install --register uses the target's local activation integration. The collection root is not an agent convert output root, so agent doctor --output must not be pointed at it.",
   }),
   agentCommand("audit", {
     stability: "experimental",
@@ -697,7 +697,7 @@ const CONTRACTS: CommandContract[] = [
       FINDINGS("Install finding, or --check found drift"),
     ],
     notes:
-      "Renders and packages in memory rather than trusting a dist tree, so an install is always derived from the bundle. Destinations come from the target profiles. --register is the only flag that edits host config, and only the marketplace layout needs it. Approximate render diagnostics do not fail install, unlike convert and validate. --target is repeatable and one destination may hold several installs, told apart by bundle, target, profile and scope in the manifest; occupancy is asked per path, so a destination is not occupied merely because a different bundle is recorded there. A run is planned in full before anything is written and a blocked plan writes nothing at all. --config installs the agent.install block a repository declares, and --target narrows that block rather than adding to it. Because a run may write to several destinations, artifacts[].path is not unique across the payload: two plans legitimately write the same relative path to different roots, and the artifact row shape is shared by every agent command rather than carrying a destination for this one caller.",
+      "Renders and packages in memory rather than trusting a dist tree, so an install is always derived from the bundle. Destinations come from the target profiles. --register is the only flag that changes host activation, and only the marketplace layout needs it: Claude Code edits settings.json, while Codex invokes its native plugin CLI. Approximate render diagnostics do not fail install, unlike convert and validate. --target is repeatable and one destination may hold several installs, told apart by bundle, target, profile and scope in the manifest; occupancy is asked per path, so a destination is not occupied merely because a different bundle is recorded there. A run is planned in full before anything is written and a blocked plan writes nothing at all. --config installs the agent.install block a repository declares, and --target narrows that block rather than adding to it. Because a run may write to several destinations, artifacts[].path is not unique across the payload: two plans legitimately write the same relative path to different roots, and the artifact row shape is shared by every agent command rather than carrying a destination for this one caller.",
   }),
   agentCommand("uninstall", {
     writes: true,
@@ -708,7 +708,7 @@ const CONTRACTS: CommandContract[] = [
       FINDINGS("Manifest missing or malformed, or --check found the install still present"),
     ],
     notes:
-      "Removes exactly the inventory recorded in .cairn-install.json and nothing else. --scope is optional: both scopes are searched, and two matches is an error rather than a guess. A destination may record several installs; removal is matched on the bundle name and the target, leaves a sibling record and any path it also owns in place, and rewrites the manifest with the survivors rather than deleting it.",
+      "Removes exactly the inventory recorded in .cairn-install.json and nothing else. --scope is optional: both scopes are searched, and two matches is an error rather than a guess. A destination may record several installs; removal is matched on the bundle name and the target, leaves a sibling record and any path it also owns in place, and rewrites the manifest with the survivors rather than deleting it. Registered installs reverse their recorded host activation before deleting files; Codex removes plugin ids before its marketplace and leaves a same-named marketplace at another root untouched.",
   }),
   agentCommand("installed", {
     stability: "experimental",

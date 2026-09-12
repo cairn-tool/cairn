@@ -10,13 +10,14 @@ target profiles, not from these scripts.
 | `install-claude-code.sh` | Claude Code | `~/.claude/plugins/marketplaces/cairn` |
 | `install-cursor.sh`      | Cursor      | `~/.cursor/plugins/local/<name>`       |
 | `install-antigravity.sh` | Antigravity | `~/.gemini/config/plugins/<name>`      |
-| `install-codex.sh`       | Codex       | the current directory (project scope)  |
+| `install-codex.sh`       | Codex       | `$CODEX_HOME/marketplaces/cairn`       |
 | `install-opencode.sh`    | OpenCode    | the current directory (project scope)  |
 
 ```bash
 scripts/install-claude-code.sh              # all eight bundles, one marketplace, activated
 scripts/install-cursor.sh --dry-run         # plan it without writing
-scripts/install-codex.sh --into ~/src/app   # into another repository
+scripts/install-codex.sh                    # all eight bundles, installed and enabled
+scripts/install-codex.sh --scope project --into ~/src/app
 scripts/install-antigravity.sh cairn-usage  # one bundle
 scripts/install-opencode.sh --uninstall     # undo
 ```
@@ -34,11 +35,15 @@ bundles falls back to a per-bundle install, and each of those becomes a marketpl
 **Cursor** and **Antigravity** get a `plugin-dir` install per bundle. Both hosts scan their
 plugin directory, so there is nothing to register — restart the host.
 
-**Codex** and **OpenCode** have no user-scope destination, and the scripts refuse `--scope user`
-rather than writing somewhere the host does not read. Codex's user-scope rules root is
-`~/AGENTS.md`, which an install would clobber; OpenCode's global layout drops the `.opencode/`
-prefix, which an install root override cannot express. Both install into a project directory
-instead — the current one, or `--into <dir>`.
+**Codex** mirrors the collection behavior at user scope: it writes one local marketplace under
+`$CODEX_HOME/marketplaces/cairn` (falling back to `~/.codex/marketplaces/cairn`), registers that
+root with `codex plugin marketplace add`, and installs/enables every entry with `codex plugin
+add`. `--no-register` writes only the source and reports the native commands as `AB805`. Naming
+bundles makes one marketplace per bundle. `--scope project` retains the direct repository merge.
+
+**OpenCode** has no user-scope destination. Its global layout drops the `.opencode/` prefix,
+which an install root override cannot express, so its script installs into a project directory —
+the current one, or `--into <dir>`.
 
 ## Which cairn runs
 

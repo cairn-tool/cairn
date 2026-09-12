@@ -11,11 +11,11 @@ They are authored as [agent bundles](formats/agent-bundle.md) under `plugins/`, 
 
 One branch per host, each holding that host's catalog at its root:
 
-| Target        | Branch           | Catalog                           |
-| ------------- | ---------------- | --------------------------------- |
-| `claude-code` | `claude-plugins` | `.claude-plugin/marketplace.json` |
-| `codex`       | `codex-plugins`  | `.codex-plugin/marketplace.json`  |
-| `cursor`      | `cursor-plugins` | `.cursor-plugin/marketplace.json` |
+| Target        | Branch           | Catalog                            |
+| ------------- | ---------------- | ---------------------------------- |
+| `claude-code` | `claude-plugins` | `.claude-plugin/marketplace.json`  |
+| `codex`       | `codex-plugins`  | `.agents/plugins/marketplace.json` |
+| `cursor`      | `cursor-plugins` | `.cursor-plugin/marketplace.json`  |
 
 All three catalogs carry the same document-level `name`, `cairn` — it comes from the collection
 spec, not from the target — so a plugin's install id is `<plugin>@cairn` on every host that uses
@@ -39,8 +39,8 @@ codex plugin add cairn-markdown@cairn
 ```
 
 Codex installs from a **local snapshot** of the catalog, under
-`$CODEX_HOME/marketplaces/cairn`, and only a configured marketplace is an install source — a
-`.codex-plugin/marketplace.json` sitting in the working directory is not. So a release does not
+`$CODEX_HOME/marketplaces/cairn`, and only a configured marketplace is an install source — an
+unregistered `.agents/plugins/marketplace.json` is only a catalog file. So a release does not
 reach an existing install by itself: `codex plugin marketplace upgrade cairn` re-fetches the
 branch, and `codex plugin list --marketplace cairn` shows what the snapshot currently offers.
 
@@ -122,13 +122,15 @@ npm run build
 # Build the collection into a tree.
 node dist/cli.js agent marketplace agent-marketplace.yaml --output ./dist-plugins
 
-# Or install and activate it directly.
-node dist/cli.js agent marketplace agent-marketplace.yaml --install --register
+# Or install and activate one host's collection directly.
+node dist/cli.js agent marketplace agent-marketplace.yaml --install --register --target claude-code
+node dist/cli.js agent marketplace agent-marketplace.yaml --install --register --target codex
 ```
 
-`--install --register` writes to `~/.claude/plugins/marketplaces/cairn` and adds one
-`extraKnownMarketplaces` key plus one `enabledPlugins` entry per plugin. Reverse it with
-`cairn agent uninstall cairn --target claude-code`.
+For Claude Code, `--install --register` writes to `~/.claude/plugins/marketplaces/cairn` and
+updates `settings.json`. For Codex, `--target codex` writes to
+`$CODEX_HOME/marketplaces/cairn`, adds the marketplace through the native CLI, and installs and
+enables every plugin. Reverse either with `cairn agent uninstall cairn --target <target>`.
 
 The build emits one tree per declared target — `dist-plugins/claude-code/`,
 `dist-plugins/codex/`, `dist-plugins/cursor/` — and each is what its branch publishes.
@@ -143,13 +145,13 @@ not have to remember which scope each host supports:
 scripts/install-claude-code.sh              # the whole collection, registered
 scripts/install-cursor.sh                   # ~/.cursor/plugins/local
 scripts/install-antigravity.sh              # ~/.gemini/config/plugins
-scripts/install-codex.sh   --into ~/src/app # project scope; Codex has no user scope
+scripts/install-codex.sh                    # one Codex marketplace, installed and enabled
+scripts/install-codex.sh --scope project --into ~/src/app
 scripts/install-opencode.sh --into ~/src/app
 ```
 
-Each takes `--dry-run`, `--check`, `--uninstall`, and a list of bundle names. Codex and OpenCode
-declare no user-scope location, and those two scripts refuse `--scope user` rather than writing
-where the host will not look.
+Each takes `--dry-run`, `--check`, `--uninstall`, and a list of bundle names. Codex and Claude
+Code also take `--no-register`; OpenCode alone has no user-scope location.
 
 For iterating on a single plugin's content, `claude --plugin-dir dist-plugins/claude-code/cairn-markdown`
 plus `/reload-plugins` avoids the marketplace and the plugin cache entirely.

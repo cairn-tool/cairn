@@ -77,13 +77,13 @@ produces five marketplaces a user has to add one at a time; this produces one. E
 paths are relative, so the tree names no owner, repo, or branch and works however it was
 fetched.
 
-`agent install` takes that same in-memory render and places it where the host actually
-scans: Cursor's user plugin directory, a Claude Code local marketplace, or a project-scope
-merge. Copy is the default; `--link` materializes once under the bundle's `.install/` tree
-and symlinks the host path at it. `--register` is the only flag that edits host config, and
-only Claude Code's marketplace layout needs it. `agent uninstall` removes exactly the
-inventory recorded in `.cairn-install.json`, and `agent installed` lists what those
-manifests describe.
+`agent install` takes that same in-memory render and places it where the host actually scans:
+Cursor's user plugin directory, a Claude Code or Codex local marketplace, or a project-scope
+merge. Copy is the default; `--link` materializes once under the bundle's `.install/` tree and
+symlinks the host path at it. `--register` is the only flag that changes host activation: Claude
+Code edits settings, while Codex invokes its native plugin CLI. `agent uninstall` removes exactly
+the inventory recorded in `.cairn-install.json`, and `agent installed` lists what those manifests
+describe.
 
 `agent audit` answers the question validation does not: what should a reviewer inspect before
 trusting or distributing this bundle? It reports the commands its hooks and MCP servers would
