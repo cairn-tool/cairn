@@ -271,7 +271,7 @@ Per-feature mapping losses. Severity depends on what the target profile declares
 | `AB802` | notice   | `agent install`, `agent uninstall`; `agent verify` | Replacing an existing install of this bundle (reports the version delta).                       |
 | `AB803` | warning  | `agent install`, `agent uninstall`                 | A bundle feature does not render in the installed profile (for example hooks at project scope). |
 | `AB804` | error    | `agent install`, `agent uninstall`                 | A destination path escapes the resolved scope root.                                             |
-| `AB805` | warning  | `agent install`, `agent uninstall`                 | Host activation edit required but `--register` was not given.                                   |
+| `AB805` | warning  | `agent install`, `agent marketplace`               | Host activation is required but `--register` was not given.                                     |
 | `AB806` | error    | `agent install`, `agent uninstall`; `agent verify` | Install manifest missing or malformed, or nothing to uninstall.                                 |
 | `AB807` | notice   | `agent install`, `agent uninstall`                 | `--link` in use; edits are live and the host may not follow symlinks.                           |
 | `AB808` | error    | `agent install`, `agent marketplace`               | A path is claimed by two installs at one destination.                                           |

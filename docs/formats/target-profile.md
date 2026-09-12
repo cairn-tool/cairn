@@ -27,7 +27,7 @@ reach `dist` and the published package would silently lack it.
 
 `PROFILE_SCHEMA_VERSION` is a **hand-owned** version of the profile structure itself,
 independent of the package version, the contract version, the bundle version, and the test-file
-version. It is currently `"3"`. A profile whose `schemaVersion` does not match is reported as
+version. It is currently `"4"`. A profile whose `schemaVersion` does not match is reported as
 invalid.
 
 ## Structure
@@ -55,8 +55,7 @@ interface TargetProfile {
 ```
 
 `marketplace` and `install` are optional on purpose: a consumer that has not been updated sees
-a new key rather than a changed shape. Every shipped profile defines both, except that Codex
-records `install.user: null`.
+a new key rather than a changed shape. Every shipped profile defines both.
 
 ## `host`
 
@@ -337,20 +336,21 @@ A field names where its value comes from and how it is reshaped:
 type MarketplaceFieldSource =
   | { from: "manifest"; field: string }
   | { from: "marketplace"; field: string }
-  | { from: "computed"; value: "source" };
+  | { from: "computed"; value: "source" }
+  | { from: "literal"; value: unknown };
 
 type MarketplaceFieldTransform = "identity" | "name" | "first";
 ```
 
 `transform` exists because targets disagree about the shape of the same underlying datum.
-`marketplace.publisher` becomes Claude Code's `owner`/`author` **object**, Codex's required
-`publisher` **string** (`name`), and Cursor's optional `author` **string**; and
-`marketplace.categories` becomes Claude Code's singular `category` (`first`) but Codex's and
-Cursor's whole list. Naming the reshape here keeps that disagreement in the profile instead of
-as a field-name check inside the packager.
+`marketplace.publisher` becomes Claude Code's `owner`/`author` **object** and Cursor's optional
+`author` **string**. `marketplace.categories` becomes Claude Code and Codex's singular `category`
+(`first`) but Cursor's whole list. Codex's install policy is a profile `literal`. Naming these
+choices here keeps the disagreement in the profile instead of as a field-name check inside the
+packager.
 
 `documentFields` are written at the catalog document's top level — the marketplace's own
-identity, as opposed to a plugin entry's. Only Claude Code declares any.
+identity, as opposed to a plugin entry's. Claude Code and Codex declare them.
 
 A target with no `marketplace` spec is skipped by `agent package` rather than given an invented
 catalog.
@@ -360,9 +360,13 @@ catalog.
 ```ts
 interface InstallLocation {
   root: string; // "~"-prefixed for user scope; relative for project
+  environmentRoot?: { variable: string; suffix: string };
   layout: "plugin-dir" | "merge" | "marketplace";
   profile: AgentProfile;
-  activation: { file: string; form: "claude-enabled-plugins" } | null;
+  activation:
+    | { file: string; form: "claude-enabled-plugins" }
+    | { command: string; form: "codex-plugin-cli" }
+    | null;
 }
 interface InstallProfile {
   user: InstallLocation | null;
@@ -376,12 +380,16 @@ interface InstallProfile {
 | `merge`       | rendered files merged into an existing tree       |
 | `marketplace` | a local marketplace the host has to be told about |
 
-`activation: null` means the root is auto-scanned and needs no edit. Only Claude Code's
-user-scope marketplace declares one, which is why `--register` exists and is the only flag that
-edits host configuration.
+`environmentRoot` selects an environment-controlled home before the fallback `root`; Codex uses
+`CODEX_HOME` plus `marketplaces`, falling back to `~/.codex/marketplaces`.
 
-A `null` location means the scope is unsupported. Codex records `install.user: null` because
-its project rules root is `AGENTS.md`, and a user-scope merge would clobber `~/AGENTS.md`.
+`activation: null` means the root is auto-scanned and needs no edit. Claude Code declares its
+settings-file driver; Codex declares its `codex plugin` CLI driver. `--register` is the only flag
+that changes host activation state.
+
+A `null` location means the scope is unsupported. Codex uses the plugin marketplace layout for
+user scope and keeps its direct project merge for project scope, so no user-level `AGENTS.md` is
+written.
 
 ## Validation
 

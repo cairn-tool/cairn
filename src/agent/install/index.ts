@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -73,7 +74,9 @@ export interface InstallInventoryEntry {
   sha256: string;
 }
 
-export interface InstallRegistration {
+export interface ClaudeInstallRegistration {
+  /** Absent in manifests written before activation drivers were versioned. */
+  form?: "claude-enabled-plugins";
   file: string;
   marketplaceKey: string;
   /** The single plugin key a bundle install enables. */
@@ -84,6 +87,16 @@ export interface InstallRegistration {
    */
   pluginKeys?: string[];
 }
+
+export interface CodexInstallRegistration {
+  form: "codex-plugin-cli";
+  command: string;
+  marketplaceKey: string;
+  pluginKey?: string;
+  pluginKeys?: string[];
+}
+
+export type InstallRegistration = ClaudeInstallRegistration | CodexInstallRegistration;
 
 /**
  * The plugin keys a registration activates, whichever spelling recorded them.
@@ -176,6 +189,7 @@ function sortRecords(records: InstallRecord[]): InstallRecord[] {
 export interface InstallContext {
   home?: string;
   cwd?: string;
+  env?: NodeJS.ProcessEnv;
 }
 
 export interface ResolvedInstall {
@@ -287,6 +301,17 @@ export function expandInstallRoot(root: string, context: InstallContext = {}): s
   if (root.startsWith("~/")) return path.resolve(home, root.slice(2));
   if (root === ".") return path.resolve(cwd);
   return path.resolve(cwd, root);
+}
+
+/** Resolves an install location, honoring a host-specific home override first. */
+export function expandInstallLocationRoot(
+  location: InstallLocation,
+  context: InstallContext = {},
+): string {
+  const configured = location.environmentRoot;
+  const value = configured ? (context.env ?? process.env)[configured.variable] : undefined;
+  if (configured && value) return path.resolve(value, configured.suffix);
+  return expandInstallRoot(location.root, context);
 }
 
 export function locationFor(target: AgentTarget, scope: InstallScope): InstallLocation | null {
@@ -424,20 +449,37 @@ function parseRecord(value: unknown): InstallRecord | null {
   const keys = Array.isArray(registration?.pluginKeys)
     ? registration.pluginKeys.filter((key): key is string => typeof key === "string")
     : undefined;
-  const parsedRegistration =
+  const hasRegistrationKey = typeof registration?.pluginKey === "string" || keys !== undefined;
+  let parsedRegistration: InstallRegistration | undefined;
+  if (
+    registration?.form === "codex-plugin-cli" &&
+    typeof registration.command === "string" &&
+    typeof registration.marketplaceKey === "string" &&
+    hasRegistrationKey
+  )
+    parsedRegistration = {
+      form: "codex-plugin-cli",
+      command: registration.command,
+      marketplaceKey: registration.marketplaceKey,
+      ...(typeof registration.pluginKey === "string" ? { pluginKey: registration.pluginKey } : {}),
+      ...(keys ? { pluginKeys: keys } : {}),
+    };
+  else if (
     registration &&
+    (registration.form === undefined || registration.form === "claude-enabled-plugins") &&
     typeof registration.file === "string" &&
     typeof registration.marketplaceKey === "string" &&
-    (typeof registration.pluginKey === "string" || keys !== undefined)
-      ? {
-          file: registration.file,
-          marketplaceKey: registration.marketplaceKey,
-          ...(typeof registration.pluginKey === "string"
-            ? { pluginKey: registration.pluginKey }
-            : {}),
-          ...(keys ? { pluginKeys: keys } : {}),
-        }
-      : undefined;
+    hasRegistrationKey
+  )
+    parsedRegistration = {
+      ...(registration.form === "claude-enabled-plugins"
+        ? { form: "claude-enabled-plugins" as const }
+        : {}),
+      file: registration.file,
+      marketplaceKey: registration.marketplaceKey,
+      ...(typeof registration.pluginKey === "string" ? { pluginKey: registration.pluginKey } : {}),
+      ...(keys ? { pluginKeys: keys } : {}),
+    };
   const collection = doc.collection as Record<string, unknown> | undefined;
   const plugins =
     collection && Array.isArray(collection.plugins)
@@ -558,13 +600,11 @@ export function resolveInstallDestination(
     return error("AB800", `No recorded install location for ${target} ${scope} scope`, {
       target,
       remediation:
-        scope === "user" && target === "codex"
-          ? "Codex has no user-scope install; use --scope project, or pick another target."
-          : "Use a target and scope the profile declares, or pass --into only after one exists.",
+        "Use a target and scope the profile declares, or pass --into only after one exists.",
     });
   const locationRoot = options.into
     ? path.resolve(options.into)
-    : expandInstallRoot(location.root, options);
+    : expandInstallLocationRoot(location, options);
   const destination = location.layout === "merge" ? locationRoot : path.join(locationRoot, name);
   return { location, locationRoot, destination };
 }
@@ -667,10 +707,125 @@ function readJsonObject(file: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-function applyRegistration(
-  settings: NonNullable<InstallPlan["settings"]>,
-  destination: string,
-): void {
+function isCodexRegistration(
+  registration: InstallRegistration,
+): registration is CodexInstallRegistration {
+  return registration.form === "codex-plugin-cli";
+}
+
+function commandJson(command: string, args: string[]): Record<string, unknown> {
+  const result = spawnSync(command, args, {
+    encoding: "utf8",
+    env: process.env,
+    maxBuffer: 1024 * 1024,
+  });
+  const invocation = [command, ...args].join(" ");
+  if (result.error) throw new Error(`Failed to run '${invocation}': ${result.error.message}`);
+  if (result.status !== 0) {
+    const detail = (result.stderr || result.stdout).trim();
+    throw new Error(
+      `Host command '${invocation}' exited ${result.status ?? "without a status"}${detail ? `: ${detail}` : ""}`,
+    );
+  }
+  try {
+    const parsed: unknown = JSON.parse(result.stdout);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      throw new Error("output is not an object");
+    return parsed as Record<string, unknown>;
+  } catch (cause) {
+    throw new Error(`Host command '${invocation}' returned invalid JSON`, { cause });
+  }
+}
+
+interface CodexMarketplaceState {
+  name: string;
+  root: string;
+}
+
+interface CodexPluginState {
+  pluginId: string;
+  version?: string;
+  installed: boolean;
+  enabled: boolean;
+}
+
+function codexMarketplaces(registration: CodexInstallRegistration): CodexMarketplaceState[] {
+  const value = commandJson(registration.command, [
+    "plugin",
+    "marketplace",
+    "list",
+    "--json",
+  ]).marketplaces;
+  if (!Array.isArray(value)) throw new Error("Codex marketplace list returned no marketplaces");
+  return value.flatMap((entry) => {
+    const row = entry as Record<string, unknown> | null;
+    return row && typeof row.name === "string" && typeof row.root === "string"
+      ? [{ name: row.name, root: row.root }]
+      : [];
+  });
+}
+
+function codexPlugins(registration: CodexInstallRegistration): CodexPluginState[] {
+  const value = commandJson(registration.command, ["plugin", "list", "--json"]).installed;
+  if (!Array.isArray(value)) throw new Error("Codex plugin list returned no installed plugins");
+  return value.flatMap((entry) => {
+    const row = entry as Record<string, unknown> | null;
+    return row && typeof row.pluginId === "string"
+      ? [
+          {
+            pluginId: row.pluginId,
+            ...(typeof row.version === "string" ? { version: row.version } : {}),
+            installed: row.installed === true,
+            enabled: row.enabled === true,
+          },
+        ]
+      : [];
+  });
+}
+
+function canonicalPath(file: string): string {
+  try {
+    return fs.realpathSync(file);
+  } catch {
+    return path.resolve(file);
+  }
+}
+
+function samePath(left: string, right: string): boolean {
+  return canonicalPath(left) === canonicalPath(right);
+}
+
+function codexMarketplace(
+  registration: CodexInstallRegistration,
+): CodexMarketplaceState | undefined {
+  return codexMarketplaces(registration).find(
+    (marketplace) => marketplace.name === registration.marketplaceKey,
+  );
+}
+
+/**
+ * Checks host-side conflicts before a batch writes any files.
+ *
+ * In particular, `--force` never takes over a same-named Codex marketplace
+ * that points somewhere else: it is external state Cairn does not own.
+ */
+export function preflightInstallRegistrations(plans: InstallPlan[]): void {
+  const checked = new Set<string>();
+  for (const plan of plans) {
+    const registration = plan.settings;
+    if (!plan.register || !registration || !isCodexRegistration(registration)) continue;
+    const key = `${registration.command}\0${registration.marketplaceKey}\0${plan.destination}`;
+    if (checked.has(key)) continue;
+    checked.add(key);
+    const current = codexMarketplace(registration);
+    if (current && !samePath(current.root, plan.destination))
+      throw new Error(
+        `Codex marketplace '${registration.marketplaceKey}' already points to ${current.root}; refusing to replace it with ${plan.destination}`,
+      );
+  }
+}
+
+function applyClaudeRegistration(settings: ClaudeInstallRegistration, destination: string): void {
   const current = readJsonObject(settings.file);
   const extra = {
     ...((current.extraKnownMarketplaces as Record<string, unknown> | undefined) ?? {}),
@@ -689,7 +844,58 @@ function applyRegistration(
   });
 }
 
-function revertRegistration(registration: InstallRegistration, destination: string): void {
+function applyCodexRegistration(registration: CodexInstallRegistration, destination: string): void {
+  const marketplace = codexMarketplace(registration);
+  if (marketplace && !samePath(marketplace.root, destination))
+    throw new Error(
+      `Codex marketplace '${registration.marketplaceKey}' already points to ${marketplace.root}; refusing to replace it with ${destination}`,
+    );
+  const installedBefore = new Set(
+    codexPlugins(registration)
+      .filter((plugin) => plugin.installed)
+      .map((plugin) => plugin.pluginId),
+  );
+  const added: string[] = [];
+  try {
+    commandJson(registration.command, ["plugin", "marketplace", "add", destination, "--json"]);
+    for (const key of registeredPluginKeys(registration)) {
+      commandJson(registration.command, ["plugin", "add", key, "--json"]);
+      if (!installedBefore.has(key)) added.push(key);
+    }
+  } catch (cause) {
+    for (const key of added.reverse()) {
+      try {
+        commandJson(registration.command, ["plugin", "remove", key, "--json"]);
+      } catch {
+        // Best effort: preserve the original host failure.
+      }
+    }
+    if (!marketplace) {
+      try {
+        commandJson(registration.command, [
+          "plugin",
+          "marketplace",
+          "remove",
+          registration.marketplaceKey,
+          "--json",
+        ]);
+      } catch {
+        // Best effort: preserve the original host failure.
+      }
+    }
+    throw cause;
+  }
+}
+
+function applyRegistration(registration: InstallRegistration, destination: string): void {
+  if (isCodexRegistration(registration)) applyCodexRegistration(registration, destination);
+  else applyClaudeRegistration(registration, destination);
+}
+
+function revertClaudeRegistration(
+  registration: ClaudeInstallRegistration,
+  destination: string,
+): void {
   if (!existsAt(registration.file)) return;
   const current = readJsonObject(registration.file);
   const extra = {
@@ -708,8 +914,67 @@ function revertRegistration(registration: InstallRegistration, destination: stri
   });
 }
 
-function registrationCurrent(
-  settings: NonNullable<InstallPlan["settings"]>,
+function revertCodexRegistration(
+  registration: CodexInstallRegistration,
+  destination: string,
+): void {
+  const marketplace = codexMarketplace(registration);
+  // The name now belongs to a different root. Removing either its plugins or
+  // the marketplace would mutate state Cairn did not install.
+  if (marketplace && !samePath(marketplace.root, destination)) return;
+  const installed = new Set(
+    codexPlugins(registration)
+      .filter((plugin) => plugin.installed)
+      .map((plugin) => plugin.pluginId),
+  );
+  for (const key of registeredPluginKeys(registration))
+    if (installed.has(key)) commandJson(registration.command, ["plugin", "remove", key, "--json"]);
+  if (marketplace)
+    commandJson(registration.command, [
+      "plugin",
+      "marketplace",
+      "remove",
+      registration.marketplaceKey,
+      "--json",
+    ]);
+}
+
+function revertRegistration(registration: InstallRegistration, destination: string): void {
+  if (isCodexRegistration(registration)) revertCodexRegistration(registration, destination);
+  else revertClaudeRegistration(registration, destination);
+}
+
+function expectedPluginVersions(
+  registration: InstallRegistration,
+  record: InstallRecord,
+): Map<string, string> {
+  if (record.kind === "collection" && record.collection)
+    return new Map(
+      record.collection.plugins.map((plugin) => [
+        `${plugin.name}@${registration.marketplaceKey}`,
+        plugin.version,
+      ]),
+    );
+  return new Map(registeredPluginKeys(registration).map((key) => [key, record.bundle.version]));
+}
+
+function codexRegistrationCurrent(
+  registration: CodexInstallRegistration,
+  destination: string,
+  record: InstallRecord,
+): boolean {
+  const marketplace = codexMarketplace(registration);
+  if (!marketplace || !samePath(marketplace.root, destination)) return false;
+  const installed = new Map(codexPlugins(registration).map((plugin) => [plugin.pluginId, plugin]));
+  for (const [key, version] of expectedPluginVersions(registration, record)) {
+    const plugin = installed.get(key);
+    if (!plugin?.installed || !plugin.enabled || plugin.version !== version) return false;
+  }
+  return true;
+}
+
+function claudeRegistrationCurrent(
+  settings: ClaudeInstallRegistration,
   destination: string,
 ): boolean {
   if (!existsAt(settings.file)) return false;
@@ -725,6 +990,16 @@ function registrationCurrent(
   } catch {
     return false;
   }
+}
+
+function registrationCurrent(
+  settings: NonNullable<InstallPlan["settings"]>,
+  destination: string,
+  record: InstallRecord,
+): boolean {
+  return isCodexRegistration(settings)
+    ? codexRegistrationCurrent(settings, destination, record)
+    : claudeRegistrationCurrent(settings, destination);
 }
 
 function pruneEmptyAncestors(root: string, relative: string): void {
@@ -756,7 +1031,11 @@ export function installIsCurrent(plan: InstallPlan): boolean {
   // The files matching is not enough: a record hand-removed from the manifest
   // would leave --check reporting "current" while uninstall reports not-found.
   if (readInstallRecord(plan.destination, installKey(plan.record)) === "missing") return false;
-  if (plan.register && plan.settings && !registrationCurrent(plan.settings, plan.destination))
+  if (
+    plan.register &&
+    plan.settings &&
+    !registrationCurrent(plan.settings, plan.destination, plan.record)
+  )
     return false;
   return true;
 }
@@ -873,6 +1152,63 @@ function unresolvedPlan(
   };
 }
 
+function registrationFor(
+  location: InstallLocation,
+  marketplaceKey: string,
+  pluginKeys: string[],
+  context: InstallContext,
+  single: boolean,
+): InstallRegistration | undefined {
+  if (location.layout !== "marketplace" || !location.activation) return undefined;
+  const keys = single ? { pluginKey: pluginKeys[0]! } : { pluginKeys };
+  if (location.activation.form === "codex-plugin-cli")
+    return {
+      form: "codex-plugin-cli",
+      command: location.activation.command,
+      marketplaceKey,
+      ...keys,
+    };
+  return {
+    file: expandInstallRoot(location.activation.file, context),
+    marketplaceKey,
+    ...keys,
+  };
+}
+
+function activationDiagnostic(
+  registration: InstallRegistration,
+  destination: string,
+  target: AgentTarget,
+): AgentDiagnostic {
+  const keys = registeredPluginKeys(registration);
+  if (isCodexRegistration(registration)) {
+    const commands = [
+      `${registration.command} plugin marketplace add ${destination} --json`,
+      ...keys.map((key) => `${registration.command} plugin add ${key} --json`),
+    ];
+    return diagnostic(
+      "AB805",
+      `Host activation required but --register was not given. Run: ${commands.join("; ")}.`,
+      "unsupported",
+      {
+        target,
+        path: destination,
+        remediation: "Re-run with --register, or run the reported Codex commands yourself.",
+      },
+    );
+  }
+  return diagnostic(
+    "AB805",
+    `Host activation edit required but --register was not given. Add extraKnownMarketplaces.${registration.marketplaceKey} (directory ${destination}) and enabledPlugins for ${keys.join(", ")} to ${registration.file}.`,
+    "unsupported",
+    {
+      target,
+      path: registration.file,
+      remediation: "Re-run with --register, or apply the edit yourself.",
+    },
+  );
+}
+
 function draftInstall(
   bundle: AgentBundle,
   target: AgentTarget,
@@ -905,31 +1241,16 @@ function draftInstall(
         }),
       );
 
-  const settingsFile = location.activation
-    ? expandInstallRoot(location.activation.file, options)
-    : undefined;
-  const settings =
-    location.layout === "marketplace" && settingsFile
-      ? {
-          file: settingsFile,
-          marketplaceKey: bundle.name,
-          pluginKey: `${bundle.name}@${bundle.name}`,
-        }
-      : undefined;
+  const settings = registrationFor(
+    location,
+    bundle.name,
+    [`${bundle.name}@${bundle.name}`],
+    options,
+    true,
+  );
   const register = Boolean(options.register) && Boolean(settings);
   if (settings && !options.register)
-    diagnostics.push(
-      diagnostic(
-        "AB805",
-        `Host activation edit required but --register was not given. Add extraKnownMarketplaces.${bundle.name} (directory ${destination}) and enabledPlugins["${bundle.name}@${bundle.name}"] to ${settingsFile}.`,
-        "unsupported",
-        {
-          target,
-          path: settingsFile,
-          remediation: "Re-run with --register, or apply the edit yourself.",
-        },
-      ),
-    );
+    diagnostics.push(activationDiagnostic(settings, destination, target));
   if (mode === "link")
     diagnostics.push(
       diagnostic(
@@ -1244,28 +1565,11 @@ export function planCollectionInstall(
         }),
       );
 
-  const settingsFile = location.activation
-    ? expandInstallRoot(location.activation.file, options)
-    : undefined;
   const pluginKeys = collection.plugins.map((plugin) => `${plugin.name}@${collection.name}`);
-  const settings =
-    location.layout === "marketplace" && settingsFile
-      ? { file: settingsFile, marketplaceKey: collection.name, pluginKeys }
-      : undefined;
+  const settings = registrationFor(location, collection.name, pluginKeys, options, false);
   const register = Boolean(options.register) && Boolean(settings);
   if (settings && !options.register)
-    diagnostics.push(
-      diagnostic(
-        "AB805",
-        `Host activation edit required but --register was not given. Add extraKnownMarketplaces.${collection.name} (directory ${destination}) and enabledPlugins for ${pluginKeys.join(", ")} to ${settingsFile}.`,
-        "unsupported",
-        {
-          target: collection.target,
-          path: settingsFile,
-          remediation: "Re-run with --register, or apply the edit yourself.",
-        },
-      ),
-    );
+    diagnostics.push(activationDiagnostic(settings, destination, collection.target));
   if (mode === "link")
     diagnostics.push(
       diagnostic(
@@ -1397,12 +1701,37 @@ function retirePrior(plan: InstallPlan): void {
     revertRegistration(previous.registration, plan.destination);
 }
 
+function restoreRegistrationRecordAfterFailure(plan: InstallPlan): void {
+  const key = installKey(plan.record);
+  const previous =
+    plan.prior === "missing" || plan.prior === "malformed"
+      ? undefined
+      : plan.prior.installs.find((record) => installKey(record) === key)?.registration;
+  const installs = plan.document.installs.map((record) => {
+    if (installKey(record) !== key) return record;
+    const { registration: _failed, ...without } = record;
+    return previous ? { ...without, registration: previous } : without;
+  });
+  writeJsonAtomically(
+    path.join(plan.destination, INSTALL_MANIFEST),
+    serializeDocument({ generator: currentGenerator(), installs: sortRecords(installs) }),
+  );
+}
+
 /** Writes a planned install. Caller must have already decided the run is not blocked. */
 export function commitInstall(plan: InstallPlan): void {
   retirePrior(plan);
   if (plan.mode === "link") writeLink(plan);
   else writeCopy(plan);
-  if (plan.register && plan.settings) applyRegistration(plan.settings, plan.destination);
+  if (plan.register && plan.settings)
+    try {
+      applyRegistration(plan.settings, plan.destination);
+    } catch (cause) {
+      // The filesystem install remains useful, but its manifest must not claim
+      // host activation that the driver just rolled back.
+      restoreRegistrationRecordAfterFailure(plan);
+      throw cause;
+    }
 }
 
 export function planToEntry(plan: InstallPlan): InstallEntry {
@@ -1543,6 +1872,9 @@ export function commitUninstall(plan: UninstallPlan): void {
   const record = plan.manifest;
   if (!record) return;
   const destination = plan.destination;
+  // Host state is the harder-to-recover half. If its driver fails, leave the
+  // marketplace tree and manifest intact so a retry can still identify it.
+  if (record.registration) revertRegistration(record.registration, destination);
   const document = readInstallDocument(destination);
   const key = installKey(record);
   const remaining =
@@ -1581,7 +1913,6 @@ export function commitUninstall(plan: UninstallPlan): void {
     }
   }
   if (record.materialized) removePath(record.materialized);
-  if (record.registration) revertRegistration(record.registration, destination);
 }
 
 function scanRoot(
@@ -1627,7 +1958,7 @@ export function listInstalled(
       if (!location) continue;
       const locationRoot = options.into
         ? path.resolve(options.into)
-        : expandInstallRoot(location.root, options);
+        : expandInstallLocationRoot(location, options);
       entries.push(...scanRoot(target, scope, location, locationRoot));
     }
   }

@@ -43,9 +43,12 @@ goes.
 into a removal without restating the scope. Two matches is an error rather than a guess.
 
 A `--link` install removes the host-side symlink and the materialized `.install/` tree the
-manifest recorded. A `--register` install also drops the `extraKnownMarketplaces` and
-`enabledPlugins` entries it added, and only those, and only when they still point at this
-destination.
+manifest recorded. A registered Claude Code install also drops the `extraKnownMarketplaces` and
+`enabledPlugins` entries it added. A registered Codex install removes its plugin IDs first and
+then its marketplace through `codex plugin`. Either driver acts only while the recorded
+marketplace name still points at this destination; a same-named marketplace at another root is
+left untouched. Host cleanup happens before file removal, so a driver failure leaves the managed
+tree available for a retry.
 
 ## Diagnostics
 

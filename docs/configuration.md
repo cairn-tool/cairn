@@ -164,14 +164,14 @@ agent:
         exclude: [codex]
 ```
 
-| Key        | Required | Description                                                              |
-| ---------- | -------- | ------------------------------------------------------------------------ |
-| `targets`  | Yes      | Targets every bundle is installed for. At least one.                     |
-| `bundles`  | Yes      | One entry per bundle. At least one.                                      |
-| `scope`    | No       | `user` or `project`. Defaults to `project`.                              |
-| `into`     | No       | Install root override, relative to this file. Defaults to the profile's. |
-| `link`     | No       | Symlink the rendered trees instead of copying. Defaults to `false`.      |
-| `register` | No       | Edit host config to activate a marketplace install. Defaults to `false`. |
+| Key        | Required | Description                                                               |
+| ---------- | -------- | ------------------------------------------------------------------------- |
+| `targets`  | Yes      | Targets every bundle is installed for. At least one.                      |
+| `bundles`  | Yes      | One entry per bundle. At least one.                                       |
+| `scope`    | No       | `user` or `project`. Defaults to `project`.                               |
+| `into`     | No       | Install root override, relative to this file. Defaults to the profile's.  |
+| `link`     | No       | Symlink the rendered trees instead of copying. Defaults to `false`.       |
+| `register` | No       | Activate a marketplace through the host integration. Defaults to `false`. |
 
 Each `bundles` entry takes a `path` and, optionally, one of `include` or `exclude` — never
 both, the same rule the [marketplace spec](formats/agent-marketplace.md) uses, because their

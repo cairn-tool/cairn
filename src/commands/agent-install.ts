@@ -8,6 +8,7 @@ import {
   locationFor,
   planInstalls,
   planToEntry,
+  preflightInstallRegistrations,
   resolveScope,
 } from "../agent/install/index.js";
 import { installsFor, resolveInstallConfig } from "../agent/install/config.js";
@@ -41,8 +42,8 @@ export function installHasFindings(diagnostics: AgentDiagnostic[], strict: boole
  *
  * `all` expands only to targets that declare a location for the requested
  * scope. Expanding to every target would make the most natural invocation of a
- * multi-target install — `--target all --scope user` — hard-fail on codex and
- * opencode, which record no user location; and under plan-all-then-commit-all a
+ * multi-target install — `--target all --scope user` — hard-fail on opencode,
+ * which records no user location; and under plan-all-then-commit-all a
  * hard fail writes nothing at all. An explicitly named target with no location
  * still reports AB800, because there the user asked for something specific.
  */
@@ -179,8 +180,10 @@ export async function agentInstallAction(
   );
   // All or nothing: committing the clean part of a run whose remainder is
   // blocked is how a destination ends up half-populated with no record of it.
-  if (!opts.dryRun && !opts.check && !blocked)
+  if (!opts.dryRun && !opts.check && !blocked) {
+    preflightInstallRegistrations(batch.plans);
     for (const plan of batch.plans) if (plan.destination) commitInstall(plan);
+  }
 
   const placed = batch.plans.filter((plan) => plan.destination);
   const report: InstallReport = { installs: placed.map(planToEntry) };

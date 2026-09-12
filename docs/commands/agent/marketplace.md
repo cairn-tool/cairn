@@ -15,8 +15,9 @@ skipped for which target are declared in an
 per bundle. This answers "what does this marketplace offer?", which is a different document: five
 bundles packaged individually are five marketplaces a user has to add one at a time.
 
-Like `agent package`, it **never contacts the network and never publishes.** It produces a tree;
-taking an irreversible external action is left to you.
+Like `agent package`, a build-only invocation **never contacts the network and never publishes.**
+With `--install --register`, it may invoke the host's local activation integration; that action
+is recorded so `agent uninstall` can reverse it.
 
 **Stability: experimental.** The payload shape may change before it hardens.
 
@@ -28,23 +29,23 @@ taking an irreversible external action is left to you.
 
 ## Options
 
-| Option                 | Default  | Description                                                         |
-| ---------------------- | -------- | ------------------------------------------------------------------- |
-| `--output <dir>`       | Required | Collection root. Must not be inside any bundle.                     |
-| `--target <target>`    | The spec | Repeatable. **Narrows** the spec's targets; may not add to them.    |
-| `--marketplace <mode>` | `repo`   | Catalog mode: `repo` or `local`.                                    |
-| `--archive`            | Off      | Also emit a deterministic `.tar.gz` per plugin.                     |
-| `--install`            | Off      | Install into the host marketplace directory the profile declares.   |
-| `--scope <scope>`      | `user`   | `user` or `project`. `--install` only.                              |
-| `--into <dir>`         | Profile  | Override the install root. `--install` only.                        |
-| `--link`               | Off      | Symlink the installed tree instead of copying it. `--install` only. |
-| `--register`           | Off      | Edit host config to activate the collection. `--install` only.      |
-| `--strict`             | Off      | Treat warnings as blocking findings.                                |
-| `--force`              | Off      | Replace a nonempty destination.                                     |
-| `--dry-run`            | Off      | Build in memory without writing.                                    |
-| `--check`              | Off      | Compare against an existing collection without writing.             |
-| `--format <fmt>`       | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.      |
-| `--envelope`           | Off      | Wrap `--format json` output in the versioned result envelope.       |
+| Option                 | Default  | Description                                                             |
+| ---------------------- | -------- | ----------------------------------------------------------------------- |
+| `--output <dir>`       | Required | Collection root. Must not be inside any bundle.                         |
+| `--target <target>`    | The spec | Repeatable. **Narrows** the spec's targets; may not add to them.        |
+| `--marketplace <mode>` | `repo`   | Catalog mode: `repo` or `local`.                                        |
+| `--archive`            | Off      | Also emit a deterministic `.tar.gz` per plugin.                         |
+| `--install`            | Off      | Install into the host marketplace directory the profile declares.       |
+| `--scope <scope>`      | `user`   | `user` or `project`. `--install` only.                                  |
+| `--into <dir>`         | Profile  | Override the install root. `--install` only.                            |
+| `--link`               | Off      | Symlink the installed tree instead of copying it. `--install` only.     |
+| `--register`           | Off      | Activate the collection through the host integration. `--install` only. |
+| `--strict`             | Off      | Treat warnings as blocking findings.                                    |
+| `--force`              | Off      | Replace a nonempty destination.                                         |
+| `--dry-run`            | Off      | Build in memory without writing.                                        |
+| `--check`              | Off      | Compare against an existing collection without writing.                 |
+| `--format <fmt>`       | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.          |
+| `--envelope`           | Off      | Wrap `--format json` output in the versioned result envelope.           |
 
 `--check` and `--dry-run` cannot be combined.
 
@@ -68,7 +69,7 @@ re-renders and compares.
 ```text
 <output>/
   <target>/
-    .claude-plugin/marketplace.json   the aggregated catalog, N entries
+    <host catalog>/marketplace.json   the aggregated catalog, N entries
     <plugin>/                         one rendered plugin payload per bundle
       .claude-plugin/plugin.json
       skills/  agents/  hooks/  .mcp.json  assets/
@@ -89,9 +90,9 @@ catalog sits one level above N plugin directories, so only the collection root c
 ## `--install` registers one marketplace, not one per plugin
 
 This is the gap the flag exists to close. [`agent install --register`](install.md) derives the
-`extraKnownMarketplaces` key from the **bundle** name, so installing five bundles leaves a user
-with five marketplaces, each offering one plugin. A collection registers **one** key — the spec's
-`name` — and enables every plugin under it:
+marketplace key from the **bundle** name, so installing five bundles leaves a user with five
+marketplaces, each offering one plugin. A collection registers **one** key — the spec's `name` —
+and enables every plugin under it. Claude Code records that in `settings.json`:
 
 ```json
 {
@@ -102,8 +103,9 @@ with five marketplaces, each offering one plugin. A collection registers **one**
 }
 ```
 
-`--register` is the only flag that edits host config, exactly as in `agent install`. Without it
-the tree is still written and the required edit is reported as `AB805`.
+Codex instead invokes `codex plugin marketplace add` once and `codex plugin add` for every entry.
+`--register` is the only flag that changes host activation state, exactly as in `agent install`.
+Without it the tree is still written and the required edit or commands are reported as `AB805`.
 
 Registering **both** an individual bundle and a collection containing it leaves two marketplaces
 offering the same plugin under different keys (`cairn-markdown@cairn-markdown` and
@@ -142,8 +144,8 @@ or branch and works however it was fetched.
 
 `claude-code`, `codex`, and `cursor` declare one. `antigravity` and `opencode` do not, and a
 selected target that declares none reports `AB507` rather than silently producing payloads and no
-catalog. Codex additionally **requires** a `marketplace.icon`, so a bundle without one packages for
-the other two and fails for Codex.
+catalog. Codex requires a category and emits the current local-source policy fields; it no longer
+requires the obsolete publisher, license, or icon fields in its catalog.
 
 ## Diagnostics
 
@@ -191,11 +193,18 @@ cairn agent marketplace agent-marketplace.yaml --output ./dist --dry-run -fj \
   | jq '.diagnostics[] | select(.severity == "error")'
 ```
 
-`--install` and `--register` do the same thing `/plugin marketplace add` does, without leaving the
-shell. To add a built tree by hand instead:
+For Claude Code, `--install --register` performs the same activation as `/plugin marketplace add`.
+To add a built tree by hand:
 
 ```text
 /plugin marketplace add /absolute/path/to/dist-plugins/claude-code
+```
+
+For Codex:
+
+```bash
+codex plugin marketplace add /absolute/path/to/dist-plugins/codex --json
+codex plugin add <plugin>@<marketplace> --json
 ```
 
 ## Exit codes

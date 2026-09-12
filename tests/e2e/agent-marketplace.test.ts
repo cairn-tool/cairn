@@ -9,21 +9,23 @@ const exec = promisify(execFile);
 
 interface CatalogEntry {
   name: string;
-  version: string;
-  description: string;
+  version?: string;
+  description?: string;
   source: string;
   author?: { name: string };
   category?: string;
+  policy?: { installation: string; authentication: string };
   license?: string;
 }
 
 interface Catalog {
   name: string;
   description?: string;
-  owner: { name: string; url?: string };
+  owner?: { name: string; url?: string };
   plugins: CatalogEntry[];
 }
 const cli = path.resolve("dist/cli.js");
+const helpers = path.resolve("tests/helpers");
 const temporary: string[] = [];
 
 async function run(
@@ -38,7 +40,14 @@ async function runIn(
   home: string | undefined,
   ...args: string[]
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  const env = home ? { ...process.env, HOME: home } : process.env;
+  const env = home
+    ? {
+        ...process.env,
+        HOME: home,
+        CODEX_HOME: path.join(home, ".codex"),
+        PATH: `${helpers}${path.delimiter}${process.env.PATH ?? ""}`,
+      }
+    : process.env;
   try {
     // Run from inside the sandbox home, not the repository. `agent installed`
     // and `agent uninstall` read the *project* scope as well as the user scope,
@@ -105,6 +114,8 @@ bundles:
   - path: plugins/alpha
   - path: plugins/beta
 `;
+
+const CODEX_SPEC = SPEC.replace("targets: [claude-code]", "targets: [codex]");
 
 function catalog(out: string, target = "claude-code", dir = ".claude-plugin"): Catalog {
   return JSON.parse(fs.readFileSync(path.join(out, target, dir, "marketplace.json"), "utf8"));
@@ -360,6 +371,13 @@ bundles:
   - path: plugins/alpha
   - path: plugins/beta
 `);
+    for (const name of ["alpha", "beta"]) {
+      const manifest = path.join(root, "plugins", name, "agent-bundle.yaml");
+      fs.writeFileSync(
+        manifest,
+        fs.readFileSync(manifest, "utf8").replace("  categories: [demo]\n", ""),
+      );
+    }
     const result = await run(
       "agent",
       "marketplace",
@@ -609,7 +627,7 @@ describe("agent marketplace --install", () => {
     );
   });
 
-  // --register stays the only flag that edits host config, matching agent install.
+  // --register stays the only flag that changes host activation, matching agent install.
   it("installs without --register and reports the edit as AB805", async () => {
     const { root } = collection(SPEC);
     const home = sandboxHome();
@@ -704,5 +722,241 @@ describe("agent marketplace --install", () => {
     );
     expect(result.exitCode).toBe(1);
     expect(result.stderr + result.stdout).toContain("applies only with --install");
+  });
+});
+
+describe("agent marketplace --install for Codex", () => {
+  function codexState(home: string): {
+    marketplaces: Record<string, string>;
+    plugins: Record<string, { enabled: boolean; version: string }>;
+  } {
+    return JSON.parse(fs.readFileSync(path.join(home, ".codex", "fake-plugin-state.json"), "utf8"));
+  }
+
+  it("installs and enables a user-scoped collection through the Codex CLI", async () => {
+    const { root } = collection(CODEX_SPEC);
+    const home = sandboxHome();
+    const spec = path.join(root, "agent-marketplace.yaml");
+    const result = await runIn(home, "agent", "marketplace", spec, "--install", "--register");
+    expect(result.exitCode).toBe(0);
+
+    const installed = path.join(home, ".codex", "marketplaces", "demo");
+    expect(fs.existsSync(path.join(installed, ".agents", "plugins", "marketplace.json"))).toBe(
+      true,
+    );
+    const catalog = JSON.parse(
+      fs.readFileSync(path.join(installed, ".agents", "plugins", "marketplace.json"), "utf8"),
+    ) as Catalog;
+    expect(catalog.name).toBe("demo");
+    expect(catalog.plugins).toEqual([
+      {
+        name: "alpha",
+        source: "./alpha",
+        policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
+        category: "demo",
+      },
+      {
+        name: "beta",
+        source: "./beta",
+        policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
+        category: "demo",
+      },
+    ]);
+
+    const state = codexState(home);
+    expect(state.marketplaces.demo).toBe(fs.realpathSync(installed));
+    expect(Object.keys(state.plugins).sort()).toEqual(["alpha@demo", "beta@demo"]);
+    expect(state.plugins["alpha@demo"]).toMatchObject({ enabled: true, version: "1.0.0" });
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(installed, ".cairn-install.json"), "utf8"),
+    );
+    expect(manifest.registration).toEqual({
+      form: "codex-plugin-cli",
+      command: "codex",
+      marketplaceKey: "demo",
+      pluginKeys: ["alpha@demo", "beta@demo"],
+    });
+  });
+
+  it("checks Codex marketplace, enabled state, and installed version", async () => {
+    const { root } = collection(CODEX_SPEC);
+    const home = sandboxHome();
+    const spec = path.join(root, "agent-marketplace.yaml");
+    await runIn(home, "agent", "marketplace", spec, "--install", "--register");
+
+    const current = await runIn(
+      home,
+      "agent",
+      "marketplace",
+      spec,
+      "--install",
+      "--register",
+      "--check",
+      "-fj",
+    );
+    expect(current.exitCode).toBe(0);
+    expect(JSON.parse(current.stdout).stale).toBe(false);
+
+    const state = codexState(home);
+    state.plugins["alpha@demo"].enabled = false;
+    fs.writeFileSync(
+      path.join(home, ".codex", "fake-plugin-state.json"),
+      JSON.stringify(state, null, 2) + "\n",
+    );
+    const stale = await runIn(
+      home,
+      "agent",
+      "marketplace",
+      spec,
+      "--install",
+      "--register",
+      "--check",
+      "-fj",
+    );
+    expect(stale.exitCode).toBe(2);
+    expect(JSON.parse(stale.stdout).stale).toBe(true);
+  });
+
+  it("removes plugins before the marketplace and then deletes the managed tree", async () => {
+    const { root } = collection(CODEX_SPEC);
+    const home = sandboxHome();
+    const log = path.join(home, "codex.log");
+    const previous = process.env.CAIRN_FAKE_CODEX_LOG;
+    process.env.CAIRN_FAKE_CODEX_LOG = log;
+    try {
+      await runIn(
+        home,
+        "agent",
+        "marketplace",
+        path.join(root, "agent-marketplace.yaml"),
+        "--install",
+        "--register",
+      );
+      fs.writeFileSync(log, "");
+      const removed = await runIn(home, "agent", "uninstall", "demo", "--target", "codex");
+      expect(removed.exitCode).toBe(0);
+    } finally {
+      if (previous === undefined) delete process.env.CAIRN_FAKE_CODEX_LOG;
+      else process.env.CAIRN_FAKE_CODEX_LOG = previous;
+    }
+    const calls = fs
+      .readFileSync(log, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as string[]);
+    const removals = calls.filter(
+      (call) => call[1] === "remove" || (call[1] === "marketplace" && call[2] === "remove"),
+    );
+    expect(removals.map((call) => call.slice(0, 4))).toEqual([
+      ["plugin", "remove", "alpha@demo", "--json"],
+      ["plugin", "remove", "beta@demo", "--json"],
+      ["plugin", "marketplace", "remove", "demo"],
+    ]);
+    expect(fs.existsSync(path.join(home, ".codex", "marketplaces", "demo"))).toBe(false);
+  });
+
+  it("refuses a same-named marketplace at another root before writing", async () => {
+    const { root } = collection(CODEX_SPEC);
+    const home = sandboxHome();
+    const codexHome = path.join(home, ".codex");
+    fs.mkdirSync(codexHome, { recursive: true });
+    fs.writeFileSync(
+      path.join(codexHome, "fake-plugin-state.json"),
+      JSON.stringify({ marketplaces: { demo: "/somewhere/else" }, plugins: {} }),
+    );
+    const result = await runIn(
+      home,
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--install",
+      "--register",
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr + result.stdout).toContain("refusing to replace it");
+    expect(fs.existsSync(path.join(codexHome, "marketplaces", "demo"))).toBe(false);
+  });
+
+  it("leaves a same-named marketplace at another root untouched on uninstall", async () => {
+    const { root } = collection(CODEX_SPEC);
+    const home = sandboxHome();
+    await runIn(
+      home,
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--install",
+      "--register",
+    );
+    const state = codexState(home);
+    state.marketplaces.demo = "/somewhere/else";
+    fs.writeFileSync(
+      path.join(home, ".codex", "fake-plugin-state.json"),
+      JSON.stringify(state, null, 2) + "\n",
+    );
+
+    const removed = await runIn(home, "agent", "uninstall", "demo", "--target", "codex");
+    expect(removed.exitCode).toBe(0);
+    const after = codexState(home);
+    expect(after.marketplaces.demo).toBe("/somewhere/else");
+    expect(Object.keys(after.plugins).sort()).toEqual(["alpha@demo", "beta@demo"]);
+  });
+
+  it("rolls back newly added Codex state when a plugin add fails", async () => {
+    const { root } = collection(CODEX_SPEC);
+    const home = sandboxHome();
+    const previous = process.env.CAIRN_FAKE_CODEX_FAIL_ADD;
+    process.env.CAIRN_FAKE_CODEX_FAIL_ADD = "beta@demo";
+    let result: Awaited<ReturnType<typeof runIn>>;
+    try {
+      result = await runIn(
+        home,
+        "agent",
+        "marketplace",
+        path.join(root, "agent-marketplace.yaml"),
+        "--install",
+        "--register",
+      );
+    } finally {
+      if (previous === undefined) delete process.env.CAIRN_FAKE_CODEX_FAIL_ADD;
+      else process.env.CAIRN_FAKE_CODEX_FAIL_ADD = previous;
+    }
+    expect(result!.exitCode).toBe(1);
+    const state = codexState(home);
+    expect(state.marketplaces).toEqual({});
+    expect(state.plugins).toEqual({});
+    const manifest = JSON.parse(
+      fs.readFileSync(
+        path.join(home, ".codex", "marketplaces", "demo", ".cairn-install.json"),
+        "utf8",
+      ),
+    );
+    expect(manifest.registration).toBeUndefined();
+  });
+
+  it("does not invoke Codex during a registered dry run", async () => {
+    const { root } = collection(CODEX_SPEC);
+    const home = sandboxHome();
+    const log = path.join(home, "codex.log");
+    const previous = process.env.CAIRN_FAKE_CODEX_LOG;
+    process.env.CAIRN_FAKE_CODEX_LOG = log;
+    try {
+      const result = await runIn(
+        home,
+        "agent",
+        "marketplace",
+        path.join(root, "agent-marketplace.yaml"),
+        "--install",
+        "--register",
+        "--dry-run",
+      );
+      expect(result.exitCode).toBe(0);
+    } finally {
+      if (previous === undefined) delete process.env.CAIRN_FAKE_CODEX_LOG;
+      else process.env.CAIRN_FAKE_CODEX_LOG = previous;
+    }
+    expect(fs.existsSync(log)).toBe(false);
+    expect(fs.existsSync(path.join(home, ".codex", "marketplaces", "demo"))).toBe(false);
   });
 });

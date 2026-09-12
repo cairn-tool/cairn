@@ -80,8 +80,11 @@ document's top level; `entryFields` describe one plugin inside it. Either list m
 | Transform  | Effect                        | Used by                                          |
 | ---------- | ----------------------------- | ------------------------------------------------ |
 | `identity` | The value as parsed (default) | Claude Code `owner` and `author`, every `source` |
-| `name`     | An object's `name`            | Cursor `author`, Codex `publisher`               |
-| `first`    | A list's first element        | Claude Code `category`, which is singular        |
+| `name`     | An object's `name`            | Cursor `author`                                  |
+| `first`    | A list's first element        | Claude Code and Codex `category`                 |
+
+A field may also use a profile `literal`; Codex uses one for its required installation and
+authentication policy object.
 
 ## Claude Code requires a marketplace owner
 

@@ -169,41 +169,37 @@ document with different semantics, so a project-scope MCP block renders what it 
 
 ## Marketplace catalog
 
-`.codex-plugin/marketplace.json`, entries key `plugins`, for both `repo` and `local` modes.
-Codex declares no document-level fields.
+`.agents/plugins/marketplace.json`, entries key `plugins`, for both `repo` and `local` modes.
+The top-level `name` comes from the bundle manifest for a single bundle and from the collection
+spec for `agent marketplace`.
 
-Codex's catalog is the strictest of the three — seven required entry fields against Claude
-Code's four:
+| Catalog key | Required | Source                   | Transform                                     |
+| ----------- | -------- | ------------------------ | --------------------------------------------- |
+| `name`      | yes      | manifest `name`          | identity                                      |
+| `source`    | yes      | computed                 | relative path                                 |
+| `policy`    | yes      | profile literal          | `AVAILABLE` / `ON_INSTALL`                    |
+| `category`  | yes      | `marketplace.categories` | first entry, as required by the Codex catalog |
 
-| Catalog key      | Required | Source                       | Transform                                                               |
-| ---------------- | -------- | ---------------------------- | ----------------------------------------------------------------------- |
-| `name`           | yes      | manifest `name`              | identity                                                                |
-| `version`        | yes      | manifest `version`           | identity                                                                |
-| `description`    | yes      | manifest `description`       | identity                                                                |
-| `source`         | yes      | computed                     | —                                                                       |
-| `displayName`    | yes      | `marketplace.displayName`    | identity                                                                |
-| `publisher`      | yes      | `marketplace.publisher`      | `name` — a bare name string, unlike Claude Code's object                |
-| `categories`     | yes      | `marketplace.categories`     | identity — the **whole list**, unlike Claude Code's singular `category` |
-| `icon`           | yes      | `marketplace.icon`           | identity                                                                |
-| `starterPrompts` | no       | `marketplace.starterPrompts` | identity                                                                |
-| `homepage`       | no       | `marketplace.homepage`       | identity                                                                |
-| `license`        | yes      | `marketplace.license`        | identity                                                                |
-
-Assets: `icon` is **required** (`.png`/`.svg`, ≤ 1 MiB); `screenshot` optional (`.png`/`.jpg`,
-≤ 4 MiB). Archive name `{name}-{version}-{target}-{profile}.tar.gz`.
-
-A bundle that packages cleanly for Claude Code may well fail `agent package --target codex`
-purely on missing listing metadata. That is the catalog spec talking, not a bug.
+The prior publisher, license, icon, display-name, and version catalog fields were from an older
+shape and are no longer emitted. Version remains authoritative in `.codex-plugin/plugin.json`,
+which Codex accepts as a compatibility manifest. Archive name remains
+`{name}-{version}-{target}-{profile}.tar.gz`.
 
 ## Install locations
 
-| Scope     | Root             | Layout  | Profile   | Activation |
-| --------- | ---------------- | ------- | --------- | ---------- |
-| `user`    | none             | —       | —         | —          |
-| `project` | the working tree | `merge` | `project` | none       |
+| Scope     | Root                                                     | Layout        | Profile   | Activation         |
+| --------- | -------------------------------------------------------- | ------------- | --------- | ------------------ |
+| `user`    | `$CODEX_HOME/marketplaces`, else `~/.codex/marketplaces` | `marketplace` | `plugin`  | `codex plugin` CLI |
+| `project` | the working tree                                         | `merge`       | `project` | none               |
 
-There is no user scope, deliberately: Codex's project rules root is `AGENTS.md`, and a
-user-scope merge would clobber `~/AGENTS.md`.
+`agent install --scope user --register` writes `<root>/<name>`, runs
+`codex plugin marketplace add <destination> --json`, and installs/enables each plugin with
+`codex plugin add <plugin>@<marketplace> --json`. Without `--register`, `AB805` reports those
+commands. `--check` verifies the marketplace root, enabled state, and installed version.
+
+This uses the plugin profile, not a user-scope merge, so it never writes `~/AGENTS.md`.
+Uninstall removes plugin IDs before the marketplace and will not touch a same-named marketplace
+that has since been pointed at another root.
 
 ## Native overlays
 

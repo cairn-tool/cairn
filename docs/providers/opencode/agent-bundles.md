@@ -96,7 +96,8 @@ MCP document has to already be OpenCode config shape, since anything else stops 
 `install.user` is `null`. Global scope drops the `.opencode/` prefix — skills live at
 `~/.config/opencode/skills/`, not `~/.config/opencode/.opencode/skills/` — and an
 `InstallLocation` cannot rewrite a path, so declaring a merge there would install to a directory
-OpenCode never scans. That is the same reasoning Codex's `install.user: null` records.
+OpenCode never scans. Codex avoids the analogous merge problem by using its native user
+marketplace flow; OpenCode has no corresponding catalog surface.
 
 The project scope merges into the repository root.
 

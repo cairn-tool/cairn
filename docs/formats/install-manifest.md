@@ -74,7 +74,7 @@ Each record:
 | `destination`  | yes      | absolute path of the installed tree                            |
 | `files`        | yes      | the inventory; see below                                       |
 | `materialized` | no       | present in `link` mode: where the real files live              |
-| `registration` | no       | present when host config was edited                            |
+| `registration` | no       | present when host activation completed                         |
 
 A document missing any required field, or with the wrong type for one, reads as `malformed`
 rather than being partially trusted — and **one unparseable record makes the whole file
@@ -188,20 +188,42 @@ without a second copy. `materialized` records where those real files are.
 
 ## Registration
 
-Only Claude Code's user-scope marketplace layout needs an activation edit, and `--register` is
-the only flag in the toolset that touches host configuration. When it runs, `registration`
-records the file edited and the two keys added, so uninstall can reverse exactly that edit.
+User-scope marketplace layouts need host activation, and `--register` is the only flag in the
+toolset that changes it. `registration` records the profile-selected driver and the keys it
+activated, so uninstall can reverse that work.
+
+Claude Code registrations retain the original shape (an absent `form` also means
+`claude-enabled-plugins`):
+
+```jsonc
+{
+  "file": "/Users/me/.claude/settings.json",
+  "marketplaceKey": "cairn",
+  "pluginKeys": ["cairn-markdown@cairn", "cairn-agent@cairn"],
+}
+```
+
+Codex registrations name its native driver:
+
+```jsonc
+{
+  "form": "codex-plugin-cli",
+  "command": "codex",
+  "marketplaceKey": "cairn",
+  "pluginKeys": ["cairn-markdown@cairn", "cairn-agent@cairn"],
+}
+```
 
 `marketplaceKey` must match the `name` in the generated catalog document. For a single bundle it
 is derived from the bundle name — which is why that catalog's `name` is sourced from the manifest.
-For a collection it is the spec's `name`. See
-[Claude Code: agent bundles](../providers/claude-code/agent-bundles.md#marketplace-catalog).
+For a collection it is the spec's `name`.
 
 A bundle install enables one plugin and records it as `pluginKey`; a collection enables one per
 plugin and records them as `pluginKeys`. Both spellings are read, so a manifest written before
-collections still reverses cleanly. Uninstall deletes the marketplace key **only** when its
-recorded `source.path` is the destination being removed, so an unrelated marketplace registered
-under the same name is never touched.
+collections still reverses cleanly. Uninstall deletes the marketplace key **only** when it still
+points at the destination being removed, so an unrelated marketplace registered under the same
+name is never touched. Codex plugin removal precedes marketplace removal, and all host cleanup
+precedes deletion of the managed tree.
 
 ## Diagnostics
 

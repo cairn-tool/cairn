@@ -6,10 +6,10 @@ export const codexProfile: TargetProfile = {
   id: "codex",
   host: {
     displayName: "Codex",
-    documentationRevision: "2026-08-02",
-    // Not recorded: no verified host range has been established for this profile.
+    documentationRevision: "2026-09-12",
+    // No lower bound recorded; the current plugin flow was exercised through 0.154.0.
     minimumVersion: null,
-    verifiedThrough: null,
+    verifiedThrough: "0.154.0",
     versionCommand: ["codex", "--version"],
     nativeValidator: null,
   },
@@ -93,40 +93,30 @@ export const codexProfile: TargetProfile = {
   skills: { invocationPolicy: "openai-yaml" },
   marketplace: {
     catalog: {
-      repo: { directory: ".codex-plugin", file: "marketplace.json" },
-      local: { directory: ".codex-plugin", file: "marketplace.json" },
+      repo: { directory: ".agents/plugins", file: "marketplace.json" },
+      local: { directory: ".agents/plugins", file: "marketplace.json" },
     },
     entriesKey: "plugins",
+    documentFields: [{ name: "name", required: true, source: { from: "manifest", field: "name" } }],
     entryFields: [
       { name: "name", required: true, source: { from: "manifest", field: "name" } },
-      { name: "version", required: true, source: { from: "manifest", field: "version" } },
-      { name: "description", required: true, source: { from: "manifest", field: "description" } },
       { name: "source", required: true, source: { from: "computed", value: "source" } },
       {
-        name: "displayName",
+        name: "policy",
         required: true,
-        source: { from: "marketplace", field: "displayName" },
+        source: {
+          from: "literal",
+          value: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
+        },
       },
       {
-        name: "publisher",
+        name: "category",
         required: true,
-        source: { from: "marketplace", field: "publisher" },
-        transform: "name",
+        source: { from: "marketplace", field: "categories" },
+        transform: "first",
       },
-      { name: "categories", required: true, source: { from: "marketplace", field: "categories" } },
-      { name: "icon", required: true, source: { from: "marketplace", field: "icon" } },
-      {
-        name: "starterPrompts",
-        required: false,
-        source: { from: "marketplace", field: "starterPrompts" },
-      },
-      { name: "homepage", required: false, source: { from: "marketplace", field: "homepage" } },
-      { name: "license", required: true, source: { from: "marketplace", field: "license" } },
     ],
-    assets: [
-      { role: "icon", required: true, extensions: [".png", ".svg"], maxBytes: 1048576 },
-      { role: "screenshot", required: false, extensions: [".png", ".jpg"], maxBytes: 4194304 },
-    ],
+    assets: [],
     archiveName: "{name}-{version}-{target}-{profile}.tar.gz",
   },
   outputs: {
@@ -212,9 +202,13 @@ export const codexProfile: TargetProfile = {
     },
   },
   install: {
-    // Codex's project rules root is AGENTS.md. A user-scope merge would
-    // clobber ~/AGENTS.md, so there is no recorded user location.
-    user: null,
+    user: {
+      root: "~/.codex/marketplaces",
+      environmentRoot: { variable: "CODEX_HOME", suffix: "marketplaces" },
+      layout: "marketplace",
+      profile: "plugin",
+      activation: { command: "codex", form: "codex-plugin-cli" },
+    },
     project: {
       root: ".",
       layout: "merge",

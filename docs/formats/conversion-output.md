@@ -65,7 +65,7 @@ The full `agent convert` result, plus provenance, written at the output root.
   "profileSchemaVersion": "2",
   "targetProfiles": {
     "claude-code": { "documentationRevision": "2026-08-02" },
-    "codex": { "documentationRevision": "2026-08-02" },
+    "codex": { "documentationRevision": "2026-09-12" },
     "cursor": { "documentationRevision": "2026-08-02" },
     "antigravity": { "documentationRevision": "2026-08-29" },
     "opencode": { "documentationRevision": "2026-08-29" },

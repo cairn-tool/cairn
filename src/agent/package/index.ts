@@ -60,6 +60,8 @@ function sourceField(field: MarketplaceEntryField): string {
       return field.source.field;
     case "computed":
       return field.name;
+    case "literal":
+      return field.name;
   }
 }
 
@@ -90,6 +92,8 @@ function resolveField(field: MarketplaceEntryField, bundle: AgentBundle, source:
         (bundle.marketplace as Record<string, unknown> | undefined)?.[field.source.field],
         field.transform,
       );
+    case "literal":
+      return reshape(field.source.value, field.transform);
   }
 }
 

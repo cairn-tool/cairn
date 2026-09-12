@@ -226,8 +226,7 @@ document-level fields.
 | `categories`  | no       | `marketplace.categories`  | identity — the whole list                         |
 | `icon`        | no       | `marketplace.icon`        | identity                                          |
 
-Note the three-way disagreement about the same underlying data: `marketplace.publisher` lands
-as Claude Code's `owner`/`author` **object**, Codex's required `publisher` **string**, and
+The underlying `marketplace.publisher` lands as Claude Code's `owner`/`author` **object** and
 Cursor's optional `author` **string**. The reshape is named in each profile as a `transform`
 rather than being a field-name check inside the packager.
 

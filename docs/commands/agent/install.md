@@ -36,7 +36,7 @@ Exactly one of `source` and `--config` is required.
 | `--into <dir>`        | Profile  | Override the install root the profile declares.                                    |
 | `--profile <profile>` | Location | Must match the location's profile when given.                                      |
 | `--link`              | Off      | Symlink the rendered tree instead of copying it.                                   |
-| `--register`          | Off      | Edit host config to activate a marketplace install.                                |
+| `--register`          | Off      | Activate a marketplace through the host's declared integration.                    |
 | `--strict`            | Off      | Treat warnings as blocking findings.                                               |
 | `--force`             | Off      | Replace a destination that is not a prior install of this bundle.                  |
 | `--dry-run`           | Off      | Plan the install without writing.                                                  |
@@ -49,8 +49,8 @@ Exactly one of `source` and `--config` is required.
 because install uses one profile per destination.
 
 `--target all` expands to every target that declares a location for the requested scope, not to
-every target. Expanding to all five would make `--target all --scope user` hard-fail on `codex`
-and `opencode` — and a hard fail writes nothing at all, see below. An explicitly named target
+every target. Expanding to all five would make `--target all --scope user` hard-fail on
+`opencode` — and a hard fail writes nothing at all, see below. An explicitly named target
 with no location still reports `AB800`.
 
 ## Several installs in one run
@@ -95,7 +95,7 @@ agent:
 | `scope`    | `project` | `user` or `project`.                                            |
 | `into`     | Profile   | Install root override; must not escape the config directory.    |
 | `link`     | `false`   | Symlink the rendered trees.                                     |
-| `register` | `false`   | Edit host config to activate a marketplace install.             |
+| `register` | `false`   | Activate a marketplace through the host integration.            |
 | `bundles`  | Required  | One entry per bundle: `path`, and one of `include` / `exclude`. |
 
 The full key schema is in [project configuration](../../configuration.md#agentinstall).
@@ -109,14 +109,14 @@ declared.
 
 ## Destinations
 
-| Target        | Scope   | Root                                    | Layout        | Profile | Activation                           |
-| ------------- | ------- | --------------------------------------- | ------------- | ------- | ------------------------------------ |
-| `cursor`      | `user`  | `~/.cursor/plugins/local/<name>`        | `plugin-dir`  | plugin  | Auto-scanned                         |
-| `cursor`      | project | `.`                                     | `merge`       | project | None                                 |
-| `claude-code` | `user`  | `~/.claude/plugins/marketplaces/<name>` | `marketplace` | plugin  | `~/.claude/settings.json`            |
-| `claude-code` | project | `.`                                     | `merge`       | project | None                                 |
-| `codex`       | `user`  | —                                       | —             | —       | `AB800`; would clobber `~/AGENTS.md` |
-| `codex`       | project | `.`                                     | `merge`       | project | None                                 |
+| Target        | Scope   | Root                                    | Layout        | Profile | Activation                |
+| ------------- | ------- | --------------------------------------- | ------------- | ------- | ------------------------- |
+| `cursor`      | `user`  | `~/.cursor/plugins/local/<name>`        | `plugin-dir`  | plugin  | Auto-scanned              |
+| `cursor`      | project | `.`                                     | `merge`       | project | None                      |
+| `claude-code` | `user`  | `~/.claude/plugins/marketplaces/<name>` | `marketplace` | plugin  | `~/.claude/settings.json` |
+| `claude-code` | project | `.`                                     | `merge`       | project | None                      |
+| `codex`       | `user`  | `$CODEX_HOME/marketplaces/<name>`       | `marketplace` | plugin  | `codex plugin` CLI        |
+| `codex`       | project | `.`                                     | `merge`       | project | None                      |
 
 `--into` replaces the **root**, not the final plugin directory: a plugin-dir or marketplace
 install still lands at `<into>/<name>`. A merge install writes into `<into>` itself.
@@ -130,9 +130,17 @@ materialized files are live (`AB807`); the host may not follow the symlink.
 
 ## `--register`
 
-`--register` is the only flag that edits host config, and only the `marketplace` layout needs
-it. It adds `extraKnownMarketplaces` and `enabledPlugins` to `~/.claude/settings.json`. Without
-it, the marketplace is still written and the exact edit is reported as `AB805`.
+`--register` is the only flag that changes host activation state, and only the `marketplace`
+layout needs it. Claude Code adds `extraKnownMarketplaces` and `enabledPlugins` to
+`~/.claude/settings.json`. Codex runs `codex plugin marketplace add <destination> --json`, then
+`codex plugin add <plugin>@<marketplace> --json` for every installed plugin. Without
+`--register`, the marketplace is still written and the exact edit or commands are reported as
+`AB805`.
+
+Codex user installs prefer `$CODEX_HOME/marketplaces`; when `CODEX_HOME` is unset the root is
+`~/.codex/marketplaces`. Registration refuses to take over a same-named Codex marketplace that
+points somewhere else, even with `--force`. `--check` verifies the marketplace root plus each
+plugin's installed, enabled, and version state.
 
 Registering is necessary but not sufficient: Claude Code validates the catalog those keys point
 at and, if it fails, drops the marketplace **and** prunes the settings entries — so a bad catalog
@@ -164,7 +172,7 @@ carries them. Only errors, and warnings under `--strict`, fail.
 | `AB802` | notice   | Replacing an existing install of this bundle (reports the version delta).                       |
 | `AB803` | warning  | A bundle feature does not render in the installed profile (for example hooks at project scope). |
 | `AB804` | error    | A destination path escapes the resolved scope root.                                             |
-| `AB805` | warning  | Host activation edit required but `--register` was not given.                                   |
+| `AB805` | warning  | Host activation is required but `--register` was not given.                                     |
 | `AB807` | notice   | `--link` in use; edits are live and the host may not follow symlinks.                           |
 
 ## Examples
@@ -175,6 +183,9 @@ cairn agent install ./bundle --target cursor --scope user
 
 # Claude Code local marketplace, and edit settings.json to enable it.
 cairn agent install ./bundle --target claude-code --scope user --register
+
+# Codex local marketplace, installed and enabled through the native CLI.
+cairn agent install ./bundle --target codex --scope user --register
 
 # Project-scope merge into a named directory, preview only.
 cairn agent install ./bundle --target cursor --scope project --into ./app --dry-run
