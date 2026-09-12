@@ -1,0 +1,6 @@
+{
+  "name": "cairn-qa",
+  "version": "1.1.0",
+  "description": "Author and run TC-N test-case plans with the cairn qa toolset.",
+  "skills": "./skills/"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "cairn-scripts",
+  "version": "1.2.0",
+  "description": "Resolve and run named scripts declared in .cairn.yml.",
+  "skills": "./skills/"
+}
