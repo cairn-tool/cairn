@@ -11,7 +11,7 @@ Authors own this file. Cairn never writes one.
 ```yaml
 id: TC-24 # required; must match the filename
 name: The Ceiling and RoundingPoint cliffs # required; the tracker's Title column
-agent: cursor # optional; cursor or claude-code
+agent: cursor # optional; cursor, claude-code, or codex
 model: composer-2.5 # optional; falls back to the backend default or --model
 parallel: true # optional; default true
 tags: [cli, build] # optional; only with parallel: false
@@ -69,8 +69,9 @@ is refused at load with the file named, rather than dying at spawn with `E2BIG`.
 Use a literal block scalar (`|`). A folded scalar (`>`) reflows the plan, which changes Markdown
 that depends on its own line breaks.
 
-The running agent receives the plan as its entire briefing — no skills, no conversation, no memory
-of how the case was written. Plans are therefore self-contained by design; see the
+The harness supplies the plan as its complete case briefing — it provides no skill invocation,
+prior conversation, or memory of how the case was written. A backend may still load its normal
+user/project configuration and rules. Plans are therefore self-contained by design; see the
 [`cairn-qa` plugin](../plugins/cairn-qa.md) for the standard governing their structure.
 
 ## What the harness validates, and what it does not

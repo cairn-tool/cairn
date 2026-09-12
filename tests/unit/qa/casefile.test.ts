@@ -84,6 +84,14 @@ it("the optional keys default, and an absent model defers to --model", () => {
   assert.deepEqual(case_?.tags, []);
 });
 
+it("accepts Codex as a case backend", () => {
+  const body = tweak({ agent: "agent: codex", model: null });
+  const { case_, errors } = only(plansDir({ "tc-24.yaml": body }));
+  assert.deepEqual(errors, []);
+  assert.equal(case_?.agent, "codex");
+  assert.equal(case_?.model, null);
+});
+
 it("tags load for a non-parallel case", () => {
   const body = tweak({ parallel: "parallel: false" }, ["tags: [build, db]"]);
   const { case_, errors } = only(plansDir({ "tc-24.yaml": body }));

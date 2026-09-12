@@ -36,7 +36,7 @@ default silently and the case would run under constraints nobody chose.
 | `id`       | yes      | string          | —        | `TC-<digits>`, case-insensitive, trimmed. Its number must equal the filename's |
 | `name`     | yes      | string          | —        | Non-empty after trimming. The human title                                      |
 | `plan`     | yes      | string          | —        | Non-empty. Handed to the agent verbatim. ≤ 262144 bytes UTF-8                  |
-| `agent`    | no       | string          | `cursor` | Must be a supported agent; `cursor` is the only one today                      |
+| `agent`    | no       | string          | `cursor` | One of `cursor`, `claude-code`, or `codex`                                     |
 | `model`    | no       | string          | _(none)_ | Absent means "use the harness's `--model`"                                     |
 | `parallel` | no       | boolean         | `true`   | A real boolean — `parallel: "false"` is rejected                               |
 | `tags`     | no       | list of strings | `[]`     | Only meaningful with `parallel: false`                                         |
@@ -47,7 +47,7 @@ The exact messages, worth knowing because they are what an author sees:
 - `` `id` is TC-25 but the file is named tc-24 `` — the cross-check that catches a copy-paste.
 - `` `name` must not be empty `` — distinct from `must be a string`, so a `name: "   "` is caught.
 - `` `parallel` must be true or false ``.
-- `` `agent` must be one of cursor, not "claude" ``.
+- `` `agent` must be one of cursor, claude-code, codex, not "claude" ``.
 - `` `tags` must be a list of strings `` and, per element, `` `tags[0]` must be a string ``.
 - `` `tags` only constrains a case with `parallel: false`; remove one or the other ``.
 - `` `plan` is 300000 bytes; the limit is 262144 ``.

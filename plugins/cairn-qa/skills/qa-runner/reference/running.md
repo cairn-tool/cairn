@@ -21,7 +21,7 @@ Every `qa` subcommand takes these.
 
 | Option              | Default                 |                                                                   |
 | ------------------- | ----------------------- | ----------------------------------------------------------------- |
-| `--repo <path>`     | **required**            | Repository root: the agent's cwd, and Cursor's `--workspace`.     |
+| `--repo <path>`     | **required**            | Repository root and agent working directory.                      |
 | `--parallel <n>`    | `8`                     | Most agents at once.                                              |
 | `--model <slug>`    | per-backend             | Model for cases with no `model:`. Repeat as `--model agent=slug`. |
 | `--only <names>`    | all pending             | Comma-separated, e.g. `tc-27,tc-28`.                              |

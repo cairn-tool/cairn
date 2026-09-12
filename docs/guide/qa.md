@@ -23,14 +23,16 @@ Two facts matter more than the flags.
 agent.
 
 **Permission checks are bypassed.** Cursor is spawned with `--force --trust`. Claude Code is
-spawned with `--dangerously-skip-permissions` (and `--verbose`, which stream-json requires). The
-agent can write wherever the case asks. That is the point of an unsupervised queue, and it is why
-`--repo` is required and why `--runs-dir` must sit under it.
+spawned with `--dangerously-skip-permissions` (and `--verbose`, which stream-json requires). Codex
+uses `exec --json --dangerously-bypass-approvals-and-sandbox -C <repo>`. Codex's separate hook-trust
+bypass and git-repository-check bypass are deliberately not enabled, and its normal user/project
+configuration and rules still load. The agent can write wherever the case asks. That is the point
+of an unsupervised queue, and it is why `--repo` is required and why `--runs-dir` must sit under it.
 
-A queue may mix `cursor` and `claude-code` cases. Each backend has its own argv, its own
-stream-json dialect, and its own default model; the harness normalizes both onto the same event
-shape before anything is counted. PATH lookup is lazy: a cursor-only queue does not fail because
-`claude` is absent.
+A queue may mix `cursor`, `claude-code`, and `codex` cases. Each backend has its own argv, its own
+JSONL dialect, and its own default model; the harness normalizes all three onto the same event
+shape before anything is counted. PATH lookup is lazy: a queue needs only the binaries for the
+backends it actually uses.
 
 POSIX-only in this build. Logs land under `<runs-dir>/_logs/`; gitignore that directory — cairn
 does not write a `.gitignore`.

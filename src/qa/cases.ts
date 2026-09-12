@@ -65,8 +65,9 @@ export class Case {
   }
 
   /**
-   * Load-bearing: handed verbatim to cursor-agent. The dash is an em dash (U+2014). The plan is
-   * inlined rather than @-referenced, so the write constraint is stated before it, not after.
+   * Load-bearing: handed verbatim to the selected agent backend. The dash is an em dash (U+2014).
+   * The plan is inlined rather than @-referenced, so the write constraint is stated before it,
+   * not after.
    */
   get prompt(): string {
     return (

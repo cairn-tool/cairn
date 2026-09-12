@@ -31,6 +31,11 @@ export type QaEvent =
       sessionId?: string;
     }
   | {
+      kind: "error";
+      error: string;
+      sessionId?: string;
+    }
+  | {
       kind: "init";
       model?: string;
       sessionId?: string;

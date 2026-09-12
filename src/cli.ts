@@ -798,10 +798,10 @@ pdfCommon(pdf.command("forms"))
 
 const qa = program
   .command("qa")
-  .description("Run TC-N test-case plans through Cursor and Claude Code agent backends")
+  .description("Run TC-N test-case plans through Cursor, Claude Code, and Codex agent backends")
   .addHelpText(
     "after",
-    "\nDiscovers `_plans/tc-N.yaml` under --runs-dir, inlines each plan into a prompt, and\nspawns the case's agent backend with permission checks bypassed. A queue may mix\ncursor and claude-code cases in one execution. POSIX-only: process-group signalling\nhas no meaning on Windows.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+    "\nDiscovers `_plans/tc-N.yaml` under --runs-dir, inlines each plan into a prompt, and\nspawns the case's agent backend with permission checks bypassed. A queue may mix\ncursor, claude-code, and codex cases in one execution. POSIX-only: process-group\nsignalling has no meaning on Windows.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   );
 
 const qaCommon = (command: Command): Command =>
@@ -813,7 +813,7 @@ const qaCommon = (command: Command): Command =>
 
 qaCommon(qa.command("run"))
   .description("Run the queue of pending test cases")
-  .requiredOption("--repo <path>", "Repository root: agent cwd and Cursor --workspace")
+  .requiredOption("--repo <path>", "Repository root and agent working directory")
   .option("--runs-dir <path>", "Directory containing _plans/ and per-case output folders")
   .option("--parallel <n>", "Most agents at once (default 8)")
   .option(

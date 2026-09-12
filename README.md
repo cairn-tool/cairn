@@ -69,7 +69,7 @@ Eight toolsets, plus `describe`, `schema`, `serve`, `completion`, and `check-upd
 | `archive` | Keep what a session produced before the logs are pruned, and get it back.        | [Archiving](docs/guide/archiving.md)         |
 | `jira`    | Convert Jira and Confluence rich text between ADF and Markdown.                  | [Jira rich text](docs/guide/jira.md)         |
 | `pdf`     | Read PDF documents: text, structure, embedded files, and conversion to Markdown. | [PDF documents](docs/guide/pdf.md)           |
-| `qa`      | Run TC-N test-case plans through Cursor and Claude Code agent backends.          | [QA harness](docs/guide/qa.md)               |
+| `qa`      | Run TC-N test-case plans through Cursor, Claude Code, and Codex backends.        | [QA harness](docs/guide/qa.md)               |
 
 `scripts run` and `qa run` are the two commands that execute anything. `scripts run` only
 runs what a tracked file in your repository names. `qa run` discovers `_plans/tc-N.yaml` and

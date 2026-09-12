@@ -224,6 +224,32 @@ it("agentCommand for claude-code uses --verbose and --dangerously-skip-permissio
   assert.ok(!argv.includes("--workspace"));
 });
 
+it("agentCommand for codex uses exec JSONL with full access but preserves hook trust and config", () => {
+  const kase = new Case(
+    spec({ name: "tc-1", number: 1, agent: "codex", model: "gpt-5.6-luna" }),
+    "/repo/tc-1",
+    "/repo",
+    DEFAULT_MODEL,
+  );
+  const argv = agentCommand("/bin/codex", kase);
+  assert.deepEqual(argv.slice(0, -1), [
+    "/bin/codex",
+    "exec",
+    "--json",
+    "--dangerously-bypass-approvals-and-sandbox",
+    "-C",
+    "/repo",
+    "--model",
+    "gpt-5.6-luna",
+  ]);
+  assert.equal(argv[argv.length - 1], kase.prompt);
+  assert.ok(!argv.includes("--dangerously-bypass-hook-trust"));
+  assert.ok(!argv.includes("--ignore-user-config"));
+  assert.ok(!argv.includes("--ignore-rules"));
+  assert.ok(!argv.includes("--ephemeral"));
+  assert.ok(!argv.includes("--skip-git-repo-check"));
+});
+
 it("elidedCommand keeps the argv but replaces the plan with its size", () => {
   const plan = "x".repeat(5000);
   const kase = new Case(spec({ plan }), "/repo/runs/tc-11", "/repo", DEFAULT_MODEL);

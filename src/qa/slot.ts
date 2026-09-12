@@ -127,6 +127,11 @@ export class Slot {
       return;
     }
 
+    if (event.kind === "error") {
+      this.note = flatten(event.error).slice(0, 160);
+      return;
+    }
+
     if (event.kind === "init" && event.model) {
       this.add(`${DIM}model ${event.model}${RESET}`);
     }

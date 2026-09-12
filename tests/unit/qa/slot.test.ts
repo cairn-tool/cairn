@@ -91,6 +91,13 @@ it("usage events set counters and truncate an error note at 160 chars", () => {
   assert.equal(s.note.length, 160);
 });
 
+it("error events set a note without manufacturing usage", () => {
+  const s = fresh();
+  s.applyEvent({ kind: "error", error: "x".repeat(300) });
+  assert.equal(s.note.length, 160);
+  assert.equal(s.usage, null);
+});
+
 it("session_id is captured once, first write wins", () => {
   const s = fresh();
   s.applyEvent({ kind: "init", sessionId: "first" });

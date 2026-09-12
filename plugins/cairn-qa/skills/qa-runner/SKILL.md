@@ -1,6 +1,6 @@
 ---
 name: qa-runner
-description: Run a queue of TC-N test-case plans with the cairn qa toolset, across Cursor and Claude Code backends. Use when asked to run, dispatch, preview, or re-run test cases, when a queue needs its status checked, or when summary.md has to be regenerated from what is on disk.
+description: Run a queue of TC-N test-case plans with the cairn qa toolset, across Cursor, Claude Code, and Codex backends. Use when asked to run, dispatch, preview, or re-run test cases, when a queue needs its status checked, or when summary.md has to be regenerated from what is on disk.
 ---
 
 # Running a test-case queue with cairn
@@ -14,7 +14,10 @@ guessing at flags. All three are `stability: experimental`, so read payload shap
 
 `qa run` discovers `_plans/tc-N.yaml` under `--runs-dir`, inlines each plan into a prompt, and spawns
 the case's agent backend **with permission checks bypassed** — `--force --trust` for Cursor,
-`--dangerously-skip-permissions` for Claude Code. The agent can write wherever the case tells it to.
+`--dangerously-skip-permissions` for Claude Code, and
+`--dangerously-bypass-approvals-and-sandbox` for Codex. Codex's separate hook-trust bypass is not
+enabled, its git-repository check still applies, and its normal user/project configuration and rules
+still load. The agent can write wherever the case tells it to.
 
 That is a different trust boundary from `cairn scripts run`, which resolves a name declared in a
 tracked `.cairn.yml`. Here the plans are discovered in a directory you point at, and their bodies are
@@ -48,17 +51,18 @@ A crash leaves the temp folder; the next invocation deletes it and retries.
 that ran — a failure with no error and no output. Re-running a finished case means deleting its
 folder first, deliberately.
 
-## Two backends in one queue
+## Three backends in one queue
 
-| `agent:`      | Binary                       | Default model          | Distinct flags                                               |
-| ------------- | ---------------------------- | ---------------------- | ------------------------------------------------------------ |
-| `cursor`      | `cursor-agent`, then `agent` | `cursor-grok-4.6-high` | `--force --trust --workspace <repo>`                         |
-| `claude-code` | `claude`                     | `sonnet`               | `--verbose --dangerously-skip-permissions`, no `--workspace` |
+| `agent:`      | Binary                       | Default model          | Distinct flags                                                     |
+| ------------- | ---------------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `cursor`      | `cursor-agent`, then `agent` | `cursor-grok-4.6-high` | `--force --trust --workspace <repo>`                               |
+| `claude-code` | `claude`                     | `sonnet`               | `--verbose --dangerously-skip-permissions`, no `--workspace`       |
+| `codex`       | `codex`                      | `gpt-5.6-luna`         | `exec --json --dangerously-bypass-approvals-and-sandbox -C <repo>` |
 
-A queue may mix them freely. PATH lookup is lazy per backend, so a cursor-only queue does not fail
-because `claude` is absent. `--model slug` sets the default for every backend; `--model cursor=slug`
-sets one. `--agent <path>` overrides the binary for **every** backend, which is the test hook — not
-a way to point one backend somewhere else.
+A queue may mix them freely. PATH lookup is lazy per backend, so a queue needs only the binaries it
+actually uses. `--model slug` sets the default for every backend; `--model cursor=slug` or
+`--model codex=slug` sets one. `--agent <path>` overrides the binary for **every** backend, which is
+the test hook — not a way to point one backend somewhere else.
 
 ## Exit codes
 

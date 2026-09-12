@@ -1,6 +1,7 @@
 import { UserError, which } from "../config.js";
 import { findExplicitAgent } from "../config.js";
 import { claudeCodeProfile } from "./claude-code.js";
+import { codexProfile } from "./codex.js";
 import { cursorProfile } from "./cursor.js";
 import type { QaAgentProfile } from "./types.js";
 
@@ -11,7 +12,8 @@ import type { QaAgentProfile } from "./types.js";
  * outside this directory may branch on an agent's name: argv, event parsing,
  * and the default model are read from the profile.
  */
-export const AGENTS: readonly QaAgentProfile[] = [cursorProfile, claudeCodeProfile];
+// Cursor stays first because an omitted `agent:` defaults to the first registered profile.
+export const AGENTS: readonly QaAgentProfile[] = [cursorProfile, claudeCodeProfile, codexProfile];
 
 for (const profile of AGENTS) {
   if (
@@ -43,8 +45,8 @@ export function defaultModels(): Record<string, string> {
 /**
  * Resolve the executable for one profile. An explicit `--agent` path overrides
  * every backend — that is the fake-agent test hook. PATH lookup is lazy and
- * cached per profile so a cursor-only queue does not fail because `claude` is
- * absent.
+ * cached per profile so a one-backend queue does not require either of the
+ * other binaries to be installed.
  */
 export function resolveBinary(name: string, explicit: string | null): string {
   if (explicit) return findExplicitAgent(explicit);
@@ -69,8 +71,8 @@ export function resolveBinary(name: string, explicit: string | null): string {
  * Falls back to the profile's first candidate name when nothing is on PATH: previewing a
  * queue launches nothing, so requiring the backend to be installed would make `qa run
  * --dry-run` fail on exactly the machine you would preview a queue on — and would make the
- * e2e suite depend on cursor-agent and claude being present on the CI runner. An explicit
- * --agent is still validated, because a bad path there is a real invocation error.
+ * e2e suite depend on real agent binaries being present on the CI runner. An explicit --agent
+ * is still validated, because a bad path there is a real invocation error.
  */
 export function displayBinary(name: string, explicit: string | null): string {
   if (explicit) return findExplicitAgent(explicit);

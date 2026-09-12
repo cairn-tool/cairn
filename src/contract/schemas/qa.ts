@@ -7,10 +7,10 @@ import { DRAFT } from "./shared.js";
  *
  * Inlined rather than cross-referenced: a schema retrieved with
  * `cairn schema qa-result` must compile on its own, so no `$ref` leaves this
- * document. Four camelCase fields — both backends map onto these; the snake_case
- * Claude Code names never appear in a payload.
+ * document. Four camelCase fields — every backend maps onto these; vendor-specific
+ * snake_case names never appear in a payload.
  */
-// Null whenever a case produced no `result` event — a timeout, a harness error, or a
+// Null whenever a case produced no terminal usage event — a timeout, a harness error, or a
 // case skipped before launch — and on `summary` when no case reported usage at all.
 const USAGE = {
   type: ["object", "null"],
@@ -28,7 +28,7 @@ const LIST_CASE = {
   properties: {
     name: { type: "string" },
     title: { type: "string" },
-    agent: { type: "string", description: "Backend name: cursor or claude-code." },
+    agent: { type: "string", description: "Backend name: cursor, claude-code, or codex." },
     model: { type: "string" },
     constraint: { type: "string" },
     status: { enum: ["pending", "done"] },
