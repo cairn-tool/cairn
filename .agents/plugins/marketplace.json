@@ -1,0 +1,82 @@
+{
+  "name": "cairn",
+  "description": "Cairn's own toolsets, as plugins.",
+  "owner": {
+    "name": "Bryan Stockus",
+    "url": "https://github.com/cairn-tool"
+  },
+  "plugins": [
+    {
+      "name": "cairn-markdown",
+      "source": "./cairn-markdown",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "documentation"
+    },
+    {
+      "name": "cairn-scripts",
+      "source": "./cairn-scripts",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "productivity"
+    },
+    {
+      "name": "cairn-usage",
+      "source": "./cairn-usage",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "productivity"
+    },
+    {
+      "name": "cairn-archive",
+      "source": "./cairn-archive",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "productivity"
+    },
+    {
+      "name": "cairn-agent",
+      "source": "./cairn-agent",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "developer-tools"
+    },
+    {
+      "name": "cairn-jira",
+      "source": "./cairn-jira",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "productivity"
+    },
+    {
+      "name": "cairn-pdf",
+      "source": "./cairn-pdf",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "productivity"
+    },
+    {
+      "name": "cairn-qa",
+      "source": "./cairn-qa",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "developer-tools"
+    }
+  ]
+}
