@@ -13,6 +13,7 @@ import {
   buildCatalogs,
   buildChecksums,
   buildSbom,
+  checkAssets,
   checkCaseCollisions,
   checkExecutables,
   checkPinning,
@@ -110,6 +111,65 @@ describe("deterministic tar", () => {
     const compressed = archive(entries);
     expect(compressed.readUInt32LE(4)).toBe(0);
     expect(compressed[9]).toBe(0x03);
+  });
+});
+
+describe("marketplace assets", () => {
+  const WITH_ICON = [
+    "marketplace:",
+    "  displayName: Demo",
+    "  categories: [example]",
+    "  publisher:",
+    "    name: Example",
+    "  license: MIT",
+    "  icon: assets/icon.png",
+    "",
+  ].join("\n");
+
+  function icon(at: string): Artifact {
+    return { path: at, content: Buffer.from("<svg/>"), mode: 0o644 };
+  }
+
+  it("finds an icon nested under a package prefix", () => {
+    const loaded = loadBundle(bundle(WITH_ICON));
+
+    const diagnostics = checkAssets(
+      loaded,
+      ["claude-code"],
+      [icon("claude-code/plugin/assets/icon.png")],
+    );
+
+    expect(diagnostics.filter((item) => item.severity === "error")).toEqual([]);
+  });
+
+  // An install writes its artifacts at the destination root, where the icon's
+  // path *is* the declared reference. Matching only on a `/`-prefixed suffix
+  // made `agent install --register` reject every bundle declaring an icon while
+  // `agent package` accepted the same bundle — one bundle, two answers.
+  it("finds an icon written at the destination root", () => {
+    const loaded = loadBundle(bundle(WITH_ICON));
+
+    const diagnostics = checkAssets(loaded, ["claude-code"], [icon("assets/icon.png")]);
+
+    expect(diagnostics.filter((item) => item.severity === "error")).toEqual([]);
+  });
+
+  it("still reports an icon that is genuinely absent", () => {
+    const loaded = loadBundle(bundle(WITH_ICON));
+
+    const diagnostics = checkAssets(loaded, ["claude-code"], [icon("assets/other.png")]);
+
+    expect(diagnostics.find((item) => item.severity === "error")?.code).toBe("AB502");
+  });
+
+  // The suffix match must stay anchored on a path segment: `evil-assets/icon.png`
+  // is not `assets/icon.png`.
+  it("does not accept a path that merely ends with the reference text", () => {
+    const loaded = loadBundle(bundle(WITH_ICON));
+
+    const diagnostics = checkAssets(loaded, ["claude-code"], [icon("evil-assets/icon.png")]);
+
+    expect(diagnostics.find((item) => item.severity === "error")?.code).toBe("AB502");
   });
 });
 
