@@ -26,14 +26,43 @@ die()  { printf '%serror:%s %s\n' "$C_RED" "$C_OFF" "$*" >&2; exit 1; }
 # --- locations ---------------------------------------------------------------
 
 SCRIPTS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO_ROOT="$(cd -- "$SCRIPTS_DIR/.." && pwd)"
+
+# The repository root is found by walking up for the collection spec rather than
+# counting directories up from this file. This library is shared verbatim between
+# repositories that keep their scripts at different depths — `scripts/` in some,
+# `scripts/plugins/` in others — and a hardcoded `../..` silently resolves to the
+# wrong root in the second kind rather than failing.
+REPO_ROOT=""
+_candidate="$SCRIPTS_DIR"
+while :; do
+  if [ -f "$_candidate/agent-marketplace.yaml" ]; then
+    REPO_ROOT="$_candidate"
+    break
+  fi
+  [ "$_candidate" = "/" ] && break
+  _candidate="$(dirname -- "$_candidate")"
+done
+unset _candidate
 MARKETPLACE_SPEC="$REPO_ROOT/agent-marketplace.yaml"
+
+# The collection's name, which is also the marketplace key a whole-collection
+# install registers and the name `agent uninstall` takes. Read from the spec
+# rather than hardcoded, because this file is shared between repositories whose
+# marketplaces are named differently — and a hardcoded name here would make one
+# repository's uninstall silently target another's marketplace.
+marketplace_name() {
+  sed -n 's/^name:[[:space:]]*\(.*\)$/\1/p' "$MARKETPLACE_SPEC" | head -n 1
+}
 
 # --- the cairn binary --------------------------------------------------------
 
-# Prefer this checkout's own build: the bundles under plugins/ are this
-# checkout's, and a globally installed cairn may predate a manifest key they
-# use. CAIRN_BIN overrides; CAIRN_NO_BUILD=1 falls back to PATH rather than
+# In *this* repository, prefer this checkout's own build: the bundles here are
+# this checkout's, and a globally installed cairn may predate a manifest key they
+# use. That preference is opt-in through CAIRN_LOCAL_BUILD, because this file is
+# shared verbatim with repositories that only hold bundles — building a CLI from
+# their checkout is meaningless, and without the gate they would try.
+#
+# CAIRN_BIN overrides everything; CAIRN_NO_BUILD=1 falls back to PATH rather than
 # building.
 CAIRN=()
 
@@ -45,8 +74,12 @@ resolve_cairn() {
     return
   fi
 
-  local dist="$REPO_ROOT/dist/cli.js"
-  if [ ! -f "$dist" ] && [ -z "${CAIRN_NO_BUILD:-}" ]; then
+  # An `if`, not `[ … ] && dist=…`: this file runs under `set -e`, where a test
+  # that simply fails would abort the script rather than fall through.
+  local dist=""
+  if [ -n "${CAIRN_LOCAL_BUILD:-}" ]; then dist="$REPO_ROOT/dist/cli.js"; fi
+
+  if [ -n "$dist" ] && [ ! -f "$dist" ] && [ -z "${CAIRN_NO_BUILD:-}" ]; then
     if [ ! -d "$REPO_ROOT/node_modules" ]; then
       step "Installing dependencies (node_modules is missing)"
       (cd "$REPO_ROOT" && npm ci) || die "npm ci failed"
@@ -55,14 +88,14 @@ resolve_cairn() {
     (cd "$REPO_ROOT" && npm run --silent build) || die "npm run build failed"
   fi
 
-  if [ -f "$dist" ]; then
+  if [ -n "$dist" ] && [ -f "$dist" ]; then
     CAIRN=(node "$dist")
     note "using $dist"
   elif command -v cairn >/dev/null 2>&1; then
     CAIRN=(cairn)
     note "using $(command -v cairn)"
   else
-    die "no cairn found: build this checkout (npm run build), install @cairn-tool/cairn globally, or set CAIRN_BIN"
+    die "no cairn found: install @cairn-tool/cairn globally, or set CAIRN_BIN"
   fi
 }
 
@@ -77,8 +110,15 @@ cairn_run() {
 # — the spec is the record of what this repository publishes, so a bundle that is
 # present but undeclared is not installed by these scripts either.
 ALL_BUNDLES=()
+# Spec-declared path per bundle, index-aligned with ALL_BUNDLES. Kept because the
+# declared path is the only thing that knows where a repository keeps its bundles
+# — cairn uses plugins/, the KPS repositories use bundles/ — and this file is
+# shared between them.
+ALL_BUNDLE_PATHS=()
 
 discover_bundles() {
+  [ -n "$REPO_ROOT" ] ||
+    die "no agent-marketplace.yaml above $SCRIPTS_DIR; these scripts must live inside the repository"
   [ -f "$MARKETPLACE_SPEC" ] || die "missing $MARKETPLACE_SPEC"
   local path
   while IFS= read -r path; do
@@ -86,12 +126,23 @@ discover_bundles() {
     [ -f "$REPO_ROOT/$path/agent-bundle.yaml" ] ||
       die "$MARKETPLACE_SPEC declares $path, which has no agent-bundle.yaml"
     ALL_BUNDLES+=("$(basename "$path")")
+    ALL_BUNDLE_PATHS+=("$path")
   done < <(sed -n 's/^[[:space:]]*-[[:space:]]*path:[[:space:]]*\(.*\)$/\1/p' "$MARKETPLACE_SPEC")
 
   [ ${#ALL_BUNDLES[@]} -gt 0 ] || die "no bundles declared in $MARKETPLACE_SPEC"
 }
 
-bundle_path() { printf '%s\n' "$REPO_ROOT/plugins/$1"; }
+bundle_path() {
+  local index=0
+  for name in "${ALL_BUNDLES[@]}"; do
+    if [ "$name" = "$1" ]; then
+      printf '%s\n' "$REPO_ROOT/${ALL_BUNDLE_PATHS[$index]}"
+      return 0
+    fi
+    index=$((index + 1))
+  done
+  die "unknown bundle '$1'"
+}
 
 # --- flags -------------------------------------------------------------------
 

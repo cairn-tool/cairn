@@ -26,7 +26,7 @@ change to one command's output publishes `v2/<id>.json` and changes that command
 
 ### The other hand-owned versions
 
-Six versions in this project are owned by hand rather than by semantic-release, and none of
+Seven versions in this project are owned by hand rather than by semantic-release, and none of
 them is the package version. They version different things and move independently:
 
 | Version                          | Versions                                               | Reported by                                    |
@@ -36,6 +36,7 @@ them is the package version. They version different things and move independentl
 | Bundle `schemaVersion`           | The `agent-bundle.yaml` format authors write           | `agent inspect`                                |
 | Test file `schemaVersion`        | The assertion format `agent test` cases are written in | `agent test` (`test.schemaVersion`)            |
 | Marketplace spec `schemaVersion` | The `agent-marketplace.yaml` format authors write      | `agent marketplace`                            |
+| Release manifest `schemaVersion` | The `release-manifest.json` a release branch carries   | `agent marketplace --layout release`           |
 | Usage store version              | The SQLite schema of `usage.db`                        | `usage index`, `usage migrate`, `usage import` |
 
 A normal release bumps none of them.

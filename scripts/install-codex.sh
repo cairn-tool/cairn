@@ -10,6 +10,9 @@
 # and registers that local marketplace through Codex. Project scope retains the
 # direct .codex/.agents merge used before user-scoped plugin installs existed.
 
+# This repository *is* cairn, so prefer its own build over a global install.
+export CAIRN_LOCAL_BUILD=${CAIRN_LOCAL_BUILD:-1}
+
 source "$(dirname -- "${BASH_SOURCE[0]}")/lib/common.sh"
 
 TARGET="codex"

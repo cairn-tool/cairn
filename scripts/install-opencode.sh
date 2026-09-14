@@ -11,6 +11,9 @@
 # path, so the target profile records no user location and `--scope user` reports
 # AB800. Project scope is the only install for this host.
 
+# This repository *is* cairn, so prefer its own build over a global install.
+export CAIRN_LOCAL_BUILD=${CAIRN_LOCAL_BUILD:-1}
+
 source "$(dirname -- "${BASH_SOURCE[0]}")/lib/common.sh"
 
 TARGET="opencode"

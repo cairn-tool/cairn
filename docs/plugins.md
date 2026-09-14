@@ -9,22 +9,44 @@ They are authored as [agent bundles](formats/agent-bundle.md) under `plugins/`, 
 
 ## Installing
 
-One branch per host, each holding that host's catalog at its root:
+One `release` branch serves every host. Each catalog sits at its own path at the branch root, and
+because the three hosts look in three different places they coexist there:
 
-| Target        | Branch           | Catalog                            |
-| ------------- | ---------------- | ---------------------------------- |
-| `claude-code` | `claude-plugins` | `.claude-plugin/marketplace.json`  |
-| `codex`       | `codex-plugins`  | `.agents/plugins/marketplace.json` |
-| `cursor`      | `cursor-plugins` | `.cursor-plugin/marketplace.json`  |
+| Target        | Catalog                            | Rendered trees |
+| ------------- | ---------------------------------- | -------------- |
+| `claude-code` | `.claude-plugin/marketplace.json`  | `claude-code/` |
+| `codex`       | `.agents/plugins/marketplace.json` | `codex/`       |
+| `cursor`      | `.cursor-plugin/marketplace.json`  | `cursor/`      |
+| `antigravity` | none — install from `bundles/`     | `antigravity/` |
 
 All three catalogs carry the same document-level `name`, `cairn` — it comes from the collection
 spec, not from the target — so a plugin's install id is `<plugin>@cairn` on every host that uses
 one.
 
+> **This replaced `claude-plugins`, `codex-plugins` and `cursor-plugins`.** A marketplace added
+> from one of those has to be removed and re-added against `release`: the branch a marketplace was
+> registered from is part of its identity, and there is no in-place upgrade across that change.
+
+### Antigravity, and any host without a marketplace
+
+Antigravity declares no marketplace catalog, so it is installed from the **source bundles** the
+branch publishes. `agent install` takes a bundle root and renders it in memory, so the published
+source is all it needs:
+
+```bash
+git clone --branch release https://github.com/cairn-tool/cairn.git
+cairn agent install cairn/bundles/cairn-markdown --target antigravity --scope user
+```
+
+OpenCode is absent from the branch entirely. Its profile declares no _user_-scope install location
+— it is a project-scope merge — so there is nothing a release branch could offer it. Install it
+from a checkout instead: `cairn agent install plugins/cairn-markdown --target opencode --scope
+project`.
+
 ### Claude Code
 
 ```text
-/plugin marketplace add cairn-tool/cairn@claude-plugins
+/plugin marketplace add cairn-tool/cairn@release
 /plugin install cairn-markdown@cairn
 ```
 
@@ -34,7 +56,7 @@ one.
 repository's default branch, which carries the bundle sources rather than a catalog:
 
 ```bash
-codex plugin marketplace add cairn-tool/cairn --ref codex-plugins
+codex plugin marketplace add cairn-tool/cairn --ref release
 codex plugin add cairn-markdown@cairn
 ```
 
@@ -49,7 +71,7 @@ branch, and `codex plugin list --marketplace cairn` shows what the snapshot curr
 Cursor has no CLI for adding a marketplace, and a repository-backed one is a **team
 marketplace** — a Teams or Enterprise feature. In the dashboard, go to **Plugins → Team
 Marketplaces → Add Marketplace → Import from Repo**, point it at
-`https://github.com/cairn-tool/cairn` and the `cursor-plugins` branch, and developers then
+`https://github.com/cairn-tool/cairn` and the `release` branch, and developers then
 install from **Customize** in the sidebar. **Auto Refresh** re-reads the whole catalog on every
 push to that branch, and needs the Cursor GitHub App installed on the repository.
 

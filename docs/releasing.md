@@ -25,13 +25,14 @@ Commits **must** follow [Conventional Commits](https://www.conventionalcommits.o
 Five versions are hand-owned and are **not** touched by a release. Bumping one is a deliberate
 act, described in [the contract](contract.md):
 
-| Version                    | Versions what                                      |
-| -------------------------- | -------------------------------------------------- |
-| `CONTRACT_VERSION`         | The machine-readable result contract.              |
-| `PROFILE_SCHEMA_VERSION`   | The shape of a target conformance profile.         |
-| Bundle `schemaVersion`     | The source format an author writes.                |
-| Test-file `schemaVersion`  | The contract-test assertion format.                |
-| Usage store `user_version` | The SQLite schema, migrated rather than discarded. |
+| Version                          | Versions what                                      |
+| -------------------------------- | -------------------------------------------------- |
+| `CONTRACT_VERSION`               | The machine-readable result contract.              |
+| `PROFILE_SCHEMA_VERSION`         | The shape of a target conformance profile.         |
+| Bundle `schemaVersion`           | The source format an author writes.                |
+| Test-file `schemaVersion`        | The contract-test assertion format.                |
+| Usage store `user_version`       | The SQLite schema, migrated rather than discarded. |
+| Release manifest `schemaVersion` | The document a release branch carries.             |
 
 Each plugin bundle's `version:` is hand-owned too, and independent of the CLI's — see
 [Cairn's own plugins](plugins.md).
@@ -40,4 +41,5 @@ Each plugin bundle's `version:` is hand-owned too, and independent of the CLI's 
 
 - [Machine-readable result contract](contract.md) — the versioning rules.
 - [Development](development.md) — running the checks a release is gated on.
-- [Cairn's own plugins](plugins.md) — how the plugin branch is published.
+- [Cairn's own plugins](plugins.md) — how the `release` branch is published.
+- [Release manifest](formats/release-manifest.md) — what that branch carries.

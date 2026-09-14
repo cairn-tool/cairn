@@ -1,4 +1,3 @@
-import path from "node:path";
 import type { AgentBundle, AgentDiagnostic, AgentTarget, Artifact } from "../types.js";
 import { diagnostic } from "../types.js";
 import { loadBundle } from "../parser.js";
@@ -18,6 +17,14 @@ import {
 import { TarPathTooLongError } from "../package/tar.js";
 import type { MarketplaceSpec, SpecBundle } from "./spec.js";
 import { selectedForTarget } from "./spec.js";
+import type { CollectionLayout } from "./layout.js";
+import { catalogPathFor, sourceFor } from "./layout.js";
+import type { PublishedBundle } from "./source-bundles.js";
+import { buildSourceBundles } from "./source-bundles.js";
+import type { ReleaseManifest } from "./release-manifest.js";
+import { buildReleaseManifest } from "./release-manifest.js";
+import { buildReleaseReadme } from "./release-readme.js";
+import { packageName, packageVersion } from "../../version.js";
 
 export const MARKETPLACE_REPORT = "marketplace-report.json";
 
@@ -49,7 +56,10 @@ export interface CollectionTarget {
 export interface MarketplaceReport {
   name: string;
   version: string;
+  layout: CollectionLayout;
   targets: CollectionTarget[];
+  /** Source bundles published alongside the rendered trees, in spec order. */
+  sources: PublishedBundle[];
   archives: PackageArchive[];
   checksums: string;
   sbom: string;
@@ -111,11 +121,45 @@ export function buildCollection(
   spec: MarketplaceSpec,
   targets: AgentTarget[],
   mode: CollectionMode,
-  options: { archive?: boolean } = {},
+  options: {
+    archive?: boolean;
+    layout?: CollectionLayout;
+    /** Publish the source bundles. Defaults on under the release layout. */
+    sourceBundles?: boolean;
+    /** Version written into each published `agent-bundle.yaml`. */
+    stampVersion?: string;
+    /** Commit the published tree was built from, recorded in the manifest. */
+    sourceCommit?: string;
+    /** `owner/name` of the repository this is published from; generates README.md. */
+    readme?: string;
+  } = {},
 ): CollectionBuild {
+  const layout: CollectionLayout = options.layout ?? "nested";
+  const withSources = options.sourceBundles ?? layout === "release";
   const diagnostics: AgentDiagnostic[] = [];
   const bundles = new Map<string, AgentBundle>();
   for (const entry of spec.bundles) bundles.set(entry.path, loadBundle(entry.root));
+
+  // Stamp before anything renders. The catalog's `version` is read off
+  // `manifest.version` while AB501 compares it against `bundle.version`, so both
+  // have to move together — and they have to move here, or the catalogs and the
+  // rendered plugin manifests would advertise a version the published source
+  // does not carry. Done on the loaded copy, never on the working tree, which is
+  // what makes the stamp-and-restore dance in a release script unnecessary.
+  if (options.stampVersion !== undefined)
+    for (const bundle of bundles.values()) {
+      if (bundle.version !== options.stampVersion)
+        diagnostics.push(
+          diagnostic(
+            "AB912",
+            `Stamped '${bundle.name}' from ${bundle.version} to ${options.stampVersion}`,
+            "exact",
+            { path: bundle.root },
+          ),
+        );
+      bundle.version = options.stampVersion;
+      (bundle.manifest as Record<string, unknown>).version = options.stampVersion;
+    }
 
   // Two bundles may declare distinct paths and still render the same plugin
   // name, which a host would resolve arbitrarily.
@@ -202,11 +246,8 @@ export function buildCollection(
         ...(spec.description !== undefined ? { description: spec.description } : {}),
         owner: spec.owner,
       },
-      // Relative to the catalog, which sits one level above the plugin
-      // directories — never rewritten to "./", which is only correct when a
-      // catalog shares a directory with the single plugin it describes.
-      sourceFor: (bundle) => `./${bundle.name}`,
-      catalogPathFor: (id, _profile, where) => `${id}/${where.directory}/${where.file}`,
+      sourceFor: (bundle) => sourceFor(layout, target, bundle.name),
+      catalogPathFor: (id, _profile, where) => catalogPathFor(layout, id as AgentTarget, where),
       attributeToBundle: true,
     });
     diagnostics.push(...catalogs.diagnostics);
@@ -221,9 +262,20 @@ export function buildCollection(
     artifacts.push(...targetArtifacts);
     reportTargets.push({
       target,
-      catalog: location ? `${target}/${location.directory}/${location.file}` : null,
+      catalog: location ? catalogPathFor(layout, target, location) : null,
       plugins,
     });
+  }
+
+  // Before the payload is sorted and digested, so `checksums.sha256` and the
+  // sbom cover the sources too. A checksum file that omitted published files
+  // would be a lie about what the branch carries.
+  let sources: PublishedBundle[] = [];
+  if (withSources) {
+    const built = buildSourceBundles(spec.bundles, bundles);
+    artifacts.push(...built.artifacts);
+    diagnostics.push(...built.diagnostics);
+    sources = built.published;
   }
 
   const payload = sortByPath(artifacts);
@@ -258,7 +310,35 @@ export function buildCollection(
         }
       }
 
-  const withArchives = sortByPath([...payload, ...extra]);
+  // Built from `payload`, which already holds every rendered tree and every
+  // published source, and folded in before the checksums so the manifest is
+  // itself covered by them.
+  const manifest: Artifact[] = [];
+  if (layout === "release") {
+    const document = buildReleaseManifest({
+      marketplace: spec.name,
+      version: options.stampVersion ?? spec.version,
+      ...(spec.description !== undefined ? { description: spec.description } : {}),
+      ...(options.sourceCommit !== undefined ? { sourceCommit: options.sourceCommit } : {}),
+      generator: { name: packageName, version: packageVersion },
+      targets: reportTargets,
+      sources,
+      descriptions: new Map(
+        [...bundles.values()].map((bundle) => [bundle.name, bundle.description]),
+      ),
+      artifacts: payload,
+    });
+    manifest.push(document);
+    if (options.readme !== undefined)
+      manifest.push(
+        buildReleaseReadme(
+          JSON.parse(document.content.toString("utf8")) as ReleaseManifest,
+          options.readme,
+        ),
+      );
+  }
+
+  const withArchives = sortByPath([...payload, ...extra, ...manifest]);
   const checksums = buildChecksums(withArchives);
   // The sbom's subject is the collection, not any one bundle, so it is given a
   // synthetic bundle carrying the spec's identity.
@@ -267,8 +347,10 @@ export function buildCollection(
 
   const report: MarketplaceReport = {
     name: spec.name,
-    version: spec.version,
+    version: options.stampVersion ?? spec.version,
+    layout,
     targets: reportTargets,
+    sources,
     archives,
     checksums: checksums.path,
     sbom: sbom.path,
@@ -284,9 +366,4 @@ export function buildCollection(
     diagnostics,
     bundles,
   };
-}
-
-/** Collection-relative directories the writer owns outright, one per target. */
-export function managedRootsFor(targets: AgentTarget[]): string[] {
-  return targets.map((target) => path.join(target));
 }

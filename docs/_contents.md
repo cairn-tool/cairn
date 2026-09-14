@@ -51,6 +51,7 @@ change without breaking a consumer.
 - [Target profile](formats/target-profile.md)
 - [Conversion output](formats/conversion-output.md)
 - [Package](formats/package.md)
+- [Release manifest](formats/release-manifest.md)
 - [Install manifest](formats/install-manifest.md)
 - [QA case file](formats/qa-case-file.md)
 - [Usage store](formats/usage-store.md)

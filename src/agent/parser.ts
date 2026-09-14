@@ -7,6 +7,7 @@ import type {
   BundleRule,
   MarkdownComponent,
   SourceFile,
+  ExternalResource,
 } from "./types.js";
 import { COMPONENT_NAME, diagnostic, TARGETS } from "./types.js";
 import { CONDITIONAL_TEXT, validateConditionals } from "./conditionals.js";
@@ -208,6 +209,7 @@ function loadMarkdownComponents(
   diagnostics: AgentDiagnostic[],
   resourceRoots: string[] = [],
   refs: RefUse[] = [],
+  resources: ExternalResource[] = [],
 ): MarkdownComponent[] {
   const directory = relativeSafe(root, relative, `${kind} path`);
   if (!fs.existsSync(directory)) return [];
@@ -482,6 +484,14 @@ function loadMarkdownComponents(
         content: fs.readFileSync(resolved),
         mode: fs.statSync(resolved).mode & 0o777,
       });
+      // The origin, which the rendered tree does not need and a publisher does.
+      // `host` is the resourceRoots entry that covered it, already resolved above.
+      resources.push({
+        absolute: resolved,
+        declared: entry.declared,
+        hostRoot: host,
+        component: name,
+      });
     }
     const own = allFiles(componentRoot);
     for (const file of materialized) {
@@ -730,6 +740,7 @@ export function loadBundle(source: string): AgentBundle {
     diagnostics,
   );
   const refs: RefUse[] = [];
+  const externalResources: ExternalResource[] = [];
   const skills = loadMarkdownComponents(
     root,
     configuredPath(manifest, "skills", "skills"),
@@ -737,6 +748,7 @@ export function loadBundle(source: string): AgentBundle {
     diagnostics,
     extraResourceRoots,
     refs,
+    externalResources,
   );
   const agents = loadMarkdownComponents(
     root,
@@ -745,6 +757,7 @@ export function loadBundle(source: string): AgentBundle {
     diagnostics,
     extraResourceRoots,
     refs,
+    externalResources,
   );
   if (!legacy)
     for (const component of [...skills, ...agents])
@@ -763,6 +776,7 @@ export function loadBundle(source: string): AgentBundle {
     diagnostics,
     extraResourceRoots,
     refs,
+    externalResources,
   );
   const rules: BundleRule[] = rawRules.map((rule) => ({
     ...rule,
@@ -963,6 +977,8 @@ export function loadBundle(source: string): AgentBundle {
     policies: loadPolicies(root, configuredPath(manifest, "policies", "policies"), diagnostics),
     mcp: findStructured(root, configuredPath(manifest, "mcp", "mcp")),
     assets: legacy ? legacyAssets : fs.existsSync(assetsDir) ? allFiles(assetsDir) : [],
+    resourceRoots: extraResourceRoots,
+    externalResources,
     diagnostics,
     graph,
   };
