@@ -7,6 +7,21 @@ A bundle is a directory containing `agent-bundle.yaml` and component directories
 in it is plain files: YAML, Markdown with frontmatter, JSON, and whatever assets the components
 need.
 
+This page is the **language reference**: every component kind, every frontmatter field, and the
+three comment families a component body may carry — conditionals, inline component references,
+and placeholders. Each section states its own diagnostics. What lives elsewhere:
+
+| For                                                  | See                                                         |
+| ---------------------------------------------------- | ----------------------------------------------------------- |
+| Why bundles exist, and what renders where            | [Agent bundles](../guide/agent-bundles.md)                  |
+| Markdown conventions shared with the rest of `cairn` | [Markdown conventions](markdown-conventions.md)             |
+| Contract tests (`tests/**/*.test.yaml`)              | [Bundle contract tests](agent-tests.md)                     |
+| How a target's behavior is declared                  | [Target profile](target-profile.md)                         |
+| What one host does with a bundle                     | `docs/providers/<host>/agent-bundles.md`                    |
+| Every `AB###` code, and the ranges                   | [Codes](diagnostic-codes.md), [Diagnostics](diagnostics.md) |
+| Building, auditing, installing                       | [`agent` commands](../commands.md)                          |
+| Authoring guidance for an agent                      | `plugins/cairn-agent/skills/bundle-authoring/`              |
+
 ## Schema versions
 
 `schemaVersion` is a **hand-owned** version of the source format authors write. It is unrelated
@@ -396,19 +411,7 @@ why a typo in a key name is silently carried through rather than reported.
 Any Markdown in the bundle may carry target-conditional regions, and so may any textual asset
 the renderer processes.
 
-Two forms are read. The **legacy** form carries one literal target name and nothing else. The
-`platform:` spelling is still accepted, and the closer repeats whichever keyword and name the
-opener used:
-
-```markdown
-<!-- target:cursor -->
-
-Cursor-specific instructions.
-
-<!-- /target:cursor -->
-```
-
-The **conditional** form carries the expressiveness:
+One form is read, and **every chain must end in `else`**:
 
 ```markdown
 <!-- if target:claude-code -->
@@ -435,8 +438,29 @@ Check the working tree before continuing.
 `not` negates the whole list, so `not target:codex,cursor` is "neither". Spaces are accepted
 around the commas. Blocks nest, and exactly one branch of a chain is taken.
 
-The two forms do not mix: an `else` inside a legacy block, or an `endif` closing one, is
-`AB121`.
+### The `else` branch is required
+
+A chain no target matches emits **nothing**, and no other diagnostic reports it: the region is
+simply absent, on exactly the hosts nobody tested. `AB128` is the requirement that an author
+decide what those hosts get, rather than discovering the hole from a bundle that renders
+without the step it depends on.
+
+This is also why the one-armed `<!-- target:cursor --> … <!-- /target:cursor -->` form, and its
+`platform:` spelling, were retired. That form _was_ a chain with no `else` — false for every
+target but the one it named — so it carried the same hole by construction, and it could not
+express the branch that closes it. It is now `AB125`:
+
+```markdown
+<!-- if target:cursor -->
+
+Cursor-specific instructions.
+
+<!-- else -->
+
+What every other host does instead.
+
+<!-- endif -->
+```
 
 ### Markers inside a fenced code block are inert
 
@@ -456,6 +480,8 @@ every marker in one is live.
 | `AB120` | error    | A conditional names an unknown target.                |
 | `AB121` | error    | A block is unmatched, misnested, or unclosed.         |
 | `AB123` | error    | A marker looks like a conditional but does not parse. |
+| `AB125` | error    | A retired one-armed `target:` or `platform:` block.   |
+| `AB128` | error    | A chain has no `else`, so some targets get nothing.   |
 
 `AB123` exists because a near-miss used to be **silent**. `<!-- target: cursor -->` — with a
 space after the colon — matched nothing, so the block simply never applied and the content

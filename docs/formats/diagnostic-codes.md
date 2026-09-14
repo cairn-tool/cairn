@@ -69,8 +69,11 @@ Emitted by the bundle and manifest parsers, so every command that loads a bundle
 | `AB122` | error    | manifest parser | A `marketplace` field has the wrong type.                                                                            |
 | `AB123` | error    | bundle parser   | A conditional marker looks like one but does not parse.                                                              |
 | `AB124` | error    | bundle parser   | A comment looks like an inline component reference but does not parse.                                               |
+| `AB125` | error    | bundle parser   | A retired one-armed `target:` or `platform:` conditional block. Write `if`/`else`/`endif`.                           |
 | `AB126` | notice   | manifest parser | A component path sits at the manifest's top level, which `schemaVersion: '2'` deprecates in favour of `components.`. |
 | `AB127` | error    | manifest parser | A manifest field requires `schemaVersion: '2'`.                                                                      |
+| `AB128` | error    | bundle parser   | A conditional chain has no `else` branch, so it emits nothing on every target it does not name.                      |
+| `AB129` | error    | bundle parser   | A `skills:` preload entry names an `invocationPolicy: explicit` skill, which a host will not preload.                |
 | `AB130` | error    | bundle parser   | A rule declares an unknown `activation`.                                                                             |
 | `AB140` | error    | bundle parser   | A policy action is not `allow`, `prompt`, or `deny`.                                                                 |
 | `AB141` | warning  | bundle parser   | A policy declares no positive and negative match examples.                                                           |

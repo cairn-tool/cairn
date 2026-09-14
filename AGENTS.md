@@ -5,7 +5,7 @@ Renamed from `claude-cli`; see the compatibility gotcha below.
 
 ## Layout
 
-```
+```text
 src/cli.ts             commander entry point; every subcommand is registered here
 src/commands/*.ts      one file per subcommand, each exporting a `<name>Action`
 src/checkers/*.ts      katex, mermaid, references, markdown-lint

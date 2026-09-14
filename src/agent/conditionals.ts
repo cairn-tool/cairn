@@ -15,16 +15,8 @@ import type { ReferenceKind } from "./targets/schema.js";
  * what a document meant. They are the same grammar here, so a form the
  * validator accepts is a form the renderer understands.
  *
- * Two forms are read. The **legacy** form carries one literal target name and
- * nothing else, and is unchanged:
- *
- * ```markdown
- * <!-- target:cursor -->
- * <!-- /target:cursor -->
- * ```
- *
- * The **conditional** form carries the expressiveness — a list is an OR, `not`
- * negates the whole list, and a block may branch:
+ * One conditional form is read — a list is an OR, `not` negates the whole list,
+ * and a block may branch:
  *
  * ```markdown
  * <!-- if target:claude-code -->
@@ -32,6 +24,16 @@ import type { ReferenceKind } from "./targets/schema.js";
  * <!-- else -->
  * <!-- endif -->
  * ```
+ *
+ * **Every chain must end in `else`**, and that is `AB128`. A chain no host
+ * matches emits nothing at all, and nothing else reports it: the region simply
+ * is not there, on exactly the hosts nobody tested. Requiring the branch makes
+ * the author decide what those hosts get.
+ *
+ * The one-armed `<!-- target:cursor --> … <!-- /target:cursor -->` form, and its
+ * `platform:` spelling, are `AB125`. That form *was* a chain with no `else` — it
+ * is false for every other target — so it carried the same silent hole by
+ * construction, and it is the reason `AB128` exists.
  *
  * A third, self-closing family names another component and resolves to whatever
  * the target calls it, so a cross-reference is written once rather than once per
@@ -54,6 +56,7 @@ export const CONDITIONAL_TEXT = /\.(?:md|txt|json|ya?ml|toml|sh|js|mjs|cjs|ts|py
 /** Every HTML comment, with its offsets. The only thing either side scans for. */
 const COMMENT = /<!--([\s\S]*?)-->/g;
 
+/** The retired one-armed form. Still recognised, only so it can be reported. */
 const LEGACY = /^(\/)?(target|platform):(\S+)$/;
 const REF = /^ref:(skill|agent|command):(\S+)$/;
 /**
@@ -81,7 +84,7 @@ const CANDIDATE =
   /^\s*(?:\/?\s*(?:target|platform)s?\b|else\s*$|endif\b|(?:el(?:se)?if|if)\b(?=[\s\S]*(?:\bnot\b|(?:target|platform)s?\s*:)))/i;
 
 type Marker =
-  | { kind: "legacy-open" | "legacy-close"; syntax: string; target: string }
+  | { kind: "legacy"; syntax: string; target: string; closing: boolean }
   | { kind: "if" | "elif"; predicate: Predicate }
   | { kind: "else" | "endif" }
   | { kind: "ref"; refKind: ReferenceKind; name: string };
@@ -139,9 +142,10 @@ function classify(body: string): Marker | "malformed" | "malformed-ref" | null {
   const legacy = LEGACY.exec(text);
   if (legacy)
     return {
-      kind: legacy[1] ? "legacy-close" : "legacy-open",
+      kind: "legacy",
       syntax: legacy[2],
       target: legacy[3],
+      closing: Boolean(legacy[1]),
     };
   const lower = text.toLowerCase();
   if (lower === "else") return { kind: "else" };
@@ -262,7 +266,6 @@ interface Frame {
   /** Whether the enclosing block emits at all. */
   enclosing: boolean;
   seenElse: boolean;
-  legacy?: { syntax: string; target: string };
 }
 
 /**
@@ -292,17 +295,11 @@ export function applyConditionals(
     cursor = token.end;
     const marker = token.marker;
     switch (marker.kind) {
-      case "legacy-open": {
-        const active = marker.target === target;
-        stack.push({
-          taken: active,
-          active,
-          enclosing: emitting(),
-          seenElse: false,
-          legacy: { syntax: marker.syntax, target: marker.target },
-        });
-        break;
-      }
+      // The retired form is an error (`AB125`), so nothing is written from this
+      // document anyway. Leaving it whole rather than half-stripping it is the
+      // same choice an unbalanced document already gets.
+      case "legacy":
+        return content;
       case "if": {
         const active = matches(marker.predicate, target);
         stack.push({ taken: active, active, enclosing: emitting(), seenElse: false });
@@ -323,8 +320,7 @@ export function applyConditionals(
         frame.seenElse = true;
         break;
       }
-      case "endif":
-      case "legacy-close": {
+      case "endif": {
         if (!stack.length) return content;
         stack.pop();
         break;
@@ -349,8 +345,8 @@ function unknownTargets(names: string[]): string[] {
 }
 
 /**
- * Reports `AB120`, `AB121`, `AB123` and `AB124` for one file's markers, and
- * returns the references it made.
+ * Reports `AB120`, `AB121`, `AB123`, `AB124`, `AB125` and `AB128` for one
+ * file's markers, and returns the references it made.
  *
  * Resolving a reference *name* is not this function's business: it runs before
  * the bundle's component lists exist. The parser resolves what is returned here
@@ -386,7 +382,7 @@ export function validateConditionals(
         {
           path: file,
           remediation:
-            "Write <!-- target:<name> --> with no space after the colon, or <!-- if target:<name> --> / <!-- elif ... --> / <!-- else --> / <!-- endif -->.",
+            "Write <!-- if target:<name> --> / <!-- elif ... --> / <!-- else --> / <!-- endif -->, with no space after the colon. Every chain needs an else branch.",
         },
       ),
       severity: "error",
@@ -408,6 +404,36 @@ export function validateConditionals(
       severity: "error",
     });
   };
+  const retired = (raw: string, line: number): void => {
+    diagnostics.push({
+      ...diagnostic(
+        "AB125",
+        `Retired conditional block '${raw.trim()}' on line ${line}`,
+        "unsupported",
+        {
+          path: file,
+          remediation:
+            "Write <!-- if target:<name> --> … <!-- else --> … <!-- endif -->. The one-armed form matched a single target and emitted nothing for every other one, so the content vanished on hosts nobody tested; the else branch is what that form could not express.",
+        },
+      ),
+      severity: "error",
+    });
+  };
+  const nonExhaustive = (line: number): void => {
+    diagnostics.push({
+      ...diagnostic(
+        "AB128",
+        `Conditional block opened on line ${line} has no else branch`,
+        "unsupported",
+        {
+          path: file,
+          remediation:
+            "Add <!-- else --> before <!-- endif -->. A chain no target matches emits nothing, and no other diagnostic reports it - the region is simply absent on those hosts.",
+        },
+      ),
+      severity: "error",
+    });
+  };
   const unbalanced = (message: string, line?: number): void => {
     diagnostics.push({
       ...diagnostic("AB121", line ? `${message} on line ${line}` : message, "unsupported", {
@@ -418,52 +444,39 @@ export function validateConditionals(
     });
   };
 
-  const stack: Array<{ legacy?: { syntax: string; target: string }; seenElse: boolean }> = [];
+  const stack: Array<{ seenElse: boolean; line: number }> = [];
   for (const token of tokens) {
     const marker = token.marker;
     switch (marker.kind) {
-      case "legacy-open":
-        unknown([marker.target], token.line);
-        stack.push({ legacy: { syntax: marker.syntax, target: marker.target }, seenElse: false });
+      // Reported and then ignored: it opens no frame, so the rest of the file is
+      // still checked as written rather than every later marker reading as
+      // unbalanced because of one retired opener.
+      case "legacy":
+        retired(token.raw, token.line);
         break;
       case "if":
         unknown(marker.predicate.targets, token.line);
-        stack.push({ seenElse: false });
+        stack.push({ seenElse: false, line: token.line });
         break;
       case "elif": {
         unknown(marker.predicate.targets, token.line);
         const frame = stack[stack.length - 1];
         if (!frame) unbalanced("elif outside a conditional block", token.line);
-        else if (frame.legacy)
-          unbalanced("elif inside a legacy target block; use if/elif/endif", token.line);
         else if (frame.seenElse) unbalanced("elif after else", token.line);
         break;
       }
       case "else": {
         const frame = stack[stack.length - 1];
         if (!frame) unbalanced("else outside a conditional block", token.line);
-        else if (frame.legacy)
-          unbalanced("else inside a legacy target block; use if/else/endif", token.line);
         else if (frame.seenElse)
           unbalanced("a conditional block has two else branches", token.line);
         else frame.seenElse = true;
         break;
       }
-      case "legacy-close": {
-        unknown([marker.target], token.line);
-        const frame = stack.pop();
-        if (
-          !frame?.legacy ||
-          frame.legacy.target !== marker.target ||
-          frame.legacy.syntax !== marker.syntax
-        )
-          unbalanced("Unmatched or misnested target block", token.line);
-        break;
-      }
       case "endif": {
         const frame = stack.pop();
         if (!frame) unbalanced("endif outside a conditional block", token.line);
-        else if (frame.legacy) unbalanced("endif closing a legacy target block", token.line);
+        else if (!frame.seenElse) nonExhaustive(frame.line);
         break;
       }
     }

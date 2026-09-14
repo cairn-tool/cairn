@@ -1586,7 +1586,7 @@ describe("agent install", () => {
     // path they share differ, which is a genuine AB808.
     fs.writeFileSync(
       path.join(source, "skills", "greet", "SKILL.md"),
-      "---\nname: greet\ndescription: Say hello\n---\n\n<!-- target:codex -->\nCodex only.\n<!-- /target:codex -->\n",
+      "---\nname: greet\ndescription: Say hello\n---\n\n<!-- if target:codex -->\nCodex only.\n<!-- else -->\nEverything else.\n<!-- endif -->\n",
     );
     const project = fs.mkdtempSync(path.join(os.tmpdir(), "agent-install-clash-"));
     temporary.push(project);

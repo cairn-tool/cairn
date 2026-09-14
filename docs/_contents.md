@@ -45,7 +45,7 @@ Why each toolset exists, and the facts that make its answers trustworthy.
 Formats Cairn itself owns: what each file contains, which version governs it, and what may
 change without breaking a consumer.
 
-- [Agent bundle](formats/agent-bundle.md)
+- [Agent bundle format and syntax](formats/agent-bundle.md)
 - [Bundle contract tests](formats/agent-tests.md)
 - [Marketplace spec](formats/agent-marketplace.md)
 - [Target profile](formats/target-profile.md)

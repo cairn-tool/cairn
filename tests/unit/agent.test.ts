@@ -4,6 +4,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadBundle, splitFrontmatter } from "../../src/agent/parser.js";
 import { processTargetBlocks, renderBundle } from "../../src/agent/render.js";
+import { validateConditionals } from "../../src/agent/conditionals.js";
+import type { AgentDiagnostic } from "../../src/agent/types.js";
 
 const temporary: string[] = [];
 
@@ -17,7 +19,7 @@ function bundleRoot(): string {
   );
   fs.writeFileSync(
     path.join(root, "skills", "release", "SKILL.md"),
-    "---\nname: release\ndescription: Prepare a release\n---\nUse ${ARGUMENTS}.\n<!-- target:cursor -->Cursor only.\n<!-- /target:cursor -->\n",
+    "---\nname: release\ndescription: Prepare a release\n---\nUse ${ARGUMENTS}.\n<!-- if target:cursor -->Cursor only.\n<!-- else -->Other hosts.\n<!-- endif -->\n",
   );
   fs.writeFileSync(path.join(root, "skills", "release", "run.sh"), "#!/bin/sh\n", { mode: 0o755 });
   return root;
@@ -41,11 +43,34 @@ describe("agent bundles", () => {
     );
   });
 
-  it("processes canonical and legacy target blocks", () => {
-    const source =
-      "A\n<!-- target:cursor -->C\n<!-- /target:cursor -->\n<!-- platform:codex -->X\n<!-- /platform:codex -->";
-    expect(processTargetBlocks(source, "cursor")).toContain("C");
-    expect(processTargetBlocks(source, "cursor")).not.toContain("X");
+  it("reports the retired one-armed form rather than processing it", () => {
+    // It was a chain with no else - false for every other target - so its
+    // content vanished on hosts nobody tested. That is the whole reason it went.
+    for (const source of [
+      "A\n<!-- target:cursor -->C\n<!-- /target:cursor -->",
+      "A\n<!-- platform:codex -->X\n<!-- /platform:codex -->",
+    ]) {
+      const diagnostics: AgentDiagnostic[] = [];
+      validateConditionals(source, "SKILL.md", diagnostics);
+      expect(diagnostics.map((item) => item.code)).toContain("AB125");
+      expect(diagnostics.find((item) => item.code === "AB125")?.severity).toBe("error");
+      // Left whole rather than half-stripped, the way an unbalanced document is.
+      expect(processTargetBlocks(source, "cursor")).toBe(source);
+    }
+  });
+
+  it("requires an else branch, so no target silently gets nothing", () => {
+    const diagnostics: AgentDiagnostic[] = [];
+    validateConditionals("<!-- if target:codex -->X\n<!-- endif -->\n", "SKILL.md", diagnostics);
+    expect(diagnostics.map((item) => item.code)).toContain("AB128");
+
+    const ok: AgentDiagnostic[] = [];
+    validateConditionals(
+      "<!-- if target:codex -->X\n<!-- else -->Y\n<!-- endif -->\n",
+      "SKILL.md",
+      ok,
+    );
+    expect(ok.map((item) => item.code)).not.toContain("AB128");
   });
 
   it("treats a comma list as OR and a leading not as negation", () => {
@@ -80,7 +105,7 @@ describe("agent bundles", () => {
     // stripped as if it were live, so this project's own bundle-format
     // reference rendered with an empty code block.
     const source =
-      "before\n\n```markdown\n<!-- target:cursor -->\nX\n<!-- /target:cursor -->\n```\n\nafter\n";
+      "before\n\n```markdown\n<!-- if target:cursor -->\nX\n<!-- else -->\nY\n<!-- endif -->\n```\n\nafter\n";
     expect(processTargetBlocks(source, "codex")).toBe(source);
     expect(processTargetBlocks(source, "cursor")).toBe(source);
   });
@@ -255,7 +280,7 @@ describe("agent bundles", () => {
     const root = bundleRoot();
     fs.writeFileSync(
       path.join(root, "skills", "release", "SKILL.md"),
-      "---\nname: release\ndescription: Release\ninclude: [future]\n---\n<!-- target:future -->bad\n",
+      "---\nname: release\ndescription: Release\ninclude: [future]\n---\n<!-- if target:future -->bad\n",
     );
     const codes = loadBundle(root).diagnostics.map((item) => item.code);
     expect(codes).toEqual(expect.arrayContaining(["AB106", "AB120", "AB121"]));

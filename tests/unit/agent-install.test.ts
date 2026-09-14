@@ -584,7 +584,7 @@ describe("planInstalls", () => {
     const root = bundle();
     fs.writeFileSync(
       path.join(root, "skills", "greet", "SKILL.md"),
-      "---\nname: greet\ndescription: Say hello\n---\n\n<!-- target:codex -->\nCodex only.\n<!-- /target:codex -->\n",
+      "---\nname: greet\ndescription: Say hello\n---\n\n<!-- if target:codex -->\nCodex only.\n<!-- else -->\nEverything else.\n<!-- endif -->\n",
     );
     return root;
   }

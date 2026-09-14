@@ -3,7 +3,7 @@ name: reviewer
 description: Reviews code
 model: capable
 tools: [read, shell, telepathy]
-skills: [build]
+skills: [deploy]
 reasoning: high
 ---
 Review carefully.
