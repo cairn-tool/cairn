@@ -82,18 +82,8 @@ equivalent:
 | `${ARGUMENTS}`   | `$ARGUMENTS`, substituted natively                  |
 | `${SKILL_DIR}`   | `${CLAUDE_SKILL_DIR}`                               |
 
-For genuinely host-specific prose, use a conditional block rather than forking the file. The
-one-target form:
-
-```markdown
-<!-- target:cursor -->
-
-Cursor-specific instructions.
-
-<!-- /target:cursor -->
-```
-
-The branching form, where a comma list is an OR and `not` negates the whole list:
+For genuinely host-specific prose, use a conditional block rather than forking the file. A
+comma list is an OR, `not` negates the whole list, and **every chain must end in `else`**:
 
 ```markdown
 <!-- if target:claude-code -->
@@ -108,11 +98,44 @@ Check the working tree before continuing.
 <!-- endif -->
 ```
 
+The `else` is not optional, and `AB128` enforces it. A chain no target matches emits
+**nothing**, and no other diagnostic reports it — the region is simply absent on the hosts
+nobody tested, which is how an approval gate or a verification step goes missing without
+anything failing. Writing the branch forces the decision about what those hosts get.
+
+The one-armed `<!-- target:cursor --> … <!-- /target:cursor -->` form, and its `platform:`
+spelling, are retired: `AB125`. That form _was_ a chain with no `else`, so it carried the same
+hole by construction and could not express the branch that closes it.
+
 An unmatched, misnested, or unclosed block is an error (`AB121`), and so is a marker that
-_looks_ conditional but does not parse (`AB123`) — `<!-- target: cursor -->` with a space after
-the colon used to be silently inert. Blocks are validated in **every** textual file, not only
-Markdown, and validation is wider than expansion: a marker in a hook script is reported rather
-than resolved.
+_looks_ conditional but does not parse (`AB123`) — `<!-- if target: cursor -->` with a space
+after the colon used to be silently inert. Blocks are validated in **every** textual file, not
+only Markdown, and validation is wider than expansion: a marker in a hook script is reported
+rather than resolved.
+
+## Invocation policy is reachability, not just activation
+
+`invocationPolicy: explicit` renders to `disable-model-invocation: true` on Claude Code, and it
+revokes four things rather than one:
+
+- the host will not activate the skill on relevance — usually the only one intended;
+- no running skill can reach it with the Skill tool;
+- no subagent can reach it with the Skill tool;
+- **it cannot appear in any component's `skills:` preload**, because a host draws preloads from
+  the same set the model may invoke. That entry is dropped in silence, and the component runs
+  without content it was written to assume. `AB129` reports it.
+
+It revokes nothing from the user: `/bundle:skill` still works either way. So an explicit skill
+is reachable by exactly one caller — a person — and prose about one has to read that way. A
+command reference should be preceded by "point at", never by "run" or "invoke": it renders to
+`/bundle:skill`, which is something a person types, not something the model can call.
+
+Before keeping the key on a new skill, ask whether anything inside the bundle needs to reach
+it. If something must **run** it as a step, delete the key — it stays user-invocable and merely
+also self-activates, which is safe for a derived, idempotent, single-output skill. If something
+needs its **procedure**, put that procedure in a model-invocable standards skill and have both
+read it; an agent has no other way in. `AB161` guards the inverse, warning when a
+`ref:command:` names a skill that is not explicit.
 
 Do **not** reach for a conditional block to spell a component's name per host. Write a
 reference, which resolves to whatever the target calls it:

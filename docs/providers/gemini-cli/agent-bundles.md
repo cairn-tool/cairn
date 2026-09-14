@@ -7,7 +7,7 @@ Consequences, all of them uniform because every one reads the same `TARGETS` lis
 
 - `agent convert --target gemini-cli` is rejected as an unknown target
 - `native: { "gemini-cli": … }` in a bundle manifest raises `AB184`, unknown overlay target
-- `<!-- target:gemini-cli -->` in component Markdown raises `AB120`, unknown target block
+- `<!-- if target:gemini-cli -->` in component Markdown raises `AB120`, unknown target block
 - `include:`/`exclude:` and `targets.<platform>` frontmatter naming it raise `AB106` and `AB104`
 
 ## Why not

@@ -154,16 +154,8 @@ newline, which is not valid Markdown.
 
 ## Target-conditional blocks
 
-Markdown inside an agent bundle may also carry target-conditional regions, in a one-target
-legacy form and a branching form:
-
-```markdown
-<!-- target:cursor -->
-
-Cursor-specific instructions.
-
-<!-- /target:cursor -->
-```
+Markdown inside an agent bundle may also carry target-conditional regions. Every chain must end
+in `else`, so no host is left with the region silently missing:
 
 ```markdown
 <!-- if target:codex, cursor -->

@@ -151,7 +151,7 @@ target by target, is under [Providers](../providers.md):
 Point `agent convert` directly at an existing Claude plugin containing
 `.claude-plugin/plugin.json` to migrate it. The importer retains manifest metadata, skills,
 agents, hooks, scripts/assets, model mappings, skill embedding, `$ARGUMENTS` behavior,
-Claude path variables, Cursor skill namespacing, and `<!-- platform:... -->` conditionals,
+Claude path variables, Cursor skill namespacing, and `<!-- if target:... -->` conditionals,
 and emits a migration notice. Add `agent-bundle.yaml` after reviewing the generated report;
 the old Python converter can then be retired independently.
 

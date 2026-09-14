@@ -829,6 +829,15 @@ export function loadBundle(source: string): AgentBundle {
     }
   }
   const skillNames = new Set(skills.map((skill) => skill.name));
+  const explicitSkills = new Set(
+    skills
+      .filter((skill) =>
+        ["explicit", "manual"].includes(
+          String(skill.metadata.invocationPolicy ?? skill.metadata.invocation ?? "auto"),
+        ),
+      )
+      .map((skill) => skill.name),
+  );
   const graph: Record<string, string[]> = {};
   for (const component of [...skills, ...agents]) {
     const declared = Array.isArray(component.metadata.skills)
@@ -841,8 +850,8 @@ export function loadBundle(source: string): AgentBundle {
     // `skills:` is different because it composes content, which is the thing a
     // cycle actually breaks.
     graph[component.name] = declared;
-    for (const ref of declared)
-      if (!skillNames.has(ref))
+    for (const ref of declared) {
+      if (!skillNames.has(ref)) {
         diagnostics.push({
           ...diagnostic("AB150", `Missing referenced skill '${ref}'`, "unsupported", {
             component: component.name,
@@ -851,6 +860,28 @@ export function loadBundle(source: string): AgentBundle {
           }),
           severity: "error",
         });
+        continue;
+      }
+      // A preload draws from the same set the model may invoke, so a host drops
+      // an explicit entry rather than composing it -- in silence, leaving the
+      // component running without content it was written to assume. That is
+      // worth an error precisely because nothing at runtime says so.
+      if (explicitSkills.has(ref))
+        diagnostics.push({
+          ...diagnostic(
+            "AB129",
+            `Preloaded skill '${ref}' is invocationPolicy: explicit and cannot be preloaded`,
+            "unsupported",
+            {
+              component: component.name,
+              path: component.path,
+              remediation:
+                "Remove the entry, or move the content the component actually needs into a model-invocable skill and preload that one.",
+            },
+          ),
+          severity: "error",
+        });
+    }
   }
   const assetsDir = relativeSafe(root, configuredPath(manifest, "assets", "assets"), "assets path");
   const hooksConfigured = configuredPath(manifest, "hooks", legacy ? "hooks/hooks.json" : "hooks");
@@ -868,15 +899,6 @@ export function loadBundle(source: string): AgentBundle {
   // the `AB150` job for the reference family, and it has to happen here rather
   // than in `validateConditionals`, which runs before any component list does.
   const agentNames = new Set(agents.map((agent) => agent.name));
-  const explicitSkills = new Set(
-    skills
-      .filter((skill) =>
-        ["explicit", "manual"].includes(
-          String(skill.metadata.invocationPolicy ?? skill.metadata.invocation ?? "auto"),
-        ),
-      )
-      .map((skill) => skill.name),
-  );
   const componentRoots = [
     ...skills.map((skill) => path.dirname(skill.path)),
     ...agents.map((agent) => path.dirname(agent.path)),

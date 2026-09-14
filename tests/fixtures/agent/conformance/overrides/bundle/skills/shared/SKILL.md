@@ -7,9 +7,10 @@ targets:
 ---
 Shared body.
 
-<!-- target:claude-code -->
+<!-- if target:claude-code -->
 Claude-specific paragraph.
-<!-- /target:claude-code -->
-<!-- platform:codex -->
+<!-- elif platform:codex -->
 Codex-specific paragraph.
-<!-- /platform:codex -->
+<!-- else -->
+Paragraph for every other host.
+<!-- endif -->

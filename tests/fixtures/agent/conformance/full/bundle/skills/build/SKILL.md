@@ -6,6 +6,8 @@ argumentHint: <target>
 ---
 Build ${BUNDLE_ROOT}/scripts with $ARGUMENTS.
 
-<!-- target:cursor -->
+<!-- if target:cursor -->
 Cursor-only guidance.
-<!-- /target:cursor -->
+<!-- else -->
+Guidance for every other host.
+<!-- endif -->
