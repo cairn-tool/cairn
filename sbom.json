@@ -3,7 +3,7 @@
   "specVersion": "1",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "5.0.0"
+    "version": "5.0.1"
   },
   "subject": {
     "name": "cairn",
@@ -3301,7 +3301,7 @@
     {
       "path": "release-manifest.json",
       "type": "config",
-      "sha256": "1091da26b2a187c82ed708145471ec4b7573e7bafc3be01b9200d29b829c1a79",
+      "sha256": "874056276134759a8b245934dd6a17833bd3cac499c51a3c870ca002c9511f0e",
       "bytes": 8504,
       "mode": "0644",
       "origin": "portable"
