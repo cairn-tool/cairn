@@ -1,0 +1,16 @@
+{
+  "cairn-markdown": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./hooks/md-lint.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

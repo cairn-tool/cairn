@@ -1,0 +1,235 @@
+{
+  "schemaVersion": "1",
+  "marketplace": "cairn",
+  "version": "1.2.0",
+  "description": "Cairn's own toolsets, as plugins.",
+  "sourceCommit": "f00755916f68963940bee3aec4f5ee5b919b4590",
+  "generator": {
+    "name": "@cairn-tool/cairn",
+    "version": "5.0.0"
+  },
+  "targets": {
+    "claude-code": {
+      "catalog": ".claude-plugin/marketplace.json",
+      "root": "claude-code",
+      "activation": "settings"
+    },
+    "codex": {
+      "catalog": ".agents/plugins/marketplace.json",
+      "root": "codex",
+      "activation": "cli:codex"
+    },
+    "cursor": {
+      "catalog": ".cursor-plugin/marketplace.json",
+      "root": "cursor",
+      "activation": null
+    },
+    "antigravity": {
+      "catalog": null,
+      "root": "antigravity",
+      "activation": null
+    }
+  },
+  "bundles": [
+    {
+      "name": "cairn-markdown",
+      "version": "1.1.0",
+      "description": "Validate, analyze, and refactor Markdown with the cairn md toolset.",
+      "source": "bundles/cairn-markdown",
+      "sourceSha256": "5c1d217cbcb8ff118a81dff04593b2efefd89852c35b9f1d4f32c419a09000a7",
+      "targets": {
+        "claude-code": {
+          "path": "claude-code/cairn-markdown",
+          "sha256": "ccb61bafecdda96f075e120d436950e706431d03bdeb0debe8b2bcb06f75d8be"
+        },
+        "codex": {
+          "path": "codex/cairn-markdown",
+          "sha256": "6e068a76ab0057e7e78012d3f8617f28349a66be4a0e182301edc51434f15450"
+        },
+        "cursor": {
+          "path": "cursor/cairn-markdown",
+          "sha256": "ceb74f319325d65b33fda408e43082966f58623c08253015a39bced122deed8c"
+        },
+        "antigravity": {
+          "path": "antigravity/cairn-markdown",
+          "sha256": "5aa39af370924b69327af3efe0121405a856290dffbcb1f4d04808abf5311fb9"
+        }
+      }
+    },
+    {
+      "name": "cairn-scripts",
+      "version": "1.2.0",
+      "description": "Resolve and run named scripts declared in .cairn.yml.",
+      "source": "bundles/cairn-scripts",
+      "sourceSha256": "7c668da67f5cf2f7af12ab0fa123bb871414ee9a8014b26c5042b1ba72d336b6",
+      "targets": {
+        "claude-code": {
+          "path": "claude-code/cairn-scripts",
+          "sha256": "02dd39df282d4f9ad76e71139b089df54cae17b99cfb234001d71fa29e46b185"
+        },
+        "codex": {
+          "path": "codex/cairn-scripts",
+          "sha256": "8c92b2d649ad5c8bdee74598dcd632750ead6b863f493505f80a2d30bc32e98c"
+        },
+        "cursor": {
+          "path": "cursor/cairn-scripts",
+          "sha256": "7e5c500f1caf0695a731122f52eb4f65d2ad8c721a763b8b398309a1f187ab67"
+        },
+        "antigravity": {
+          "path": "antigravity/cairn-scripts",
+          "sha256": "cdcfbf5a0f0e0946e6c86aee0b9fdcb0ed025e74e2b8e750eb3acc55e10160c4"
+        }
+      }
+    },
+    {
+      "name": "cairn-usage",
+      "version": "1.2.0",
+      "description": "Report on LLM assistant usage from local session logs.",
+      "source": "bundles/cairn-usage",
+      "sourceSha256": "4fbcd7d6aec6be95b03aec635f54c0e68c709bc221ee41d9c3816a4f8a32f145",
+      "targets": {
+        "claude-code": {
+          "path": "claude-code/cairn-usage",
+          "sha256": "b87f8e1b7169f49b1cef77efa9be8bc2819f6e78fa9a267a5000f89cc61d9e4b"
+        },
+        "codex": {
+          "path": "codex/cairn-usage",
+          "sha256": "064b58f91c5105b3d5c64adaaf8d3165d3c8da17feff8ecb228ba892dbab8e64"
+        },
+        "cursor": {
+          "path": "cursor/cairn-usage",
+          "sha256": "cfba4396fefd6c9fae3a76a535980b99b1f71f8df8dd74a1d70449e4851c8e1d"
+        },
+        "antigravity": {
+          "path": "antigravity/cairn-usage",
+          "sha256": "0d51a6e8446600f03d1afb0a8697fb3ec4db6b929b93b7d1a0ec733510b566fd"
+        }
+      }
+    },
+    {
+      "name": "cairn-archive",
+      "version": "1.2.0",
+      "description": "Archive assistant plans, artifacts, and transcripts into long-term storage.",
+      "source": "bundles/cairn-archive",
+      "sourceSha256": "7b1b8dca6194de7851e957b0762643140f37f43fd522175f59eec23f5c67d0e6",
+      "targets": {
+        "claude-code": {
+          "path": "claude-code/cairn-archive",
+          "sha256": "337286e84a8a34b44fe47d9756704a2d923fa4427793366fe216b7df3ff79986"
+        },
+        "codex": {
+          "path": "codex/cairn-archive",
+          "sha256": "1e12363b9eb7d2e7a52604d8785419e05ac1928cd82f68ffcb6f2459ffacfa23"
+        },
+        "cursor": {
+          "path": "cursor/cairn-archive",
+          "sha256": "2c722673a38d7994444bd45c89825b9740ee4e1d0cb43b4f3b255b7a9ddd6d71"
+        },
+        "antigravity": {
+          "path": "antigravity/cairn-archive",
+          "sha256": "34d5b3be90be1f0908822e308fa14ace1079498d6f54e5129bbeafa66533d603"
+        }
+      }
+    },
+    {
+      "name": "cairn-agent",
+      "version": "1.2.0",
+      "description": "Author, convert, migrate, test, and publish portable agent bundles.",
+      "source": "bundles/cairn-agent",
+      "sourceSha256": "817804b83a40435d6cb02aa6000fdef07c24b6f16859b5636f70040653e6e224",
+      "targets": {
+        "claude-code": {
+          "path": "claude-code/cairn-agent",
+          "sha256": "b916a96730cf533e57a733c86c4593cf945e7675931412cb03953821ec2b49de"
+        },
+        "codex": {
+          "path": "codex/cairn-agent",
+          "sha256": "9f24563682255ba093db05db30446b2c6cdb1621907fbc2da5791e9cf8d8c5af"
+        },
+        "cursor": {
+          "path": "cursor/cairn-agent",
+          "sha256": "7e8b4ee01edd141a1e25571b99857a3958ba16f1d59c712419cc24b1308b73d8"
+        },
+        "antigravity": {
+          "path": "antigravity/cairn-agent",
+          "sha256": "c31a60323fbb0a04fbd75d350087a2fa041e2ef603d5f6904abc210266853590"
+        }
+      }
+    },
+    {
+      "name": "cairn-jira",
+      "version": "1.1.0",
+      "description": "Convert Jira and Confluence rich text between ADF and Markdown.",
+      "source": "bundles/cairn-jira",
+      "sourceSha256": "ac63732a0e13483a57f4730c9e64fb04b397024baf14b8ce87986a89c154f536",
+      "targets": {
+        "claude-code": {
+          "path": "claude-code/cairn-jira",
+          "sha256": "7527dc6231e3e87732b6e00c5bfaae16a8969908c04f82c9b396441b360548cc"
+        },
+        "codex": {
+          "path": "codex/cairn-jira",
+          "sha256": "3f830016ccfd1a82f29f1be4632cbe769937c8e0209cacdbe12977ba07ba1de5"
+        },
+        "cursor": {
+          "path": "cursor/cairn-jira",
+          "sha256": "0c74c7f8b2d47e887711458ea9713fc04c861fe09d4acfa7d9b795e42c0d7f5b"
+        },
+        "antigravity": {
+          "path": "antigravity/cairn-jira",
+          "sha256": "ef98633fe68cc8ee9f15b7278167c8ad15bca4bcc744692cc6f0646b534d3566"
+        }
+      }
+    },
+    {
+      "name": "cairn-pdf",
+      "version": "1.0.0",
+      "description": "Read PDF documents — text, structure, and conversion to Markdown.",
+      "source": "bundles/cairn-pdf",
+      "sourceSha256": "2dd40db8bfb5f37ef115c125b0938dbc9c3c2d6722e49f5f8bed9beedec40c82",
+      "targets": {
+        "claude-code": {
+          "path": "claude-code/cairn-pdf",
+          "sha256": "5814cdebf2c3d71492fcfd973aaf872aa6fc6ca528c9865cb6b5d7b1b7e5150e"
+        },
+        "codex": {
+          "path": "codex/cairn-pdf",
+          "sha256": "137b5e3a32eb4180aac5dcf58ed748c74fe04229adb1e70df3a91db787305e9d"
+        },
+        "cursor": {
+          "path": "cursor/cairn-pdf",
+          "sha256": "8e8632c6275a29d058317588dff53d5ab7a40f8f3a57725c22eacef9b1f228df"
+        },
+        "antigravity": {
+          "path": "antigravity/cairn-pdf",
+          "sha256": "cbe8f074c047963ec049b70f6a88813c05906993e854b52e2cab0c57878da5c9"
+        }
+      }
+    },
+    {
+      "name": "cairn-qa",
+      "version": "1.1.0",
+      "description": "Author and run TC-N test-case plans with the cairn qa toolset.",
+      "source": "bundles/cairn-qa",
+      "sourceSha256": "d7ec213361843d099b859cf14f8ff55fd496c7c71895b4752f0bbf7c7fe52acc",
+      "targets": {
+        "claude-code": {
+          "path": "claude-code/cairn-qa",
+          "sha256": "c33a2e4d4201b0cb9720ea7e76413e383cb8010cf19da91c314d522a426cbb70"
+        },
+        "codex": {
+          "path": "codex/cairn-qa",
+          "sha256": "8128ff296e1db504c972ac68661accb5cb4d8e94102955e822be9d9f42c5b0e3"
+        },
+        "cursor": {
+          "path": "cursor/cairn-qa",
+          "sha256": "31b3e08768d0ce5eb352c61f4f471c8db85410f51f63c7ca82db635c78e6891b"
+        },
+        "antigravity": {
+          "path": "antigravity/cairn-qa",
+          "sha256": "d94e29a8724c8b376227343ab70247e1f04401735b2cfa1cef56b56bf3ec197b"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,3310 @@
+{
+  "bomFormat": "cairn-inventory",
+  "specVersion": "1",
+  "generator": {
+    "name": "@cairn-tool/cairn",
+    "version": "5.0.0"
+  },
+  "subject": {
+    "name": "cairn",
+    "version": "1.2.0"
+  },
+  "components": [
+    {
+      "path": ".agents/plugins/marketplace.json",
+      "type": "config",
+      "sha256": "282352c89d908978ea89f68c0ab69cd201142fbb2683884e63bf0f4f612f0ecf",
+      "bytes": 1930,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": ".claude-plugin/marketplace.json",
+      "type": "config",
+      "sha256": "ae379b549b4a224a1181870978af49301b883b5716b617311179b01388a7b1a0",
+      "bytes": 3118,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": ".cursor-plugin/marketplace.json",
+      "type": "config",
+      "sha256": "82393b2808ce41f1d5aca8a770a074fa4d337a3020de8524e69ab458011fe44b",
+      "bytes": 3204,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "README.md",
+      "type": "document",
+      "sha256": "6877750082019cc302a0d91f75a368c1353d12f43daf65c110b18123ce29748d",
+      "bytes": 2827,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/assets/icon.svg",
+      "type": "asset",
+      "sha256": "9ddaaba9c513888ed08dfbd53f6e518401407c3246e4c1beaaa5197d30bd803a",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/plugin.json",
+      "type": "config",
+      "sha256": "77cd9ebe3d9aac5e559e345b165ca0da89a109aa0a0e5bf47e48006c288bb67e",
+      "bytes": 138,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/agent-check/SKILL.md",
+      "type": "document",
+      "sha256": "884da7b02a607c4d4d4b52bc53f13295c4500ade155e5b442f9633dcf448aee1",
+      "bytes": 1011,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/agent-migrate/SKILL.md",
+      "type": "document",
+      "sha256": "5f5758709c68106ca67c6cfe92e7a553f2e5f3d95ffa79603cdaf38a45bb1278",
+      "bytes": 4676,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/agent-migrate/reference/cutover.md",
+      "type": "document",
+      "sha256": "27235133040966a153825785df2e2dc4281278cb5bf8fd0b546fd2a60aae4ffb",
+      "bytes": 5527,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/agent-migrate/reference/discovery.md",
+      "type": "document",
+      "sha256": "dc841f0a8b4b0c1356599c3b117910ac367828a0e7095beee5dceff15a789feb",
+      "bytes": 7358,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/agent-new/SKILL.md",
+      "type": "document",
+      "sha256": "b68ea3aa81a4ae8db75057491beb95d5e879e293c40650ec6f1bfcc30191ee49",
+      "bytes": 691,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/bundle-authoring/SKILL.md",
+      "type": "document",
+      "sha256": "115817e7773793c0b20e673755979200438695408a9f735bbc946353b024da0e",
+      "bytes": 7354,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
+      "type": "document",
+      "sha256": "917a259f9c474446458e15eff9733c560201e120cd35b35ad9c1cdbc8c682637",
+      "bytes": 9209,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/bundle-publishing/SKILL.md",
+      "type": "document",
+      "sha256": "84821b12c3f1082f314891ec4837f1e88131fd06a1e8b644bb87cff0fb279649",
+      "bytes": 6660,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/bundle-publishing/reference/marketplace.md",
+      "type": "document",
+      "sha256": "28010da822e45954f578666c40d12ada1a55b7ce53b450fd83319c45e9dbcdee",
+      "bytes": 8301,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/bundle-testing/SKILL.md",
+      "type": "document",
+      "sha256": "62908ea30dc4e2343f3a8e4268803ab4e1da47fc89047654ad0c42a0a1834b80",
+      "bytes": 6378,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/bundle-testing/reference/tests.md",
+      "type": "document",
+      "sha256": "01121c6f6cc9fc4941cb70f30d2e47f911f4d95531044a8127370d67c40376af",
+      "bytes": 5431,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/portability-triage/SKILL.md",
+      "type": "document",
+      "sha256": "884dd03435b7be10092e4b1522aceba2b04858a5abd6f171ca055c4556b21484",
+      "bytes": 4779,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/portability-triage/reference/diagnostics.md",
+      "type": "document",
+      "sha256": "b7ae4052d3f884079bef6c731cf947d485f380291459583040e0458e6a23168c",
+      "bytes": 9045,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/target-portability/SKILL.md",
+      "type": "document",
+      "sha256": "77220622c9afdf7f11446f8a9cc26418a05c48abe8e2e844b388460032c6a701",
+      "bytes": 6076,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/skills/target-portability/reference/support-matrix.md",
+      "type": "document",
+      "sha256": "f8d1e88403c083c29efca5ee268f0bf90c77ae63679d68ed08916548241786e9",
+      "bytes": 6974,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-archive/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-archive/assets/icon.svg",
+      "type": "asset",
+      "sha256": "bfd7f50a84e93e9157370db84e877dfe6a9862b771361c580871a86813adc673",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-archive/plugin.json",
+      "type": "config",
+      "sha256": "7b30ae5f30588d2faaf2f67effbf66030f46358bb654a0cb896b76aa08892871",
+      "bytes": 148,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-archive/skills/archive-operations/SKILL.md",
+      "type": "document",
+      "sha256": "6c87113564d4013755f03fc004a0c15d1e96d5eebd9901e710e4575459f1e0ba",
+      "bytes": 4908,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-archive/skills/archive-operations/reference/archive.md",
+      "type": "document",
+      "sha256": "82d22a468a5247cb60d23f347e81a78f5cb68cdf8620bd6d87357258c4939ff7",
+      "bytes": 5652,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-archive/skills/archive-retrieve/SKILL.md",
+      "type": "document",
+      "sha256": "782ae8cd8af382f9a1c87e90f165637941be2831a9c7b991165709375543fef7",
+      "bytes": 2131,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-archive/skills/archive-status/SKILL.md",
+      "type": "document",
+      "sha256": "853f21571c8cddfb7675a148428b73401ea42f59055a417dd01ceb57ce445430",
+      "bytes": 459,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-jira/assets/icon.svg",
+      "type": "asset",
+      "sha256": "c53590d91d396643e6224c0c2a81487e5e9732c1b0e8ee5b793bc132fe93e778",
+      "bytes": 522,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-jira/plugin.json",
+      "type": "config",
+      "sha256": "79f5a4413fe62cf16aa9be30ad5239725d6e06cc72077995abd089aabad0e8f5",
+      "bytes": 133,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-jira/skills/adf-convert/SKILL.md",
+      "type": "document",
+      "sha256": "35e419902ac3df5389a90ec3d3a70d36dca525c637e1d0533628186a23741dd6",
+      "bytes": 6402,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-jira/skills/adf-convert/reference/fidelity.md",
+      "type": "document",
+      "sha256": "1b4103f1feffe4b79d916ac2618a599431b18f32aad90530803a581e0f9b4d82",
+      "bytes": 8217,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3ec1c412565868085b0ee1795cbde1ccdd14ab9354041b965ade9eeae2567b85",
+      "bytes": 526,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/hooks.json",
+      "type": "config",
+      "sha256": "cfbba946282ce92055602d17e3218afca1c06ba512213447990fbbadfd1bb0e3",
+      "bytes": 261,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/hooks/md-lint.sh",
+      "type": "script",
+      "sha256": "dc2c3df4afde39d67438d645506cac62868023af80b1b33fec6d935a3509ec14",
+      "bytes": 1164,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/mcp_config.json",
+      "type": "config",
+      "sha256": "4c7d1a4bf19433570848353f34ab2463fe4142090491b93c375d1b7a838d9407",
+      "bytes": 159,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/plugin.json",
+      "type": "config",
+      "sha256": "9d158772e8a8477e306eb270460e4b386aae0fc2eaa747e70f61841f4c1528d3",
+      "bytes": 141,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/markdown-navigate/SKILL.md",
+      "type": "document",
+      "sha256": "605aa5b4630d5b93efde22527538d2697ce023cb1d2bc3e9ff6204540225f360",
+      "bytes": 4641,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/markdown-navigate/reference/structure.md",
+      "type": "document",
+      "sha256": "030560dfdc5d0e32a274b3f7f6e1cefaee2af41f9b80930f4b13a4c9f21d9346",
+      "bytes": 3401,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/markdown-query/SKILL.md",
+      "type": "document",
+      "sha256": "72e917b31deca1d3cdb5982ca534da18360c9ae789ec3ccf3d26b224c07919f7",
+      "bytes": 4501,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/markdown-query/reference/query-grammar.md",
+      "type": "document",
+      "sha256": "eeb197c0d996de8290dd7de87d1e933b36abaa158fc7314b20edabce6db296c1",
+      "bytes": 4629,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/markdown-refactor/SKILL.md",
+      "type": "document",
+      "sha256": "356a5f34268970f847095acfdc152efca8d656993c63b56a0742e96e40996370",
+      "bytes": 4982,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/markdown-refactor/reference/refactor.md",
+      "type": "document",
+      "sha256": "90e5fd6e9b0428e15a3004fd8e6e921d8675b3971417b0768c9efbb1e06f7839",
+      "bytes": 6129,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/markdown-validate/SKILL.md",
+      "type": "document",
+      "sha256": "69d842522c0ee4a6e400a2198b2ec948e10c8abc1bf702a2bba6b40f5b138534",
+      "bytes": 4432,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/markdown-validate/reference/validation.md",
+      "type": "document",
+      "sha256": "d9f388268c92a717b1075e50de7ce0b251ba42d1f30e1aa7b6683e07b316ad30",
+      "bytes": 4721,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/md-fix/SKILL.md",
+      "type": "document",
+      "sha256": "c940cdd183292cc6184e47b0611340b04feb4e860a381c2465993358c3e421b3",
+      "bytes": 659,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/md-lint/SKILL.md",
+      "type": "document",
+      "sha256": "8623d55301023640928d5fe2161be4c8a9c37f17c6d71228a216752ce2be3705",
+      "bytes": 645,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-markdown/skills/md-toc/SKILL.md",
+      "type": "document",
+      "sha256": "001345d6db83463306341ad5d6a8f4a37c694f80eee7cc5929ea2f9b28a5d5c7",
+      "bytes": 611,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-pdf/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3228aa12bff57a5cc0d015fd25c492cce4bf7538706c0cd56d37e347ed16bd4c",
+      "bytes": 676,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-pdf/plugin.json",
+      "type": "config",
+      "sha256": "b0bd359d5d3d9c67914c2765630920177d99cbdb1686e09eb28e0fd8d04e8c41",
+      "bytes": 136,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-pdf/skills/pdf-read/SKILL.md",
+      "type": "document",
+      "sha256": "95d0ad93397799d0fe0000691e3f7fbad62ea6bb4ad47b143463d8c5ac2937a5",
+      "bytes": 7375,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-pdf/skills/pdf-read/reference/fidelity.md",
+      "type": "document",
+      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
+      "bytes": 6666,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/assets/icon.svg",
+      "type": "asset",
+      "sha256": "7e3f711e4658814da23fa90ff685730ad3e403586ac8acefb5e88618c1aaee5f",
+      "bytes": 698,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/plugin.json",
+      "type": "config",
+      "sha256": "653ac7b2e5f4621c5b58bbf0d57e087913b20a1a7ed2bd406819299905c9a6a3",
+      "bytes": 130,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/skills/qa-case-plan/SKILL.md",
+      "type": "document",
+      "sha256": "4312146a546b279f6510d2e0d8424fa2fd0763a0cc25ed698f3686a47517168c",
+      "bytes": 5868,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/skills/qa-case-plan/reference/case-file.md",
+      "type": "document",
+      "sha256": "41a85257f76a879a98cb890a744c6d8fc58db37ee4fe5cfd5a9efcdbbe381265",
+      "bytes": 8972,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/skills/qa-case-plan/reference/plan.md",
+      "type": "document",
+      "sha256": "b648ed5de10d0efefde3cfae2bfddfc82942e2668e4c7dde0e199a079b8d320e",
+      "bytes": 16977,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/skills/qa-run-record/SKILL.md",
+      "type": "document",
+      "sha256": "a13008bce8990576da1c88c71a9448fa0ad4a4e2044200db8597ec0019588d64",
+      "bytes": 5000,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/skills/qa-run-record/reference/run-record.md",
+      "type": "document",
+      "sha256": "98596730c4d12fa203428591d0b4d3c337add55c6b8d9de33c35a35a1a48c62e",
+      "bytes": 12008,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/skills/qa-run-record/reference/tracker-contract.md",
+      "type": "document",
+      "sha256": "6cd4eaa4bc19f9c706979921c2cd31ca2529186213ac6e6f5791b64465df8da3",
+      "bytes": 7019,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/skills/qa-runner/SKILL.md",
+      "type": "document",
+      "sha256": "3a9308306ccff17307910f0916f9a73c39144d6bc49bc25c777e0dc14333fbb2",
+      "bytes": 6076,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/skills/qa-runner/reference/running.md",
+      "type": "document",
+      "sha256": "1aa8741d4020402ca94d2e4841cde3bdb6c0fb179aae162c3131da014cb49757",
+      "bytes": 6845,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-qa/skills/run-qa/SKILL.md",
+      "type": "document",
+      "sha256": "9e1f28365b9d48d633776ef9f15c95a202fb4f57545293a2937e1777c5f56df3",
+      "bytes": 1081,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-scripts/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-scripts/assets/icon.svg",
+      "type": "asset",
+      "sha256": "944afc2ac70584eedf95e314b035bbb4b0dd5baa34039e4523c6fa4f01ea24aa",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-scripts/plugin.json",
+      "type": "config",
+      "sha256": "233dadb620b44524c82606e568d776cb139744e919d3d0cfd87ed2dc33704829",
+      "bytes": 126,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-scripts/skills/run-script/SKILL.md",
+      "type": "document",
+      "sha256": "692bba3aa88ced7d7a3f99be9272c72db2a2d04a8230d0e0795a22c9bd270250",
+      "bytes": 705,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-scripts/skills/scripts-registry/SKILL.md",
+      "type": "document",
+      "sha256": "9c1c931d96dde92410252b520621449b665586543e8b185cc5d3dc5a8c0e102c",
+      "bytes": 4624,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-scripts/skills/scripts-runner/SKILL.md",
+      "type": "document",
+      "sha256": "5db611857af0c08109e016bbb44d1329cd9229dd422b1301911ecb900490c1e6",
+      "bytes": 4292,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-scripts/skills/scripts-runner/reference/resolution.md",
+      "type": "document",
+      "sha256": "d27d44c3336d36a10029cbb26f7e1f5577c94bf32cd7faffbac517e44ba3d692",
+      "bytes": 3987,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-usage/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-usage/assets/icon.svg",
+      "type": "asset",
+      "sha256": "d3c0975c4e57e67a32c1d06b5663728d494e945594df036c4450cbb90b032695",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-usage/plugin.json",
+      "type": "config",
+      "sha256": "f5482f6d0f29969606aad9d8420abdb6e1c5acaf5b0495c09a275def9ec79f5b",
+      "bytes": 125,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-usage/skills/usage-reports/SKILL.md",
+      "type": "document",
+      "sha256": "0aaf5b4991b444c56052794d58a1aa25ff3c5c58370364186b12b59fd69a8722",
+      "bytes": 4378,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-usage/skills/usage-reports/reference/reports.md",
+      "type": "document",
+      "sha256": "0298b3e1169197ec2e0fa83fd6c914bf270415bf42d89265ccda28e7276378d5",
+      "bytes": 4312,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-usage/skills/usage-store/SKILL.md",
+      "type": "document",
+      "sha256": "fc7b8bc063913a72736899269b666a4c7988cc0f455b2d955d184a23895d3b8b",
+      "bytes": 5887,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-usage/skills/usage-store/reference/store.md",
+      "type": "document",
+      "sha256": "3577fbbca5d21bbf031083eaa57175ce1f52fc0abaef1e7c9dee68e17488425e",
+      "bytes": 5585,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-usage/skills/usage-today/SKILL.md",
+      "type": "document",
+      "sha256": "104b305b357d208e6cceb4d33b6a01c70188f2550c443930ef33da720f4b57d4",
+      "bytes": 541,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/agent-bundle.yaml",
+      "type": "config",
+      "sha256": "3f244f32ba97b9f306de19d40191fef607ae1ea611218c64e466319f5d5490db",
+      "bytes": 1189,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/agents/bundle-reviewer.agent.md",
+      "type": "document",
+      "sha256": "2dadb3147aeb5b8ea34376c1e47107848c4cd56abcca05c438493509cab0b9dc",
+      "bytes": 2572,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/assets/icon.svg",
+      "type": "asset",
+      "sha256": "9ddaaba9c513888ed08dfbd53f6e518401407c3246e4c1beaaa5197d30bd803a",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/agent-check/SKILL.md",
+      "type": "document",
+      "sha256": "5201dc93032c8a384bd8d28be2248287049eaace75059e7d4ad8c5d5b71204a3",
+      "bytes": 1030,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/agent-migrate/SKILL.md",
+      "type": "document",
+      "sha256": "c1ac8b42cb083793aea993252bf4b714e1fc0e9974f21753224972a5582cbd22",
+      "bytes": 4802,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/agent-migrate/reference/cutover.md",
+      "type": "document",
+      "sha256": "27235133040966a153825785df2e2dc4281278cb5bf8fd0b546fd2a60aae4ffb",
+      "bytes": 5527,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/agent-migrate/reference/discovery.md",
+      "type": "document",
+      "sha256": "dc841f0a8b4b0c1356599c3b117910ac367828a0e7095beee5dceff15a789feb",
+      "bytes": 7358,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/agent-new/SKILL.md",
+      "type": "document",
+      "sha256": "fd22f947e3005376428923f0fb8941302e83a75faf47604027047f9fa5bcd84d",
+      "bytes": 738,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/bundle-authoring/SKILL.md",
+      "type": "document",
+      "sha256": "51bd0bcb32f823eddbd5dc4bc0262776d088b6766e43656ea763655c4c20600f",
+      "bytes": 7406,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
+      "type": "document",
+      "sha256": "a5c1030a1e9016abc6488a71a6b7b2a53c91bcfb28c18ffca79f47ad1d331f8c",
+      "bytes": 9222,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/bundle-publishing/SKILL.md",
+      "type": "document",
+      "sha256": "8c641fa3abb2e0e41414b23647ae9e050dbf04570731d426bf719d055b04c812",
+      "bytes": 6673,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/bundle-publishing/reference/marketplace.md",
+      "type": "document",
+      "sha256": "28010da822e45954f578666c40d12ada1a55b7ce53b450fd83319c45e9dbcdee",
+      "bytes": 8301,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/bundle-testing/SKILL.md",
+      "type": "document",
+      "sha256": "3fabf4c01c035e79dc63a62c948fd4dd7a3c231d4d26e72a3ed4098e88d2e557",
+      "bytes": 6391,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/bundle-testing/reference/tests.md",
+      "type": "document",
+      "sha256": "01121c6f6cc9fc4941cb70f30d2e47f911f4d95531044a8127370d67c40376af",
+      "bytes": 5431,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/portability-triage/SKILL.md",
+      "type": "document",
+      "sha256": "ffb9bb9d841e486a0c39cf61b131cfdc02f35425d69289f09ef6c596593770b9",
+      "bytes": 4811,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/portability-triage/reference/diagnostics.md",
+      "type": "document",
+      "sha256": "ac3108fbf6b348f95ec960710b5e148475a93ed4c712a9d3a80b11aa9bd39a16",
+      "bytes": 9009,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/target-portability/SKILL.md",
+      "type": "document",
+      "sha256": "4a3ca3e223f99ec8204d1dd59b018644b23e8bb97f9faf52307a956559719e78",
+      "bytes": 6108,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/skills/target-portability/reference/support-matrix.md",
+      "type": "document",
+      "sha256": "294b78883fd4fd808fe9eb0721bde1a7d111e3b7e4b5c79252c6655ad0b5dba8",
+      "bytes": 6962,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/tests/render.test.yaml",
+      "type": "config",
+      "sha256": "cc6f78377401055673f419672d2e5ea5bc1c76c47d2be4a5775ce9240fc58db1",
+      "bytes": 5636,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-archive/agent-bundle.yaml",
+      "type": "config",
+      "sha256": "c90bbafe932781bb294cd4043be6ba79b756d09033fc1cb5c03c251f7caf86a2",
+      "bytes": 915,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-archive/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-archive/assets/icon.svg",
+      "type": "asset",
+      "sha256": "bfd7f50a84e93e9157370db84e877dfe6a9862b771361c580871a86813adc673",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-archive/skills/archive-operations/SKILL.md",
+      "type": "document",
+      "sha256": "f062ea4c6e3f5195d77df19ff8cb1f58915dd6068ad06b224c7ce1cb3be2e1e0",
+      "bytes": 4940,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-archive/skills/archive-operations/reference/archive.md",
+      "type": "document",
+      "sha256": "82d22a468a5247cb60d23f347e81a78f5cb68cdf8620bd6d87357258c4939ff7",
+      "bytes": 5652,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-archive/skills/archive-retrieve/SKILL.md",
+      "type": "document",
+      "sha256": "919e1a26ec224be8dc83ef4ecf537734fa21b7cedb4308669d3b77f77f5a59de",
+      "bytes": 2144,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-archive/skills/archive-status/SKILL.md",
+      "type": "document",
+      "sha256": "e4adad0a369463dfb3b9b44b750dd7ca2a83e83b301966f4e4845ba8dfabfb91",
+      "bytes": 482,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-archive/tests/render.test.yaml",
+      "type": "config",
+      "sha256": "817108eb3db303bc6d0169eb53ef00cab0fedd03ca22fc6e9f306ac632d7da7a",
+      "bytes": 2507,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-jira/agent-bundle.yaml",
+      "type": "config",
+      "sha256": "06d69ab437829783b0667794f5858d2a3b484731504a0450d14e9f7f2da994d1",
+      "bytes": 994,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-jira/assets/icon.svg",
+      "type": "asset",
+      "sha256": "c53590d91d396643e6224c0c2a81487e5e9732c1b0e8ee5b793bc132fe93e778",
+      "bytes": 522,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-jira/skills/adf-convert/SKILL.md",
+      "type": "document",
+      "sha256": "35e419902ac3df5389a90ec3d3a70d36dca525c637e1d0533628186a23741dd6",
+      "bytes": 6402,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-jira/skills/adf-convert/reference/fidelity.md",
+      "type": "document",
+      "sha256": "1b4103f1feffe4b79d916ac2618a599431b18f32aad90530803a581e0f9b4d82",
+      "bytes": 8217,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-jira/tests/render.test.yaml",
+      "type": "config",
+      "sha256": "8ec7b505bf2ca966d77d4f9977aa3f332f5b2363eaa9a562ade8a1663df1b146",
+      "bytes": 2645,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/agent-bundle.yaml",
+      "type": "config",
+      "sha256": "4a9555fa0f35dd60dcf8f89c70bd727de2bed177dfd0102cd8b7352f498bf0c9",
+      "bytes": 870,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/agents/markdown-auditor.agent.md",
+      "type": "document",
+      "sha256": "97dfce08047b0b426b7c036f78098e4b72921d522a3c97260126fcf9e10585d7",
+      "bytes": 1985,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3ec1c412565868085b0ee1795cbde1ccdd14ab9354041b965ade9eeae2567b85",
+      "bytes": 526,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/hooks/hooks.yaml",
+      "type": "config",
+      "sha256": "254dc703842e1cc02cb9a24ec80196cf900c717d873b7aeb8c019c21c33ad5d4",
+      "bytes": 271,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/hooks/md-lint.sh",
+      "type": "script",
+      "sha256": "dc2c3df4afde39d67438d645506cac62868023af80b1b33fec6d935a3509ec14",
+      "bytes": 1164,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/mcp/mcp.yaml",
+      "type": "config",
+      "sha256": "d91f59352bea3e5e5496105a9d3ccaacfaadccd305b8194ac8374f94a7d21f5c",
+      "bytes": 689,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/markdown-navigate/SKILL.md",
+      "type": "document",
+      "sha256": "1e5b580798d7c035f62ea3c70d09678856aa3f04884a1cf5a44e8812ec79b5e0",
+      "bytes": 4711,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/markdown-navigate/reference/structure.md",
+      "type": "document",
+      "sha256": "9f8b383f55fe45d79abd4bf6093d4a9f14fa06d8c2b829eb70df19bf070ac0a5",
+      "bytes": 3420,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/markdown-query/SKILL.md",
+      "type": "document",
+      "sha256": "307fa03757709c93a7ad21b66329532af6ef5cba6a86107b425ed43112d5b2c2",
+      "bytes": 4514,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/markdown-query/reference/query-grammar.md",
+      "type": "document",
+      "sha256": "eeb197c0d996de8290dd7de87d1e933b36abaa158fc7314b20edabce6db296c1",
+      "bytes": 4629,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/markdown-refactor/SKILL.md",
+      "type": "document",
+      "sha256": "0696930d04e567a4704ddcf052c06ece60d8e7bfea7a691739adea6b735ccb0e",
+      "bytes": 4995,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/markdown-refactor/reference/refactor.md",
+      "type": "document",
+      "sha256": "90e5fd6e9b0428e15a3004fd8e6e921d8675b3971417b0768c9efbb1e06f7839",
+      "bytes": 6129,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/markdown-validate/SKILL.md",
+      "type": "document",
+      "sha256": "1561d22d66c7ebb42e7cd0b5152ea253938395be142dc7733aa39c8c8017af73",
+      "bytes": 4445,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/markdown-validate/reference/validation.md",
+      "type": "document",
+      "sha256": "3c28154ef7760b2165952f86798896233360fab7d7f005da3bda62bb69bae554",
+      "bytes": 4759,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/md-fix/SKILL.md",
+      "type": "document",
+      "sha256": "a49134331445430c511200c9817589f6633511b2331caa92401e9d3d7d044fd9",
+      "bytes": 671,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/md-lint/SKILL.md",
+      "type": "document",
+      "sha256": "ce707d438d4875b57aae6dbf06219e618f3b8307c1f67d838035eafc8bb8f0de",
+      "bytes": 629,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/skills/md-toc/SKILL.md",
+      "type": "document",
+      "sha256": "5473caab3c5f112db492b0ca2fa30f5814e3f6d4a72678574bed997c50305db2",
+      "bytes": 641,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-markdown/tests/render.test.yaml",
+      "type": "config",
+      "sha256": "b1974b7668dcaa34c4f2d32388adf8f6c09a6b031ee2ad0cd7e2263b7fbac44c",
+      "bytes": 5898,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-pdf/agent-bundle.yaml",
+      "type": "config",
+      "sha256": "87d3cc6690b214c60226a1cfc89787e1d848a006a314ae6cdbf9c67b486900d1",
+      "bytes": 1134,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-pdf/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3228aa12bff57a5cc0d015fd25c492cce4bf7538706c0cd56d37e347ed16bd4c",
+      "bytes": 676,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-pdf/skills/pdf-read/SKILL.md",
+      "type": "document",
+      "sha256": "95d0ad93397799d0fe0000691e3f7fbad62ea6bb4ad47b143463d8c5ac2937a5",
+      "bytes": 7375,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-pdf/skills/pdf-read/reference/fidelity.md",
+      "type": "document",
+      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
+      "bytes": 6666,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-pdf/tests/render.test.yaml",
+      "type": "config",
+      "sha256": "fd2ba43582f19ca2acaeb34622b27e0f275a921507a2fd7c7aa3588dc9d7c6d7",
+      "bytes": 2835,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/agent-bundle.yaml",
+      "type": "config",
+      "sha256": "80495a836190e6f0cdec3e3eca7851589ccde66efa4a1a5517263e1d9edf6bc2",
+      "bytes": 1060,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/assets/icon.svg",
+      "type": "asset",
+      "sha256": "7e3f711e4658814da23fa90ff685730ad3e403586ac8acefb5e88618c1aaee5f",
+      "bytes": 698,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/skills/qa-case-plan/SKILL.md",
+      "type": "document",
+      "sha256": "4312146a546b279f6510d2e0d8424fa2fd0763a0cc25ed698f3686a47517168c",
+      "bytes": 5868,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/skills/qa-case-plan/reference/case-file.md",
+      "type": "document",
+      "sha256": "41a85257f76a879a98cb890a744c6d8fc58db37ee4fe5cfd5a9efcdbbe381265",
+      "bytes": 8972,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/skills/qa-case-plan/reference/plan.md",
+      "type": "document",
+      "sha256": "b648ed5de10d0efefde3cfae2bfddfc82942e2668e4c7dde0e199a079b8d320e",
+      "bytes": 16977,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/skills/qa-run-record/SKILL.md",
+      "type": "document",
+      "sha256": "a13008bce8990576da1c88c71a9448fa0ad4a4e2044200db8597ec0019588d64",
+      "bytes": 5000,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/skills/qa-run-record/reference/run-record.md",
+      "type": "document",
+      "sha256": "98596730c4d12fa203428591d0b4d3c337add55c6b8d9de33c35a35a1a48c62e",
+      "bytes": 12008,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/skills/qa-run-record/reference/tracker-contract.md",
+      "type": "document",
+      "sha256": "6cd4eaa4bc19f9c706979921c2cd31ca2529186213ac6e6f5791b64465df8da3",
+      "bytes": 7019,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/skills/qa-runner/SKILL.md",
+      "type": "document",
+      "sha256": "03afc5ce875f690c7074a3f14bd84006ccb33d2d097caea17eddbaa404327484",
+      "bytes": 6114,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/skills/qa-runner/reference/running.md",
+      "type": "document",
+      "sha256": "1aa8741d4020402ca94d2e4841cde3bdb6c0fb179aae162c3131da014cb49757",
+      "bytes": 6845,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/skills/run-qa/SKILL.md",
+      "type": "document",
+      "sha256": "0878b3eed51427b338bf2cb381f7e1c07ba9c46038af2f78d6b9f811696c7b65",
+      "bytes": 1090,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-qa/tests/render.test.yaml",
+      "type": "config",
+      "sha256": "cc92e32137a2a329300a50e2052acf677138ccef592082369b945795ee1bd3c7",
+      "bytes": 7036,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-scripts/agent-bundle.yaml",
+      "type": "config",
+      "sha256": "498cf8b2046bd72d0c081470c97103dd9dde22fdce8ce64b5e13a393b88061c3",
+      "bytes": 857,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-scripts/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-scripts/assets/icon.svg",
+      "type": "asset",
+      "sha256": "944afc2ac70584eedf95e314b035bbb4b0dd5baa34039e4523c6fa4f01ea24aa",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-scripts/skills/run-script/SKILL.md",
+      "type": "document",
+      "sha256": "ba66d6ab88243d2cdf891bc87e4a12726516a4b9bb2f9fc975c0e635ef328dc0",
+      "bytes": 692,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-scripts/skills/scripts-registry/SKILL.md",
+      "type": "document",
+      "sha256": "4859557b4c2ac1f72788dc5dbb711daff936b0ff665384d7b7b7327ae3e3be3a",
+      "bytes": 4637,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-scripts/skills/scripts-runner/SKILL.md",
+      "type": "document",
+      "sha256": "8daf59ecdb69ce0e16412fbb792c0a90af924d3c150a58384e87d0a8cffbb85f",
+      "bytes": 4324,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-scripts/skills/scripts-runner/reference/resolution.md",
+      "type": "document",
+      "sha256": "d27d44c3336d36a10029cbb26f7e1f5577c94bf32cd7faffbac517e44ba3d692",
+      "bytes": 3987,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-scripts/tests/render.test.yaml",
+      "type": "config",
+      "sha256": "0c6f594049e6c3039bda46fa7f2b579c6bae0da31d260247607eb16e2216f0bf",
+      "bytes": 2507,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/agent-bundle.yaml",
+      "type": "config",
+      "sha256": "73f1679137663b0b323a1e80cb185382137d9b2db357104656b49867779a9727",
+      "bytes": 879,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/agents/usage-analyst.agent.md",
+      "type": "document",
+      "sha256": "c9abc6efc2a8f1e987ab941c157e7b6c463c0a406144635ed267420f03b01b81",
+      "bytes": 2078,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/assets/icon.svg",
+      "type": "asset",
+      "sha256": "d3c0975c4e57e67a32c1d06b5663728d494e945594df036c4450cbb90b032695",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/skills/usage-reports/SKILL.md",
+      "type": "document",
+      "sha256": "fee99b11940af87afc4aaf8ef4b4fe0b7f15eff90120df757442607674097033",
+      "bytes": 4429,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/skills/usage-reports/reference/reports.md",
+      "type": "document",
+      "sha256": "0298b3e1169197ec2e0fa83fd6c914bf270415bf42d89265ccda28e7276378d5",
+      "bytes": 4312,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/skills/usage-store/SKILL.md",
+      "type": "document",
+      "sha256": "affb377885ee6e7765f9e3701243a72771774b9161868400b0ab9855db757d63",
+      "bytes": 5900,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/skills/usage-store/reference/store.md",
+      "type": "document",
+      "sha256": "3577fbbca5d21bbf031083eaa57175ce1f52fc0abaef1e7c9dee68e17488425e",
+      "bytes": 5585,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/skills/usage-today/SKILL.md",
+      "type": "document",
+      "sha256": "29893ae4ab29405a774495017bada173e807179516203caa2fb6a192304aa951",
+      "bytes": 576,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-usage/tests/render.test.yaml",
+      "type": "config",
+      "sha256": "05026200eb8d66bffdcf919ca9fceb5cc5276c0a1d61c2122682507666677e80",
+      "bytes": 3447,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/.claude-plugin/plugin.json",
+      "type": "config",
+      "sha256": "224d455939cd91f65d348f6cdcef824c2b89f3df886eff230a1b4c74f30a4fb5",
+      "bytes": 163,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/agents/bundle-reviewer.md",
+      "type": "document",
+      "sha256": "6be312b2eed88f156e72448fb4ef13c87c4f600c1b765f74b2ed4c0c9d306ade",
+      "bytes": 2584,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/assets/icon.svg",
+      "type": "asset",
+      "sha256": "9ddaaba9c513888ed08dfbd53f6e518401407c3246e4c1beaaa5197d30bd803a",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/agent-check/SKILL.md",
+      "type": "document",
+      "sha256": "21d7cab68bb9ef2450832c95437a404e28cff2f1cefe3bcab15b52aa3e55a8fc",
+      "bytes": 1035,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/agent-migrate/SKILL.md",
+      "type": "document",
+      "sha256": "ee1ee3dca01fe686b35ec24b172610482c34badd8ca2898183ba321344b7f712",
+      "bytes": 4791,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/agent-migrate/reference/cutover.md",
+      "type": "document",
+      "sha256": "27235133040966a153825785df2e2dc4281278cb5bf8fd0b546fd2a60aae4ffb",
+      "bytes": 5527,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/agent-migrate/reference/discovery.md",
+      "type": "document",
+      "sha256": "dc841f0a8b4b0c1356599c3b117910ac367828a0e7095beee5dceff15a789feb",
+      "bytes": 7358,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/agent-new/SKILL.md",
+      "type": "document",
+      "sha256": "2039d0ab1eec18b879fd23e02c1b48c333650b45a444939053485be08556b387",
+      "bytes": 741,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/bundle-authoring/SKILL.md",
+      "type": "document",
+      "sha256": "edb2dd8086bf0f701fb82406db8cd46609493ba79ae85878d04ad81432b7438f",
+      "bytes": 7418,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
+      "type": "document",
+      "sha256": "cc4166ae8de1682cb314854012b48d88dd7ef67d0851727c0737cb09bc5a9895",
+      "bytes": 9229,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/bundle-publishing/SKILL.md",
+      "type": "document",
+      "sha256": "b68948dd5411ce16a2cb7f154fe5ba52358718b2bbe60953f8fc3a73a5ec23df",
+      "bytes": 6680,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/bundle-publishing/reference/marketplace.md",
+      "type": "document",
+      "sha256": "28010da822e45954f578666c40d12ada1a55b7ce53b450fd83319c45e9dbcdee",
+      "bytes": 8301,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/bundle-testing/SKILL.md",
+      "type": "document",
+      "sha256": "b4e92f60b2d717445a4ba2f21a4bfdf3a0948faf0e55d6363643d346a16f6591",
+      "bytes": 6398,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/bundle-testing/reference/tests.md",
+      "type": "document",
+      "sha256": "01121c6f6cc9fc4941cb70f30d2e47f911f4d95531044a8127370d67c40376af",
+      "bytes": 5431,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/portability-triage/SKILL.md",
+      "type": "document",
+      "sha256": "1b287e72e4cf0812debb5d8e74d805847baf5642fcc0101eafdedcdf89dc3f83",
+      "bytes": 4811,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/portability-triage/reference/diagnostics.md",
+      "type": "document",
+      "sha256": "3dcbbb91d6a0e7f80ee4aba7ab294567fc682633c1e08482459bade16fb314cf",
+      "bytes": 9007,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/target-portability/SKILL.md",
+      "type": "document",
+      "sha256": "7637e784cd4c4b67844c8c9b6eb1a17331735361c13a32ec53585a7216205b29",
+      "bytes": 6108,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/skills/target-portability/reference/support-matrix.md",
+      "type": "document",
+      "sha256": "c60cf8f0a96ea3038dc4cfec6ca68efa1b7f1e0b72bec64f441b57fc8a4a4ced",
+      "bytes": 6974,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-archive/.claude-plugin/plugin.json",
+      "type": "config",
+      "sha256": "e750777cca64ad353cd534687c6be7e5f22de01d3aa4c459baa8b58feb82d92c",
+      "bytes": 173,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-archive/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-archive/assets/icon.svg",
+      "type": "asset",
+      "sha256": "bfd7f50a84e93e9157370db84e877dfe6a9862b771361c580871a86813adc673",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-archive/skills/archive-operations/SKILL.md",
+      "type": "document",
+      "sha256": "8ff9c99aaec76d50dfc6161e7cbd11d762c853e33ad6248e26c2aeb0e28e85b7",
+      "bytes": 4942,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-archive/skills/archive-operations/reference/archive.md",
+      "type": "document",
+      "sha256": "82d22a468a5247cb60d23f347e81a78f5cb68cdf8620bd6d87357258c4939ff7",
+      "bytes": 5652,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-archive/skills/archive-retrieve/SKILL.md",
+      "type": "document",
+      "sha256": "d0ef081c3d719ad70920c4b739d1535f034759373fadcae03cb498aaeff7f55c",
+      "bytes": 2151,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-archive/skills/archive-status/SKILL.md",
+      "type": "document",
+      "sha256": "e2a6f9c419f70414c35280c3eb96aed6cb43505ddb2ade5ffcee5dd9b9e6b0f6",
+      "bytes": 487,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-jira/.claude-plugin/plugin.json",
+      "type": "config",
+      "sha256": "eef722de4fc8e44aab13ae7782b70ca7786899ab0949ba84adedeff97ed288bc",
+      "bytes": 158,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-jira/assets/icon.svg",
+      "type": "asset",
+      "sha256": "c53590d91d396643e6224c0c2a81487e5e9732c1b0e8ee5b793bc132fe93e778",
+      "bytes": 522,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-jira/skills/adf-convert/SKILL.md",
+      "type": "document",
+      "sha256": "35e419902ac3df5389a90ec3d3a70d36dca525c637e1d0533628186a23741dd6",
+      "bytes": 6402,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-jira/skills/adf-convert/reference/fidelity.md",
+      "type": "document",
+      "sha256": "1b4103f1feffe4b79d916ac2618a599431b18f32aad90530803a581e0f9b4d82",
+      "bytes": 8217,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/.claude-plugin/plugin.json",
+      "type": "config",
+      "sha256": "6f94c112494a90c9d8e88b9c171396cbb408f90f55fd521748f6c7579c1d44ce",
+      "bytes": 197,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/.mcp.json",
+      "type": "config",
+      "sha256": "4c7d1a4bf19433570848353f34ab2463fe4142090491b93c375d1b7a838d9407",
+      "bytes": 159,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/agents/markdown-auditor.md",
+      "type": "document",
+      "sha256": "9da6ea49d01e77d711e545a3cb290aea87b95c3e694d100fa307e0c0f3beb6d5",
+      "bytes": 1997,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3ec1c412565868085b0ee1795cbde1ccdd14ab9354041b965ade9eeae2567b85",
+      "bytes": 526,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/hooks/hooks.json",
+      "type": "config",
+      "sha256": "8b7ce10c091aa92085b72e302dc16a3584904d08277e8a7e28618e90c14b9dfd",
+      "bytes": 272,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/hooks/md-lint.sh",
+      "type": "script",
+      "sha256": "dc2c3df4afde39d67438d645506cac62868023af80b1b33fec6d935a3509ec14",
+      "bytes": 1164,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/markdown-navigate/SKILL.md",
+      "type": "document",
+      "sha256": "92b5ba04968225d5297a976a801b903bc4bfd5318d7f290f89e6459d839b0faf",
+      "bytes": 4706,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/markdown-navigate/reference/structure.md",
+      "type": "document",
+      "sha256": "40baa16ffa62f73451ececf87e1fd9d50cdffa19664b0c66262c8363d5b10616",
+      "bytes": 3416,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/markdown-query/SKILL.md",
+      "type": "document",
+      "sha256": "c182d06141f1b081fc26a399eeda96803bbd3603416b22eafc016f2d79ac2775",
+      "bytes": 4521,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/markdown-query/reference/query-grammar.md",
+      "type": "document",
+      "sha256": "eeb197c0d996de8290dd7de87d1e933b36abaa158fc7314b20edabce6db296c1",
+      "bytes": 4629,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/markdown-refactor/SKILL.md",
+      "type": "document",
+      "sha256": "4a583b5e357e1e606fb304f3be5aa111ca76be0db14cd8a99aefe880406b1d7b",
+      "bytes": 5002,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/markdown-refactor/reference/refactor.md",
+      "type": "document",
+      "sha256": "90e5fd6e9b0428e15a3004fd8e6e921d8675b3971417b0768c9efbb1e06f7839",
+      "bytes": 6129,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/markdown-validate/SKILL.md",
+      "type": "document",
+      "sha256": "56276e62d259134b319e5e86973b229ae1ca363b63a201fc3a365d3ddf4899d0",
+      "bytes": 4452,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/markdown-validate/reference/validation.md",
+      "type": "document",
+      "sha256": "a0cea29b86abf4ee42fc3d9949a2c2afa85df1627f750ae3a5a9d490e5804c72",
+      "bytes": 4751,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/md-fix/SKILL.md",
+      "type": "document",
+      "sha256": "5ac9bb8e8c1cd300d96088090751c895678211e751c9dea0cb3e13f8e2f53a0c",
+      "bytes": 676,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/md-lint/SKILL.md",
+      "type": "document",
+      "sha256": "ff1a48dbda1dd4a7b6781201135e1fa27ddb1fb6b9f6b9b23117912461431f81",
+      "bytes": 634,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-markdown/skills/md-toc/SKILL.md",
+      "type": "document",
+      "sha256": "6bbd52bdf516c7f1b375cd63c9295b8ed53c905cbc6ff1a6dfd5ceda8e13d61b",
+      "bytes": 644,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-pdf/.claude-plugin/plugin.json",
+      "type": "config",
+      "sha256": "a3997f1241862f88b973ce51d2eb32cad630f12b1cfda3482d0e1f349b478cf7",
+      "bytes": 161,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-pdf/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3228aa12bff57a5cc0d015fd25c492cce4bf7538706c0cd56d37e347ed16bd4c",
+      "bytes": 676,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-pdf/skills/pdf-read/SKILL.md",
+      "type": "document",
+      "sha256": "95d0ad93397799d0fe0000691e3f7fbad62ea6bb4ad47b143463d8c5ac2937a5",
+      "bytes": 7375,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-pdf/skills/pdf-read/reference/fidelity.md",
+      "type": "document",
+      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
+      "bytes": 6666,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/.claude-plugin/plugin.json",
+      "type": "config",
+      "sha256": "ab72b0ddcfd2344343d0cbc6d5ec034a1739305f264326762bc5b05408e0c53f",
+      "bytes": 155,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/assets/icon.svg",
+      "type": "asset",
+      "sha256": "7e3f711e4658814da23fa90ff685730ad3e403586ac8acefb5e88618c1aaee5f",
+      "bytes": 698,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/skills/qa-case-plan/SKILL.md",
+      "type": "document",
+      "sha256": "4312146a546b279f6510d2e0d8424fa2fd0763a0cc25ed698f3686a47517168c",
+      "bytes": 5868,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/skills/qa-case-plan/reference/case-file.md",
+      "type": "document",
+      "sha256": "41a85257f76a879a98cb890a744c6d8fc58db37ee4fe5cfd5a9efcdbbe381265",
+      "bytes": 8972,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/skills/qa-case-plan/reference/plan.md",
+      "type": "document",
+      "sha256": "b648ed5de10d0efefde3cfae2bfddfc82942e2668e4c7dde0e199a079b8d320e",
+      "bytes": 16977,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/skills/qa-run-record/SKILL.md",
+      "type": "document",
+      "sha256": "a13008bce8990576da1c88c71a9448fa0ad4a4e2044200db8597ec0019588d64",
+      "bytes": 5000,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/skills/qa-run-record/reference/run-record.md",
+      "type": "document",
+      "sha256": "98596730c4d12fa203428591d0b4d3c337add55c6b8d9de33c35a35a1a48c62e",
+      "bytes": 12008,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/skills/qa-run-record/reference/tracker-contract.md",
+      "type": "document",
+      "sha256": "6cd4eaa4bc19f9c706979921c2cd31ca2529186213ac6e6f5791b64465df8da3",
+      "bytes": 7019,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/skills/qa-runner/SKILL.md",
+      "type": "document",
+      "sha256": "561edc8de3046b17d3b054d31798b39b747898ab69b15f1bdcae3e2c5fc67e79",
+      "bytes": 6094,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/skills/qa-runner/reference/running.md",
+      "type": "document",
+      "sha256": "1aa8741d4020402ca94d2e4841cde3bdb6c0fb179aae162c3131da014cb49757",
+      "bytes": 6845,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-qa/skills/run-qa/SKILL.md",
+      "type": "document",
+      "sha256": "3d783d622137e0a90387071c7d52a4fd9fdb617d4a59ff48fc9d454e01b91d6f",
+      "bytes": 1095,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-scripts/.claude-plugin/plugin.json",
+      "type": "config",
+      "sha256": "3a0ee349b67387b865149809a4640632364f2e07bb62068d1cc8d8c5c4e7633f",
+      "bytes": 151,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-scripts/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-scripts/assets/icon.svg",
+      "type": "asset",
+      "sha256": "944afc2ac70584eedf95e314b035bbb4b0dd5baa34039e4523c6fa4f01ea24aa",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-scripts/skills/run-script/SKILL.md",
+      "type": "document",
+      "sha256": "dd7ce985080fa68b069462162563c14915b1ca67052bce6c05dc8639efb6a979",
+      "bytes": 695,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-scripts/skills/scripts-registry/SKILL.md",
+      "type": "document",
+      "sha256": "8ac51f9518cfb8adfda0911912f62e1fc417aa9598ad9344e4db89c1fbaf8378",
+      "bytes": 4644,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-scripts/skills/scripts-runner/SKILL.md",
+      "type": "document",
+      "sha256": "ddbe9dbc2677a3bc8cb2eea9409359a2c99d938c1c527e319e30d32ef0fc7ec4",
+      "bytes": 4326,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-scripts/skills/scripts-runner/reference/resolution.md",
+      "type": "document",
+      "sha256": "d27d44c3336d36a10029cbb26f7e1f5577c94bf32cd7faffbac517e44ba3d692",
+      "bytes": 3987,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-usage/.claude-plugin/plugin.json",
+      "type": "config",
+      "sha256": "d8a9eec61bf1c04c9cbfdabd06aa7282c1416aad68a0c76716ad45be733b7c28",
+      "bytes": 150,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-usage/agents/usage-analyst.md",
+      "type": "document",
+      "sha256": "5cad367931968e9c1c8e38e2fa9f9ebbac1c22d7abb6ebbe36faf181a8ea602f",
+      "bytes": 2091,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-usage/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-usage/assets/icon.svg",
+      "type": "asset",
+      "sha256": "d3c0975c4e57e67a32c1d06b5663728d494e945594df036c4450cbb90b032695",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-usage/skills/usage-reports/SKILL.md",
+      "type": "document",
+      "sha256": "f8577f9c4bd0535c60e6bc1daee16172c07158a6860d7432b8305b6defd1fc18",
+      "bytes": 4422,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-usage/skills/usage-reports/reference/reports.md",
+      "type": "document",
+      "sha256": "0298b3e1169197ec2e0fa83fd6c914bf270415bf42d89265ccda28e7276378d5",
+      "bytes": 4312,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-usage/skills/usage-store/SKILL.md",
+      "type": "document",
+      "sha256": "e6b800673297fc8f7f363cae83ceaf5474b27f5df1cc225fa2a1e93defa70ea0",
+      "bytes": 5907,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-usage/skills/usage-store/reference/store.md",
+      "type": "document",
+      "sha256": "3577fbbca5d21bbf031083eaa57175ce1f52fc0abaef1e7c9dee68e17488425e",
+      "bytes": 5585,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-usage/skills/usage-today/SKILL.md",
+      "type": "document",
+      "sha256": "fe6380b548592ea42d87a7285180e84bc0a42f374b74a7cabcf00bfeda832991",
+      "bytes": 581,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/.codex-plugin/plugin.json",
+      "type": "config",
+      "sha256": "224d455939cd91f65d348f6cdcef824c2b89f3df886eff230a1b4c74f30a4fb5",
+      "bytes": 163,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/assets/icon.svg",
+      "type": "asset",
+      "sha256": "9ddaaba9c513888ed08dfbd53f6e518401407c3246e4c1beaaa5197d30bd803a",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/agent-check/SKILL.md",
+      "type": "document",
+      "sha256": "884da7b02a607c4d4d4b52bc53f13295c4500ade155e5b442f9633dcf448aee1",
+      "bytes": 1011,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/agent-check/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/agent-migrate/SKILL.md",
+      "type": "document",
+      "sha256": "65aca99b57a5bb42acff3a1bf1f076194032d6ba6ffc19d097f1cfa6f5500e4b",
+      "bytes": 4702,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/agent-migrate/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/agent-migrate/reference/cutover.md",
+      "type": "document",
+      "sha256": "27235133040966a153825785df2e2dc4281278cb5bf8fd0b546fd2a60aae4ffb",
+      "bytes": 5527,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/agent-migrate/reference/discovery.md",
+      "type": "document",
+      "sha256": "dc841f0a8b4b0c1356599c3b117910ac367828a0e7095beee5dceff15a789feb",
+      "bytes": 7358,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/agent-new/SKILL.md",
+      "type": "document",
+      "sha256": "b68ea3aa81a4ae8db75057491beb95d5e879e293c40650ec6f1bfcc30191ee49",
+      "bytes": 691,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/agent-new/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/bundle-authoring/SKILL.md",
+      "type": "document",
+      "sha256": "15dc042d9c9820eb4bb77032486bb857616e86aada8b19d4ecf56b7e430f4369",
+      "bytes": 7393,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
+      "type": "document",
+      "sha256": "f2d235c017996daddd9656b5173f585751996070cc033baabdbb681374e90451",
+      "bytes": 9222,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/bundle-publishing/SKILL.md",
+      "type": "document",
+      "sha256": "ac3540e7a7669a8681df2bcfa832f46766d7b7d20c0ee41b565231d05e976c71",
+      "bytes": 6673,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/bundle-publishing/reference/marketplace.md",
+      "type": "document",
+      "sha256": "28010da822e45954f578666c40d12ada1a55b7ce53b450fd83319c45e9dbcdee",
+      "bytes": 8301,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/bundle-testing/SKILL.md",
+      "type": "document",
+      "sha256": "555067d4847ce3a26f8fabaccd6ba8e78a26bed1b2be4e9c8229b8e859bbebb5",
+      "bytes": 6391,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/bundle-testing/reference/tests.md",
+      "type": "document",
+      "sha256": "01121c6f6cc9fc4941cb70f30d2e47f911f4d95531044a8127370d67c40376af",
+      "bytes": 5431,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/portability-triage/SKILL.md",
+      "type": "document",
+      "sha256": "1114c47bf7df40b9f3cd33ed87692ee66e59e86cd16e776c86c67708150e7802",
+      "bytes": 4792,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/portability-triage/reference/diagnostics.md",
+      "type": "document",
+      "sha256": "b7ae4052d3f884079bef6c731cf947d485f380291459583040e0458e6a23168c",
+      "bytes": 9045,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/target-portability/SKILL.md",
+      "type": "document",
+      "sha256": "26e14860976e4b37e11521c56ff9ee23e7ca6ae4fb66b77cfa540bf5c1227c4f",
+      "bytes": 6089,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/skills/target-portability/reference/support-matrix.md",
+      "type": "document",
+      "sha256": "693b67c3fa1046898eb01061d61350446d6ba5d261f70f221fdeef550ede796a",
+      "bytes": 6987,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-archive/.codex-plugin/plugin.json",
+      "type": "config",
+      "sha256": "e750777cca64ad353cd534687c6be7e5f22de01d3aa4c459baa8b58feb82d92c",
+      "bytes": 173,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-archive/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-archive/assets/icon.svg",
+      "type": "asset",
+      "sha256": "bfd7f50a84e93e9157370db84e877dfe6a9862b771361c580871a86813adc673",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-archive/skills/archive-operations/SKILL.md",
+      "type": "document",
+      "sha256": "0e19e0eed56181cc78a9d1ae59f4fb53f5099c4f6401ceb76e5ccec609ca80f1",
+      "bytes": 4921,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-archive/skills/archive-operations/reference/archive.md",
+      "type": "document",
+      "sha256": "82d22a468a5247cb60d23f347e81a78f5cb68cdf8620bd6d87357258c4939ff7",
+      "bytes": 5652,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-archive/skills/archive-retrieve/SKILL.md",
+      "type": "document",
+      "sha256": "19833a6cf2c1708d80d8ca9d1e1c47a833b5f03c084a3b98c4a615aa7279ffcf",
+      "bytes": 2144,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-archive/skills/archive-status/SKILL.md",
+      "type": "document",
+      "sha256": "853f21571c8cddfb7675a148428b73401ea42f59055a417dd01ceb57ce445430",
+      "bytes": 459,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-archive/skills/archive-status/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-jira/.codex-plugin/plugin.json",
+      "type": "config",
+      "sha256": "eef722de4fc8e44aab13ae7782b70ca7786899ab0949ba84adedeff97ed288bc",
+      "bytes": 158,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-jira/assets/icon.svg",
+      "type": "asset",
+      "sha256": "c53590d91d396643e6224c0c2a81487e5e9732c1b0e8ee5b793bc132fe93e778",
+      "bytes": 522,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-jira/skills/adf-convert/SKILL.md",
+      "type": "document",
+      "sha256": "35e419902ac3df5389a90ec3d3a70d36dca525c637e1d0533628186a23741dd6",
+      "bytes": 6402,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-jira/skills/adf-convert/reference/fidelity.md",
+      "type": "document",
+      "sha256": "1b4103f1feffe4b79d916ac2618a599431b18f32aad90530803a581e0f9b4d82",
+      "bytes": 8217,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/.codex-plugin/plugin.json",
+      "type": "config",
+      "sha256": "73a8957ef642784fdf9fd8257c94f08f15f8616860596de986830a285759b1d6",
+      "bytes": 230,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/.mcp.json",
+      "type": "config",
+      "sha256": "4c7d1a4bf19433570848353f34ab2463fe4142090491b93c375d1b7a838d9407",
+      "bytes": 159,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3ec1c412565868085b0ee1795cbde1ccdd14ab9354041b965ade9eeae2567b85",
+      "bytes": 526,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/hooks/hooks.json",
+      "type": "config",
+      "sha256": "936cce99b6c3e12cab167aaaaeb7938d9be6100cf03fd5ad353de9647aaf1793",
+      "bytes": 265,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/hooks/md-lint.sh",
+      "type": "script",
+      "sha256": "dc2c3df4afde39d67438d645506cac62868023af80b1b33fec6d935a3509ec14",
+      "bytes": 1164,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/markdown-navigate/SKILL.md",
+      "type": "document",
+      "sha256": "bc21e42243c55fd450a694a69dc7daf1200c0e79b2f087b3efd2dec7c2eb1ba2",
+      "bytes": 4654,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/markdown-navigate/reference/structure.md",
+      "type": "document",
+      "sha256": "030560dfdc5d0e32a274b3f7f6e1cefaee2af41f9b80930f4b13a4c9f21d9346",
+      "bytes": 3401,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/markdown-query/SKILL.md",
+      "type": "document",
+      "sha256": "e977773d5b20d4ff9014fdd7f8f1bcd6098f20dff9700628ea88e900ae6aba10",
+      "bytes": 4514,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/markdown-query/reference/query-grammar.md",
+      "type": "document",
+      "sha256": "eeb197c0d996de8290dd7de87d1e933b36abaa158fc7314b20edabce6db296c1",
+      "bytes": 4629,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/markdown-refactor/SKILL.md",
+      "type": "document",
+      "sha256": "f120dc75d0e4b35cc6259ba7e94c1a80ce1fe9026ad3da616159fa2e8fdc2dbe",
+      "bytes": 4995,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/markdown-refactor/reference/refactor.md",
+      "type": "document",
+      "sha256": "90e5fd6e9b0428e15a3004fd8e6e921d8675b3971417b0768c9efbb1e06f7839",
+      "bytes": 6129,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/markdown-validate/SKILL.md",
+      "type": "document",
+      "sha256": "14a7d7cbd4995f2b02022e8d577e8065f62bba7bebaddd8decc18af0453372d5",
+      "bytes": 4445,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/markdown-validate/reference/validation.md",
+      "type": "document",
+      "sha256": "d9f388268c92a717b1075e50de7ce0b251ba42d1f30e1aa7b6683e07b316ad30",
+      "bytes": 4721,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/md-fix/SKILL.md",
+      "type": "document",
+      "sha256": "c940cdd183292cc6184e47b0611340b04feb4e860a381c2465993358c3e421b3",
+      "bytes": 659,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/md-fix/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/md-lint/SKILL.md",
+      "type": "document",
+      "sha256": "8623d55301023640928d5fe2161be4c8a9c37f17c6d71228a216752ce2be3705",
+      "bytes": 645,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/md-lint/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/md-toc/SKILL.md",
+      "type": "document",
+      "sha256": "001345d6db83463306341ad5d6a8f4a37c694f80eee7cc5929ea2f9b28a5d5c7",
+      "bytes": 611,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-markdown/skills/md-toc/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-pdf/.codex-plugin/plugin.json",
+      "type": "config",
+      "sha256": "a3997f1241862f88b973ce51d2eb32cad630f12b1cfda3482d0e1f349b478cf7",
+      "bytes": 161,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-pdf/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3228aa12bff57a5cc0d015fd25c492cce4bf7538706c0cd56d37e347ed16bd4c",
+      "bytes": 676,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-pdf/skills/pdf-read/SKILL.md",
+      "type": "document",
+      "sha256": "95d0ad93397799d0fe0000691e3f7fbad62ea6bb4ad47b143463d8c5ac2937a5",
+      "bytes": 7375,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-pdf/skills/pdf-read/reference/fidelity.md",
+      "type": "document",
+      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
+      "bytes": 6666,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/.codex-plugin/plugin.json",
+      "type": "config",
+      "sha256": "ab72b0ddcfd2344343d0cbc6d5ec034a1739305f264326762bc5b05408e0c53f",
+      "bytes": 155,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/assets/icon.svg",
+      "type": "asset",
+      "sha256": "7e3f711e4658814da23fa90ff685730ad3e403586ac8acefb5e88618c1aaee5f",
+      "bytes": 698,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/qa-case-plan/SKILL.md",
+      "type": "document",
+      "sha256": "4312146a546b279f6510d2e0d8424fa2fd0763a0cc25ed698f3686a47517168c",
+      "bytes": 5868,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/qa-case-plan/reference/case-file.md",
+      "type": "document",
+      "sha256": "41a85257f76a879a98cb890a744c6d8fc58db37ee4fe5cfd5a9efcdbbe381265",
+      "bytes": 8972,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/qa-case-plan/reference/plan.md",
+      "type": "document",
+      "sha256": "b648ed5de10d0efefde3cfae2bfddfc82942e2668e4c7dde0e199a079b8d320e",
+      "bytes": 16977,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/qa-run-record/SKILL.md",
+      "type": "document",
+      "sha256": "a13008bce8990576da1c88c71a9448fa0ad4a4e2044200db8597ec0019588d64",
+      "bytes": 5000,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/qa-run-record/reference/run-record.md",
+      "type": "document",
+      "sha256": "98596730c4d12fa203428591d0b4d3c337add55c6b8d9de33c35a35a1a48c62e",
+      "bytes": 12008,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/qa-run-record/reference/tracker-contract.md",
+      "type": "document",
+      "sha256": "6cd4eaa4bc19f9c706979921c2cd31ca2529186213ac6e6f5791b64465df8da3",
+      "bytes": 7019,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/qa-runner/SKILL.md",
+      "type": "document",
+      "sha256": "3a9308306ccff17307910f0916f9a73c39144d6bc49bc25c777e0dc14333fbb2",
+      "bytes": 6076,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/qa-runner/reference/running.md",
+      "type": "document",
+      "sha256": "1aa8741d4020402ca94d2e4841cde3bdb6c0fb179aae162c3131da014cb49757",
+      "bytes": 6845,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/run-qa/SKILL.md",
+      "type": "document",
+      "sha256": "9e1f28365b9d48d633776ef9f15c95a202fb4f57545293a2937e1777c5f56df3",
+      "bytes": 1081,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-qa/skills/run-qa/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-scripts/.codex-plugin/plugin.json",
+      "type": "config",
+      "sha256": "3a0ee349b67387b865149809a4640632364f2e07bb62068d1cc8d8c5c4e7633f",
+      "bytes": 151,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-scripts/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-scripts/assets/icon.svg",
+      "type": "asset",
+      "sha256": "944afc2ac70584eedf95e314b035bbb4b0dd5baa34039e4523c6fa4f01ea24aa",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-scripts/skills/run-script/SKILL.md",
+      "type": "document",
+      "sha256": "692bba3aa88ced7d7a3f99be9272c72db2a2d04a8230d0e0795a22c9bd270250",
+      "bytes": 705,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-scripts/skills/run-script/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-scripts/skills/scripts-registry/SKILL.md",
+      "type": "document",
+      "sha256": "638565c0ca63549740dd70467a59485312bf310003d1bdf691dd8604d9270d26",
+      "bytes": 4637,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-scripts/skills/scripts-runner/SKILL.md",
+      "type": "document",
+      "sha256": "ad52077b1a2420fa314ba4313edb906068e88e1287fed350dd127af8c6e0258a",
+      "bytes": 4305,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-scripts/skills/scripts-runner/reference/resolution.md",
+      "type": "document",
+      "sha256": "d27d44c3336d36a10029cbb26f7e1f5577c94bf32cd7faffbac517e44ba3d692",
+      "bytes": 3987,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-usage/.codex-plugin/plugin.json",
+      "type": "config",
+      "sha256": "d8a9eec61bf1c04c9cbfdabd06aa7282c1416aad68a0c76716ad45be733b7c28",
+      "bytes": 150,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-usage/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-usage/assets/icon.svg",
+      "type": "asset",
+      "sha256": "d3c0975c4e57e67a32c1d06b5663728d494e945594df036c4450cbb90b032695",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-usage/skills/usage-reports/SKILL.md",
+      "type": "document",
+      "sha256": "30a50ac95e36113a863d4268b4308abeac3283016db30770d367f04c487a422d",
+      "bytes": 4391,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-usage/skills/usage-reports/reference/reports.md",
+      "type": "document",
+      "sha256": "0298b3e1169197ec2e0fa83fd6c914bf270415bf42d89265ccda28e7276378d5",
+      "bytes": 4312,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-usage/skills/usage-store/SKILL.md",
+      "type": "document",
+      "sha256": "f7fe0ba4d31450928d37dea3f90c2fd8d20470a986823e83cef542927a29e8c3",
+      "bytes": 5900,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-usage/skills/usage-store/reference/store.md",
+      "type": "document",
+      "sha256": "3577fbbca5d21bbf031083eaa57175ce1f52fc0abaef1e7c9dee68e17488425e",
+      "bytes": 5585,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-usage/skills/usage-today/SKILL.md",
+      "type": "document",
+      "sha256": "104b305b357d208e6cceb4d33b6a01c70188f2550c443930ef33da720f4b57d4",
+      "bytes": 541,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-usage/skills/usage-today/agents/openai.yaml",
+      "type": "config",
+      "sha256": "a1499d95abd8447558c535fe5554adcc3c9b988a0a39264a6283d430effe1e94",
+      "bytes": 43,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/.cursor-plugin/plugin.json",
+      "type": "config",
+      "sha256": "94a839bce695d01f2f48d594dd3c166730e09e5b93d7e553062fa6f9692faba4",
+      "bytes": 188,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/agents/cairn-agent-bundle-reviewer.md",
+      "type": "document",
+      "sha256": "654b061cb8ba63869541e40afcc651c0d89a40f43676c3841c9b25bf26dfb037",
+      "bytes": 14869,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/assets/icon.svg",
+      "type": "asset",
+      "sha256": "9ddaaba9c513888ed08dfbd53f6e518401407c3246e4c1beaaa5197d30bd803a",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-agent-check/SKILL.md",
+      "type": "document",
+      "sha256": "12058ff5386d9bffd64590a504bbe1b2748b31760e5935f94bc05bf835694f85",
+      "bytes": 1016,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-agent-migrate/SKILL.md",
+      "type": "document",
+      "sha256": "0931f09beef99d31f7dd3a3c3b7e58423995d26ee148288cfe9d67c87d6dc885",
+      "bytes": 4714,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-agent-migrate/reference/cutover.md",
+      "type": "document",
+      "sha256": "27235133040966a153825785df2e2dc4281278cb5bf8fd0b546fd2a60aae4ffb",
+      "bytes": 5527,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-agent-migrate/reference/discovery.md",
+      "type": "document",
+      "sha256": "dc841f0a8b4b0c1356599c3b117910ac367828a0e7095beee5dceff15a789feb",
+      "bytes": 7358,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-agent-new/SKILL.md",
+      "type": "document",
+      "sha256": "61486372b78afa67fd13ea1641cfe425bc4eded9c50265eac2901b1f172c446d",
+      "bytes": 722,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-bundle-authoring/SKILL.md",
+      "type": "document",
+      "sha256": "52e50335a0fad08b211ebb9523b005dd91473399dd43fc4b15ec61223bca6c1d",
+      "bytes": 7314,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-bundle-authoring/reference/bundle-format.md",
+      "type": "document",
+      "sha256": "917a259f9c474446458e15eff9733c560201e120cd35b35ad9c1cdbc8c682637",
+      "bytes": 9209,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-bundle-publishing/SKILL.md",
+      "type": "document",
+      "sha256": "5cb4989be9f2a2537f177b9e55d0d107ca92046676092706be2350ce9987da24",
+      "bytes": 6672,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-bundle-publishing/reference/marketplace.md",
+      "type": "document",
+      "sha256": "28010da822e45954f578666c40d12ada1a55b7ce53b450fd83319c45e9dbcdee",
+      "bytes": 8301,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-bundle-testing/SKILL.md",
+      "type": "document",
+      "sha256": "867b34e33d8e775563960885c34959d5e8a8720a8607e7a4c391e0e428a31c1f",
+      "bytes": 6390,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-bundle-testing/reference/tests.md",
+      "type": "document",
+      "sha256": "01121c6f6cc9fc4941cb70f30d2e47f911f4d95531044a8127370d67c40376af",
+      "bytes": 5431,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-portability-triage/SKILL.md",
+      "type": "document",
+      "sha256": "1e67347ff2a44439977bd386a7087439c39ee4dafd0ae019cf8a30fcf523e7d8",
+      "bytes": 4803,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-portability-triage/reference/diagnostics.md",
+      "type": "document",
+      "sha256": "3dcbbb91d6a0e7f80ee4aba7ab294567fc682633c1e08482459bade16fb314cf",
+      "bytes": 9007,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-target-portability/SKILL.md",
+      "type": "document",
+      "sha256": "960fbb488ddf28ffacdc3d179b89db40a7358ea8e77477c461dfed507c33f1f0",
+      "bytes": 6100,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/skills/cairn-agent-target-portability/reference/support-matrix.md",
+      "type": "document",
+      "sha256": "9a939b389ac9c089a556b094e905f4584d3aac02694d584e191c3b8868e2911c",
+      "bytes": 6936,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-archive/.cursor-plugin/plugin.json",
+      "type": "config",
+      "sha256": "e750777cca64ad353cd534687c6be7e5f22de01d3aa4c459baa8b58feb82d92c",
+      "bytes": 173,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-archive/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-archive/assets/icon.svg",
+      "type": "asset",
+      "sha256": "bfd7f50a84e93e9157370db84e877dfe6a9862b771361c580871a86813adc673",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-archive/skills/cairn-archive-archive-operations/SKILL.md",
+      "type": "document",
+      "sha256": "be0b7b20049dde93a3ee25e3e7c7a74a5dcdb19c959b7b95d7959abbbb5cfe6b",
+      "bytes": 4936,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-archive/skills/cairn-archive-archive-operations/reference/archive.md",
+      "type": "document",
+      "sha256": "82d22a468a5247cb60d23f347e81a78f5cb68cdf8620bd6d87357258c4939ff7",
+      "bytes": 5652,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-archive/skills/cairn-archive-archive-retrieve/SKILL.md",
+      "type": "document",
+      "sha256": "5185289296ee8e7d95d210ae01d15ffbcf85348253238010eb10a4c6589294c8",
+      "bytes": 2145,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-archive/skills/cairn-archive-archive-status/SKILL.md",
+      "type": "document",
+      "sha256": "afe753249b6cdef7722fd08ff1486876347138559d608dd32600fafc9b7c967b",
+      "bytes": 470,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-jira/.cursor-plugin/plugin.json",
+      "type": "config",
+      "sha256": "eef722de4fc8e44aab13ae7782b70ca7786899ab0949ba84adedeff97ed288bc",
+      "bytes": 158,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-jira/assets/icon.svg",
+      "type": "asset",
+      "sha256": "c53590d91d396643e6224c0c2a81487e5e9732c1b0e8ee5b793bc132fe93e778",
+      "bytes": 522,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-jira/skills/cairn-jira-adf-convert/SKILL.md",
+      "type": "document",
+      "sha256": "adc6f58fbc9688db092fff676dd9a3e539afb8c01b9ceeaa41d2547abeca0104",
+      "bytes": 6413,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-jira/skills/cairn-jira-adf-convert/reference/fidelity.md",
+      "type": "document",
+      "sha256": "1b4103f1feffe4b79d916ac2618a599431b18f32aad90530803a581e0f9b4d82",
+      "bytes": 8217,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/.cursor-plugin/plugin.json",
+      "type": "config",
+      "sha256": "758f16d7434febaf1661f0af9d94e6a294639ada9b931645062744f26aeba42a",
+      "bytes": 255,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/.mcp.json",
+      "type": "config",
+      "sha256": "4c7d1a4bf19433570848353f34ab2463fe4142090491b93c375d1b7a838d9407",
+      "bytes": 159,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/agents/cairn-markdown-markdown-auditor.md",
+      "type": "document",
+      "sha256": "88a075de8f0a3feee31977ba1e75638be50154ee18ecafb33cd1de9cec4fa0e4",
+      "bytes": 10218,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3ec1c412565868085b0ee1795cbde1ccdd14ab9354041b965ade9eeae2567b85",
+      "bytes": 526,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/hooks/hooks.json",
+      "type": "config",
+      "sha256": "3681939bbf726c81810e76980faff0a4cd0d944445509ba71f266f836011a738",
+      "bytes": 176,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/hooks/md-lint.sh",
+      "type": "script",
+      "sha256": "dc2c3df4afde39d67438d645506cac62868023af80b1b33fec6d935a3509ec14",
+      "bytes": 1164,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-markdown-navigate/SKILL.md",
+      "type": "document",
+      "sha256": "d1f9946909d9be676804ea3364337506612229216f6f7aaa10c0bedb9d43b208",
+      "bytes": 4701,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-markdown-navigate/reference/structure.md",
+      "type": "document",
+      "sha256": "8d539a810086af675aeaa3cddcddf7431c98c2290a5639907ea79eee768cd97b",
+      "bytes": 3416,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-markdown-query/SKILL.md",
+      "type": "document",
+      "sha256": "1585fa0ac193c4e2f39c40ae8ec452a9b931f51ac23075640ab2fa1ef5074f8d",
+      "bytes": 4516,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-markdown-query/reference/query-grammar.md",
+      "type": "document",
+      "sha256": "eeb197c0d996de8290dd7de87d1e933b36abaa158fc7314b20edabce6db296c1",
+      "bytes": 4629,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-markdown-refactor/SKILL.md",
+      "type": "document",
+      "sha256": "25059c6a8c6ca1871d8d804bbbd0e0c1af236cf41cd5b1cfdde9f5be716fd28d",
+      "bytes": 4997,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-markdown-refactor/reference/refactor.md",
+      "type": "document",
+      "sha256": "90e5fd6e9b0428e15a3004fd8e6e921d8675b3971417b0768c9efbb1e06f7839",
+      "bytes": 6129,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-markdown-validate/SKILL.md",
+      "type": "document",
+      "sha256": "c7d22e424f9c34c4ba69ef8c0c4005e3996fa9098455e29d7140c4ba35eaa016",
+      "bytes": 4447,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-markdown-validate/reference/validation.md",
+      "type": "document",
+      "sha256": "3d3998240893a540145850c8163e3b7d24a094eb08d8d5575c7a9c27fea5fd7e",
+      "bytes": 4751,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-md-fix/SKILL.md",
+      "type": "document",
+      "sha256": "f716ad048a8e1dab9d3ec2440ee47c9b1a74321107bab141e652bfe7466eefbd",
+      "bytes": 660,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-md-lint/SKILL.md",
+      "type": "document",
+      "sha256": "8f796eeab0d6355b173453e6c0a78689c38884c0be7e72b6e84e51892972cbe3",
+      "bytes": 618,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-markdown/skills/cairn-markdown-md-toc/SKILL.md",
+      "type": "document",
+      "sha256": "2b5f23e4928a04ed3bd9d6799ee8259badf4bce9328ca81696d1953d5b1a63e2",
+      "bytes": 628,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-pdf/.cursor-plugin/plugin.json",
+      "type": "config",
+      "sha256": "a3997f1241862f88b973ce51d2eb32cad630f12b1cfda3482d0e1f349b478cf7",
+      "bytes": 161,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-pdf/assets/icon.svg",
+      "type": "asset",
+      "sha256": "3228aa12bff57a5cc0d015fd25c492cce4bf7538706c0cd56d37e347ed16bd4c",
+      "bytes": 676,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-pdf/skills/cairn-pdf-pdf-read/SKILL.md",
+      "type": "document",
+      "sha256": "c31bf9681e4731e594292872a8ce760579df575167bde2bf1730feec06679b56",
+      "bytes": 7385,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-pdf/skills/cairn-pdf-pdf-read/reference/fidelity.md",
+      "type": "document",
+      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
+      "bytes": 6666,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/.cursor-plugin/plugin.json",
+      "type": "config",
+      "sha256": "ab72b0ddcfd2344343d0cbc6d5ec034a1739305f264326762bc5b05408e0c53f",
+      "bytes": 155,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/assets/icon.svg",
+      "type": "asset",
+      "sha256": "7e3f711e4658814da23fa90ff685730ad3e403586ac8acefb5e88618c1aaee5f",
+      "bytes": 698,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/skills/cairn-qa-qa-case-plan/SKILL.md",
+      "type": "document",
+      "sha256": "286afa7e5c6e37d6fd375521b9afeeb3f86b395fd34614b4914a68967974725e",
+      "bytes": 5877,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/skills/cairn-qa-qa-case-plan/reference/case-file.md",
+      "type": "document",
+      "sha256": "41a85257f76a879a98cb890a744c6d8fc58db37ee4fe5cfd5a9efcdbbe381265",
+      "bytes": 8972,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/skills/cairn-qa-qa-case-plan/reference/plan.md",
+      "type": "document",
+      "sha256": "b648ed5de10d0efefde3cfae2bfddfc82942e2668e4c7dde0e199a079b8d320e",
+      "bytes": 16977,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/skills/cairn-qa-qa-run-record/SKILL.md",
+      "type": "document",
+      "sha256": "bdb052d6fad2f32104ac8c14c9f5e83acc5c2df58a9bbc06ba1744f007a7c417",
+      "bytes": 5009,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/skills/cairn-qa-qa-run-record/reference/run-record.md",
+      "type": "document",
+      "sha256": "98596730c4d12fa203428591d0b4d3c337add55c6b8d9de33c35a35a1a48c62e",
+      "bytes": 12008,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/skills/cairn-qa-qa-run-record/reference/tracker-contract.md",
+      "type": "document",
+      "sha256": "6cd4eaa4bc19f9c706979921c2cd31ca2529186213ac6e6f5791b64465df8da3",
+      "bytes": 7019,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/skills/cairn-qa-qa-runner/SKILL.md",
+      "type": "document",
+      "sha256": "cd2fefe86e350ca530a0a8b075fc3b96a8b92165dd35bdf84fe9ef5ea29d70a8",
+      "bytes": 6103,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/skills/cairn-qa-qa-runner/reference/running.md",
+      "type": "document",
+      "sha256": "1aa8741d4020402ca94d2e4841cde3bdb6c0fb179aae162c3131da014cb49757",
+      "bytes": 6845,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-qa/skills/cairn-qa-run-qa/SKILL.md",
+      "type": "document",
+      "sha256": "3e5df1db3208ffef0b1f849e06b6b7f1fe7ac3e6ee06796c83faaf537928ee8d",
+      "bytes": 1073,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-scripts/.cursor-plugin/plugin.json",
+      "type": "config",
+      "sha256": "3a0ee349b67387b865149809a4640632364f2e07bb62068d1cc8d8c5c4e7633f",
+      "bytes": 151,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-scripts/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-scripts/assets/icon.svg",
+      "type": "asset",
+      "sha256": "944afc2ac70584eedf95e314b035bbb4b0dd5baa34039e4523c6fa4f01ea24aa",
+      "bytes": 525,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-scripts/skills/cairn-scripts-run-script/SKILL.md",
+      "type": "document",
+      "sha256": "d7f24e06f5bdf8366477c47cb9ed25a3ee935298e36a0dd1134b3b228159699f",
+      "bytes": 678,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-scripts/skills/cairn-scripts-scripts-registry/SKILL.md",
+      "type": "document",
+      "sha256": "921f9e9d56c7a5573bf73e3ec517b8c86f04aa3fe1f0d2e38e3bcbc66c6a2c71",
+      "bytes": 4638,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-scripts/skills/cairn-scripts-scripts-runner/SKILL.md",
+      "type": "document",
+      "sha256": "727d31d57746901f693fa98b60840d855be39c5e005a968f7545f8382942ebca",
+      "bytes": 4320,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-scripts/skills/cairn-scripts-scripts-runner/reference/resolution.md",
+      "type": "document",
+      "sha256": "d27d44c3336d36a10029cbb26f7e1f5577c94bf32cd7faffbac517e44ba3d692",
+      "bytes": 3987,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-usage/.cursor-plugin/plugin.json",
+      "type": "config",
+      "sha256": "ddb1f224d45e788234a475761fb596300826bba7a522102a67ac284ece90c5c5",
+      "bytes": 175,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-usage/agents/cairn-usage-usage-analyst.md",
+      "type": "document",
+      "sha256": "37ebdb9635fabfe2d192adfda916f6ddbf1e0d63fb8ebb90a2c65d1b13224b26",
+      "bytes": 11685,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-usage/assets/cli-basics.md",
+      "type": "document",
+      "sha256": "c87715ba2722e9e68e0b09ba292a819b7fffb0883c656b6a9e949ee83d92f6c4",
+      "bytes": 3034,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-usage/assets/icon.svg",
+      "type": "asset",
+      "sha256": "d3c0975c4e57e67a32c1d06b5663728d494e945594df036c4450cbb90b032695",
+      "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-usage/skills/cairn-usage-usage-reports/SKILL.md",
+      "type": "document",
+      "sha256": "e11943eb7b63d294fcdb4d74feb7249ca041d3de40a7f393d2f6872819340ce2",
+      "bytes": 4414,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-usage/skills/cairn-usage-usage-reports/reference/reports.md",
+      "type": "document",
+      "sha256": "0298b3e1169197ec2e0fa83fd6c914bf270415bf42d89265ccda28e7276378d5",
+      "bytes": 4312,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-usage/skills/cairn-usage-usage-store/SKILL.md",
+      "type": "document",
+      "sha256": "92d7b9952c6f9103aa1841a80a979d8b68e67ecb6fca048451cd520e29401747",
+      "bytes": 5899,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-usage/skills/cairn-usage-usage-store/reference/store.md",
+      "type": "document",
+      "sha256": "3577fbbca5d21bbf031083eaa57175ce1f52fc0abaef1e7c9dee68e17488425e",
+      "bytes": 5585,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-usage/skills/cairn-usage-usage-today/SKILL.md",
+      "type": "document",
+      "sha256": "f0469e79bdcd60f32eb3793d1146b20bd2952a91761a321de90ffe147c34bc04",
+      "bytes": 562,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "release-manifest.json",
+      "type": "config",
+      "sha256": "1091da26b2a187c82ed708145471ec4b7573e7bafc3be01b9200d29b829c1a79",
+      "bytes": 8504,
+      "mode": "0644",
+      "origin": "portable"
+    }
+  ]
+}

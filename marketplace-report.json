@@ -1,0 +1,244 @@
+{
+  "generator": {
+    "name": "@cairn-tool/cairn",
+    "version": "5.0.0"
+  },
+  "name": "cairn",
+  "version": "1.2.0",
+  "layout": "release",
+  "targets": [
+    {
+      "target": "claude-code",
+      "catalog": ".claude-plugin/marketplace.json",
+      "plugins": [
+        {
+          "name": "cairn-markdown",
+          "version": "1.1.0",
+          "source": "plugins/cairn-markdown"
+        },
+        {
+          "name": "cairn-scripts",
+          "version": "1.2.0",
+          "source": "plugins/cairn-scripts"
+        },
+        {
+          "name": "cairn-usage",
+          "version": "1.2.0",
+          "source": "plugins/cairn-usage"
+        },
+        {
+          "name": "cairn-archive",
+          "version": "1.2.0",
+          "source": "plugins/cairn-archive"
+        },
+        {
+          "name": "cairn-agent",
+          "version": "1.2.0",
+          "source": "plugins/cairn-agent"
+        },
+        {
+          "name": "cairn-jira",
+          "version": "1.1.0",
+          "source": "plugins/cairn-jira"
+        },
+        {
+          "name": "cairn-pdf",
+          "version": "1.0.0",
+          "source": "plugins/cairn-pdf"
+        },
+        {
+          "name": "cairn-qa",
+          "version": "1.1.0",
+          "source": "plugins/cairn-qa"
+        }
+      ]
+    },
+    {
+      "target": "codex",
+      "catalog": ".agents/plugins/marketplace.json",
+      "plugins": [
+        {
+          "name": "cairn-markdown",
+          "version": "1.1.0",
+          "source": "plugins/cairn-markdown"
+        },
+        {
+          "name": "cairn-scripts",
+          "version": "1.2.0",
+          "source": "plugins/cairn-scripts"
+        },
+        {
+          "name": "cairn-usage",
+          "version": "1.2.0",
+          "source": "plugins/cairn-usage"
+        },
+        {
+          "name": "cairn-archive",
+          "version": "1.2.0",
+          "source": "plugins/cairn-archive"
+        },
+        {
+          "name": "cairn-agent",
+          "version": "1.2.0",
+          "source": "plugins/cairn-agent"
+        },
+        {
+          "name": "cairn-jira",
+          "version": "1.1.0",
+          "source": "plugins/cairn-jira"
+        },
+        {
+          "name": "cairn-pdf",
+          "version": "1.0.0",
+          "source": "plugins/cairn-pdf"
+        },
+        {
+          "name": "cairn-qa",
+          "version": "1.1.0",
+          "source": "plugins/cairn-qa"
+        }
+      ]
+    },
+    {
+      "target": "cursor",
+      "catalog": ".cursor-plugin/marketplace.json",
+      "plugins": [
+        {
+          "name": "cairn-markdown",
+          "version": "1.1.0",
+          "source": "plugins/cairn-markdown"
+        },
+        {
+          "name": "cairn-scripts",
+          "version": "1.2.0",
+          "source": "plugins/cairn-scripts"
+        },
+        {
+          "name": "cairn-usage",
+          "version": "1.2.0",
+          "source": "plugins/cairn-usage"
+        },
+        {
+          "name": "cairn-archive",
+          "version": "1.2.0",
+          "source": "plugins/cairn-archive"
+        },
+        {
+          "name": "cairn-agent",
+          "version": "1.2.0",
+          "source": "plugins/cairn-agent"
+        },
+        {
+          "name": "cairn-jira",
+          "version": "1.1.0",
+          "source": "plugins/cairn-jira"
+        },
+        {
+          "name": "cairn-pdf",
+          "version": "1.0.0",
+          "source": "plugins/cairn-pdf"
+        },
+        {
+          "name": "cairn-qa",
+          "version": "1.1.0",
+          "source": "plugins/cairn-qa"
+        }
+      ]
+    },
+    {
+      "target": "antigravity",
+      "catalog": null,
+      "plugins": [
+        {
+          "name": "cairn-markdown",
+          "version": "1.1.0",
+          "source": "plugins/cairn-markdown"
+        },
+        {
+          "name": "cairn-scripts",
+          "version": "1.2.0",
+          "source": "plugins/cairn-scripts"
+        },
+        {
+          "name": "cairn-usage",
+          "version": "1.2.0",
+          "source": "plugins/cairn-usage"
+        },
+        {
+          "name": "cairn-archive",
+          "version": "1.2.0",
+          "source": "plugins/cairn-archive"
+        },
+        {
+          "name": "cairn-agent",
+          "version": "1.2.0",
+          "source": "plugins/cairn-agent"
+        },
+        {
+          "name": "cairn-jira",
+          "version": "1.1.0",
+          "source": "plugins/cairn-jira"
+        },
+        {
+          "name": "cairn-pdf",
+          "version": "1.0.0",
+          "source": "plugins/cairn-pdf"
+        },
+        {
+          "name": "cairn-qa",
+          "version": "1.1.0",
+          "source": "plugins/cairn-qa"
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "name": "cairn-markdown",
+      "source": "bundles/cairn-markdown",
+      "version": "1.1.0"
+    },
+    {
+      "name": "cairn-scripts",
+      "source": "bundles/cairn-scripts",
+      "version": "1.2.0"
+    },
+    {
+      "name": "cairn-usage",
+      "source": "bundles/cairn-usage",
+      "version": "1.2.0"
+    },
+    {
+      "name": "cairn-archive",
+      "source": "bundles/cairn-archive",
+      "version": "1.2.0"
+    },
+    {
+      "name": "cairn-agent",
+      "source": "bundles/cairn-agent",
+      "version": "1.2.0"
+    },
+    {
+      "name": "cairn-jira",
+      "source": "bundles/cairn-jira",
+      "version": "1.1.0"
+    },
+    {
+      "name": "cairn-pdf",
+      "source": "bundles/cairn-pdf",
+      "version": "1.0.0"
+    },
+    {
+      "name": "cairn-qa",
+      "source": "bundles/cairn-qa",
+      "version": "1.1.0"
+    }
+  ],
+  "archives": [],
+  "checksums": "checksums.sha256",
+  "sbom": "sbom.json",
+  "checks": {
+    "failed": 0,
+    "passed": 62
+  }
+}

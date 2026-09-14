@@ -1,0 +1,141 @@
+# Contract tests: what this bundle must render. No tree digest -- one would
+# invalidate on every prose edit and on any formatter pass.
+schemaVersion: "1"
+cases:
+  - name: renders-a-complete-claude-code-plugin
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - .claude-plugin/plugin.json
+          - skills/{name}/SKILL.md
+          - assets/cli-basics.md
+          - agents/bundle-reviewer.md
+        absent:
+          # Rules are project-profile only, and a command here is a skill --
+          # there is no `commands` component kind.
+          - .claude/rules/**
+          - commands/**
+          # No hook and no MCP server here; the subagent is the only
+          # non-skill surface.
+          - hooks/**
+          - .mcp.json
+      json:
+        - path: .claude-plugin/plugin.json
+          contains:
+            name: cairn-agent
+            version: 1.2.0
+
+  # `agents` and `hooks` are implied manifest fields. Declaring `agents` fails
+  # the whole manifest; declaring `hooks` drops the plugin's hooks. Neither is
+  # caught by `claude plugin validate`.
+  - name: manifest-omits-the-implied-fields
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: .claude-plugin/plugin.json
+          excludes: ['"agents"', '"hooks"']
+          includes: ['"skills"']
+
+  # Pins the slash-command mechanism -- invocationPolicy and argumentHint
+  # through the target profile's frontmatter-flag form.
+  - name: explicit-skills-are-user-invocable-only
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/agent-new/SKILL.md
+          mode: "0644"
+          includes: ["disable-model-invocation: true", "argument-hint:"]
+        - path: skills/agent-check/SKILL.md
+          includes: ["disable-model-invocation: true"]
+        - path: skills/agent-migrate/SKILL.md
+          includes: ["disable-model-invocation: true", "argument-hint:"]
+
+  # The exclusion is newline-anchored to the frontmatter line: a bare substring
+  # would also match a skill whose prose documents the flag, which the
+  # cairn-agent skills legitimately do.
+  - name: auto-skills-stay-model-invocable
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/bundle-authoring/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/bundle-testing/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/bundle-publishing/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/target-portability/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+        - path: skills/portability-triage/SKILL.md
+          excludes: ["\ndisable-model-invocation: true\n"]
+
+  - name: the-shared-reference-asset-ships
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: assets/cli-basics.md
+          includes: ["## Exit codes", "@cairn-tool/cairn"]
+
+  # Sidecars are reached by relative link from a skill body, so a rename that
+  # misses one leaves a dead link the renderer will happily emit.
+  - name: skill-reference-sidecars-ship
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - skills/agent-migrate/reference/discovery.md
+          - skills/agent-migrate/reference/cutover.md
+          - skills/target-portability/reference/support-matrix.md
+          - skills/portability-triage/reference/diagnostics.md
+          - skills/bundle-authoring/reference/bundle-format.md
+          - skills/bundle-publishing/reference/marketplace.md
+          - skills/bundle-testing/reference/tests.md
+
+  # The migration skill exists to drive these three commands in order. Losing
+  # one to a rewrite would leave a walkthrough that no longer walks anywhere.
+  - name: the-migration-skill-drives-import-convert-and-verify
+    targets: [claude-code]
+    profiles: [plugin]
+    expect:
+      files:
+        - path: skills/agent-migrate/SKILL.md
+          includes:
+            - "cairn agent import"
+            - "cairn agent convert"
+            - "cairn agent verify"
+            - "--from"
+
+  # Cursor namespaces a plugin's agents as well as its skills, on the frontmatter
+  # `name` as well as the path -- the directory used to be prefixed while `name:`
+  # stayed bare, which is one component with two identities. And no reference may
+  # reach the tree unexpanded: a literal marker there is a defect the host shows
+  # to the user.
+  - name: the-cursor-plugin-namespaces-components-and-resolves-references
+    targets: [cursor]
+    profiles: [plugin]
+    expect:
+      paths:
+        present:
+          - agents/cairn-agent-bundle-reviewer.md
+          - skills/cairn-agent-bundle-authoring/SKILL.md
+        absent:
+          - agents/bundle-reviewer.md
+      files:
+        - path: agents/cairn-agent-bundle-reviewer.md
+          includes: ["name: cairn-agent-bundle-reviewer"]
+          excludes: ["<!-- ref:"]
+        - path: skills/cairn-agent-bundle-authoring/SKILL.md
+          includes: ["name: cairn-agent-bundle-authoring"]
+        # The exclusion goes on a skill that *uses* references rather than one
+        # that documents them: `bundle-authoring` ships fenced examples of the
+        # syntax, and a fenced marker is inert by design, so a literal `<!-- ref:`
+        # in its output is correct.
+        - path: skills/cairn-agent-portability-triage/SKILL.md
+          includes: ["name: cairn-agent-portability-triage", "cairn-agent-target-portability"]
+          excludes: ["<!-- ref:"]

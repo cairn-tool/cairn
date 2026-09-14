@@ -1,0 +1,8 @@
+# Lint a Markdown file right after it is written or edited, so a broken
+# reference is reported while the change is still in context.
+hooks:
+  post-tool-use:
+    - type: command
+      matcher: Write|Edit
+      command: "${BUNDLE_ROOT}/hooks/md-lint.sh"
+      timeout: 30

@@ -1,0 +1,9 @@
+{
+  "name": "cairn-markdown",
+  "version": "1.1.0",
+  "description": "Validate, analyze, and refactor Markdown with the cairn md toolset.",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json",
+  "agents": "./agents/"
+}

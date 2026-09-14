@@ -1,0 +1,5 @@
+{
+  "name": "cairn-agent",
+  "version": "1.2.0",
+  "description": "Author, convert, migrate, test, and publish portable agent bundles."
+}

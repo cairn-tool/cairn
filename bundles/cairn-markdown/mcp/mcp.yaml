@@ -1,0 +1,15 @@
+# The read-only workspace engine, over MCP. Seventeen tools: eleven mirroring the
+# `md` query and structure commands, and six read-only PDF tools. All confined to
+# --root.
+#
+# Registered here and in no other plugin. One server carries every toolset's
+# tools, so a second registration would hand a host that installs both plugins
+# the same seventeen tools twice under two prefixes.
+#
+# `command: cairn` resolves from PATH. Not `npx @cairn-tool/cairn`: an unpinned
+# npx specifier resolves to whatever is newest at launch, which trips AB506 and
+# makes the server's behavior depend on the day it started.
+mcpServers:
+  cairn:
+    command: cairn
+    args: ["serve", "mcp", "--root", "."]

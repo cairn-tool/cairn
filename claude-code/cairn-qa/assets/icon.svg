@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="title">
+  <title id="title">Cairn QA</title>
+  <rect width="64" height="64" rx="14" fill="#0f172a" />
+  <path d="M20 14h24a2 2 0 0 1 2 2v34a2 2 0 0 1-2 2H20a2 2 0 0 1-2-2V16a2 2 0 0 1 2-2z" fill="#2dd4bf" opacity="0.9" />
+  <rect x="26" y="10" width="12" height="7" rx="2" fill="#0f172a" opacity="0.55" />
+  <path d="M24 30l4 4 8-8" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7" />
+  <path d="M24 43l4 4 8-8" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7" />
+</svg>
