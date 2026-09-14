@@ -64,7 +64,9 @@ through `CAIRN_LOCAL_BUILD` rather than the default. The scripts in _this_ direc
 repository that only carries bundles does not, and falls straight through to `cairn` on `PATH`.
 
 Where a repository keeps its bundles is read from `agent-marketplace.yaml` rather than assumed, for
-the same reason: cairn keeps them under `plugins/`, and the KPS repositories under `bundles/`.
+the same reason: cairn keeps them under `plugins/`, and the KPS repositories under `bundles/`. The
+repository root is found by walking up for that file rather than counting directories, because the
+scripts sit at different depths too — `scripts/` here, `scripts/plugins/` in kps-dev-tools.
 
 ## Publishing
 

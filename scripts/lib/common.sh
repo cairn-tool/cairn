@@ -26,7 +26,23 @@ die()  { printf '%serror:%s %s\n' "$C_RED" "$C_OFF" "$*" >&2; exit 1; }
 # --- locations ---------------------------------------------------------------
 
 SCRIPTS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO_ROOT="$(cd -- "$SCRIPTS_DIR/.." && pwd)"
+
+# The repository root is found by walking up for the collection spec rather than
+# counting directories up from this file. This library is shared verbatim between
+# repositories that keep their scripts at different depths — `scripts/` in some,
+# `scripts/plugins/` in others — and a hardcoded `../..` silently resolves to the
+# wrong root in the second kind rather than failing.
+REPO_ROOT=""
+_candidate="$SCRIPTS_DIR"
+while :; do
+  if [ -f "$_candidate/agent-marketplace.yaml" ]; then
+    REPO_ROOT="$_candidate"
+    break
+  fi
+  [ "$_candidate" = "/" ] && break
+  _candidate="$(dirname -- "$_candidate")"
+done
+unset _candidate
 MARKETPLACE_SPEC="$REPO_ROOT/agent-marketplace.yaml"
 
 # The collection's name, which is also the marketplace key a whole-collection
@@ -101,6 +117,8 @@ ALL_BUNDLES=()
 ALL_BUNDLE_PATHS=()
 
 discover_bundles() {
+  [ -n "$REPO_ROOT" ] ||
+    die "no agent-marketplace.yaml above $SCRIPTS_DIR; these scripts must live inside the repository"
   [ -f "$MARKETPLACE_SPEC" ] || die "missing $MARKETPLACE_SPEC"
   local path
   while IFS= read -r path; do
