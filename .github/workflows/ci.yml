@@ -63,9 +63,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Must stay within package.json "engines". jsdom is the binding constraint
+        # One entry per range package.json "engines" declares, so nothing is
+        # claimed as supported without being run. jsdom is the binding constraint
         # (^22.22.2 || ^24.15.0 || >=26.0.0); Node 20 is EOL and unsupported.
-        node: ["22.x", "24.x"]
+        node: ["22.x", "24.x", "26.x"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
