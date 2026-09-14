@@ -25,6 +25,9 @@
 # gated on `error` diagnostics instead. An invocation or I/O error (exit 1)
 # fails everywhere. --strict holds every target to the exit-0 bar.
 
+# This repository *is* cairn, so prefer its own build over a global install.
+export CAIRN_LOCAL_BUILD=${CAIRN_LOCAL_BUILD:-1}
+
 source "$(dirname -- "${BASH_SOURCE[0]}")/lib/common.sh"
 
 ALL_TARGETS=(claude-code codex cursor antigravity opencode)

@@ -16,8 +16,15 @@ export function buildReleaseReadme(manifest: ReleaseManifest, repository: string
 
   const rows = manifest.bundles.map((bundle) => {
     const hosts = Object.keys(bundle.targets).join(", ");
-    // Pipes and newlines would break the row; a description is free text.
-    const description = bundle.description.replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ");
+    // A description is free text, and three things in it would break the row.
+    // Backslashes go first: escaping the pipes before the backslashes turns an
+    // authored `\|` into `\\|`, where the backslash is now escaped and the pipe
+    // is not — a cell separator where the author wrote a literal. A trailing
+    // backslash escapes the row's own closing pipe the same way.
+    const description = bundle.description
+      .replace(/\\/g, "\\\\")
+      .replace(/\|/g, "\\|")
+      .replace(/\s*\n\s*/g, " ");
     return `| \`${bundle.name}\` | ${hosts || "—"} | ${description} |`;
   });
 

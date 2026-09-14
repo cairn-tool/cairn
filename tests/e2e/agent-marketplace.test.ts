@@ -1303,6 +1303,59 @@ describe("agent marketplace --layout release", () => {
     expect(readme).toContain("#release-v2.1.0");
   });
 
+  // A description is free text from someone else's bundle. Escaping the pipes
+  // without escaping the backslashes first turns an authored `\|` into `\\|`,
+  // where the backslash is escaped and the pipe is not — a cell separator where
+  // the author wrote a literal, and a table row that has silently gained a
+  // column. A trailing backslash escapes the row's own closing pipe the same way.
+  it("escapes backslashes and pipes in a description, in that order", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "agent-marketplace-esc-"));
+    temporary.push(root);
+    const bundle = path.join(root, "plugins", "alpha");
+    fs.mkdirSync(path.join(bundle, "skills", "alpha"), { recursive: true });
+    fs.writeFileSync(
+      path.join(bundle, "agent-bundle.yaml"),
+      `schemaVersion: "2"\nname: alpha\nversion: 1.0.0\n` +
+        `description: 'a \\| b, and a trailing \\'\n` +
+        `marketplace:\n  displayName: Alpha\n  publisher:\n    name: Test Owner\n` +
+        `  license: MIT\n  categories: [demo]\n`,
+    );
+    fs.writeFileSync(
+      path.join(bundle, "skills", "alpha", "SKILL.md"),
+      `---\nname: alpha\ndescription: Do alpha things.\n---\nDo alpha things.\n`,
+    );
+    fs.writeFileSync(
+      path.join(root, "agent-marketplace.yaml"),
+      `schemaVersion: "1"\nname: demo\nversion: 2.1.0\nowner:\n  name: Test Owner\n` +
+        `targets: [claude-code]\nbundles:\n  - path: plugins/alpha\n`,
+    );
+    const out = fs.mkdtempSync(path.join(os.tmpdir(), "agent-marketplace-out-"));
+    temporary.push(out);
+    fs.rmSync(out, { recursive: true, force: true });
+
+    await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--output",
+      out,
+      "--readme",
+      "acme/widgets",
+    );
+
+    const row = fs
+      .readFileSync(path.join(out, "README.md"), "utf8")
+      .split("\n")
+      .find((line) => line.startsWith("| `alpha`"))!;
+
+    expect(row).toContain("a \\\\\\| b");
+    expect(row).toMatch(/\\\\ \|$/);
+    // Every pipe inside the cell is escaped, so the row still has three cells.
+    expect(row.replace(/\\./g, "").split("|").filter(Boolean)).toHaveLength(3);
+  });
+
   it("writes no README unless asked", async () => {
     const { root, out } = collection(SPEC);
     await run(
