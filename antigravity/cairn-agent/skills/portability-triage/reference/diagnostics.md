@@ -137,15 +137,8 @@ include: [claude-code]
 
 ### 4 — prose that differs per target
 
-```markdown
-<!-- target:cursor -->
-
-Cursor-specific instructions.
-
-<!-- /target:cursor -->
-```
-
-A comma list is an OR, `not` negates the whole list, and a block may branch:
+A comma list is an OR, `not` negates the whole list, a block may branch, and **every chain must
+end in `else`**:
 
 ```markdown
 <!-- if target:codex, cursor -->
@@ -159,8 +152,22 @@ Everywhere else.
 
 Blocks are validated in **every** file the renderer processes them in — every textual asset,
 not only Markdown. An unknown target is `AB120` and an unmatched, misnested, or unclosed block
-is `AB121`. A marker that looks conditional but does not parse is `AB123`: `<!-- target: cursor -->`,
+is `AB121`. A marker that looks conditional but does not parse is `AB123`: `<!-- if target: cursor -->`,
 with a space after the colon, used to match nothing and so apply to no target at all, silently.
+
+A chain with no `else` is `AB128`, and it fails the same way: the region emits nothing on every
+target the chain does not name, with nothing else to report it. The retired one-armed
+`<!-- target:cursor --> … <!-- /target:cursor -->` form and its `platform:` spelling are
+`AB125` — that form _was_ a chain with no `else`, so the fix is to write the branch it could
+not express.
+
+### 5 — a component that needs a skill it cannot preload
+
+`AB129`. `invocationPolicy: explicit` renders to `disable-model-invocation: true`, and a host
+draws preloads from the same set the model may invoke — so an explicit name in a `skills:` list
+is dropped in silence and the component runs without it. Remove the entry, or move the content
+the component actually needs into a model-invocable skill and preload that one. An agent has no
+other route: it can neither preload nor invoke an explicit skill.
 
 Markers inside a fenced code block or an inline code span are inert.
 

@@ -3,7 +3,7 @@
   "specVersion": "1",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "5.0.1"
+    "version": "5.1.0"
   },
   "subject": {
     "name": "cairn",
@@ -109,16 +109,16 @@
     {
       "path": "antigravity/cairn-agent/skills/bundle-authoring/SKILL.md",
       "type": "document",
-      "sha256": "115817e7773793c0b20e673755979200438695408a9f735bbc946353b024da0e",
-      "bytes": 7354,
+      "sha256": "258d84876fa9594e2f0c13d5f493e4ec490c3eb75ad3fa00c782b178af612b74",
+      "bytes": 9386,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "antigravity/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "917a259f9c474446458e15eff9733c560201e120cd35b35ad9c1cdbc8c682637",
-      "bytes": 9209,
+      "sha256": "1dad11e65adb26aa8dbc92825223979ee317298b910ae0f6874e77712acc30a1",
+      "bytes": 9366,
       "mode": "0644",
       "origin": "portable"
     },
@@ -157,16 +157,16 @@
     {
       "path": "antigravity/cairn-agent/skills/portability-triage/SKILL.md",
       "type": "document",
-      "sha256": "884dd03435b7be10092e4b1522aceba2b04858a5abd6f171ca055c4556b21484",
-      "bytes": 4779,
+      "sha256": "dde94117f388f9d8dec45d398e7423c744383d46b5d45b3af43e065a6f891cbd",
+      "bytes": 4896,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "antigravity/cairn-agent/skills/portability-triage/reference/diagnostics.md",
       "type": "document",
-      "sha256": "b7ae4052d3f884079bef6c731cf947d485f380291459583040e0458e6a23168c",
-      "bytes": 9045,
+      "sha256": "01399396d9f85b841523f4a5384976ecc96ff4bc06de1645f651d3b215f6d287",
+      "bytes": 9880,
       "mode": "0644",
       "origin": "portable"
     },
@@ -725,16 +725,16 @@
     {
       "path": "bundles/cairn-agent/skills/bundle-authoring/SKILL.md",
       "type": "document",
-      "sha256": "51bd0bcb32f823eddbd5dc4bc0262776d088b6766e43656ea763655c4c20600f",
-      "bytes": 7406,
+      "sha256": "d1bc0f44868eedc0835b1b78171149de401e9c689645ee08fbb9856c54506947",
+      "bytes": 9438,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "bundles/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "a5c1030a1e9016abc6488a71a6b7b2a53c91bcfb28c18ffca79f47ad1d331f8c",
-      "bytes": 9222,
+      "sha256": "2298e0b951b986c1aa3c5506b1cdfa6791fd91e323e826c478a192547de19dcb",
+      "bytes": 9379,
       "mode": "0644",
       "origin": "portable"
     },
@@ -773,16 +773,16 @@
     {
       "path": "bundles/cairn-agent/skills/portability-triage/SKILL.md",
       "type": "document",
-      "sha256": "ffb9bb9d841e486a0c39cf61b131cfdc02f35425d69289f09ef6c596593770b9",
-      "bytes": 4811,
+      "sha256": "2809a7da2a260c19072ccc2ef85db2cd112244afcf6358fb8bce06bd00a10ef9",
+      "bytes": 4928,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "bundles/cairn-agent/skills/portability-triage/reference/diagnostics.md",
       "type": "document",
-      "sha256": "ac3108fbf6b348f95ec960710b5e148475a93ed4c712a9d3a80b11aa9bd39a16",
-      "bytes": 9009,
+      "sha256": "54c9f104a465c84256df397aa244e9c78ac0e60fafe13a104e491ca02aa89671",
+      "bytes": 9844,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1421,16 +1421,16 @@
     {
       "path": "claude-code/cairn-agent/skills/bundle-authoring/SKILL.md",
       "type": "document",
-      "sha256": "edb2dd8086bf0f701fb82406db8cd46609493ba79ae85878d04ad81432b7438f",
-      "bytes": 7418,
+      "sha256": "b3d4834838e057cbb281d5a88eb7c57e8f8269b1553e27b2d20c2b40bbd6c104",
+      "bytes": 9450,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "claude-code/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "cc4166ae8de1682cb314854012b48d88dd7ef67d0851727c0737cb09bc5a9895",
-      "bytes": 9229,
+      "sha256": "a0d32fb5c90f0f2f38c8e115f25724c91f4683820909de45a2fb8e6b29cc2c61",
+      "bytes": 9386,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1469,16 +1469,16 @@
     {
       "path": "claude-code/cairn-agent/skills/portability-triage/SKILL.md",
       "type": "document",
-      "sha256": "1b287e72e4cf0812debb5d8e74d805847baf5642fcc0101eafdedcdf89dc3f83",
-      "bytes": 4811,
+      "sha256": "fc9604fa61ba44374e7ce2e441a44af812f0fdb1d295afa2ac82f07f763617cd",
+      "bytes": 4928,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "claude-code/cairn-agent/skills/portability-triage/reference/diagnostics.md",
       "type": "document",
-      "sha256": "3dcbbb91d6a0e7f80ee4aba7ab294567fc682633c1e08482459bade16fb314cf",
-      "bytes": 9007,
+      "sha256": "baca6c4a197d5fbd676f692ccbdf87cfabb9da111cc8261643450096848877c5",
+      "bytes": 9842,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2069,16 +2069,16 @@
     {
       "path": "codex/cairn-agent/skills/bundle-authoring/SKILL.md",
       "type": "document",
-      "sha256": "15dc042d9c9820eb4bb77032486bb857616e86aada8b19d4ecf56b7e430f4369",
-      "bytes": 7393,
+      "sha256": "f316bcbc26f13ac98b75ae380c75560d9dbec9f6f2ec5f017c843b7463933426",
+      "bytes": 9425,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "codex/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "f2d235c017996daddd9656b5173f585751996070cc033baabdbb681374e90451",
-      "bytes": 9222,
+      "sha256": "2c218f560eac01e7aa2571b65867ed1530b22169b0dedefc1cb8d56917f9eefd",
+      "bytes": 9379,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2117,16 +2117,16 @@
     {
       "path": "codex/cairn-agent/skills/portability-triage/SKILL.md",
       "type": "document",
-      "sha256": "1114c47bf7df40b9f3cd33ed87692ee66e59e86cd16e776c86c67708150e7802",
-      "bytes": 4792,
+      "sha256": "96ce70df60b9b78f4b70abe269f9891b05f4215f273fa3b9692ea0a61bf7a64e",
+      "bytes": 4909,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "codex/cairn-agent/skills/portability-triage/reference/diagnostics.md",
       "type": "document",
-      "sha256": "b7ae4052d3f884079bef6c731cf947d485f380291459583040e0458e6a23168c",
-      "bytes": 9045,
+      "sha256": "01399396d9f85b841523f4a5384976ecc96ff4bc06de1645f651d3b215f6d287",
+      "bytes": 9880,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2741,16 +2741,16 @@
     {
       "path": "cursor/cairn-agent/skills/cairn-agent-bundle-authoring/SKILL.md",
       "type": "document",
-      "sha256": "52e50335a0fad08b211ebb9523b005dd91473399dd43fc4b15ec61223bca6c1d",
-      "bytes": 7314,
+      "sha256": "9e6c9ac5921060025918428f9cc24f2981ecd81c59a18fd2918afee6dbc3b5f6",
+      "bytes": 9346,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "cursor/cairn-agent/skills/cairn-agent-bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "917a259f9c474446458e15eff9733c560201e120cd35b35ad9c1cdbc8c682637",
-      "bytes": 9209,
+      "sha256": "1dad11e65adb26aa8dbc92825223979ee317298b910ae0f6874e77712acc30a1",
+      "bytes": 9366,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2789,16 +2789,16 @@
     {
       "path": "cursor/cairn-agent/skills/cairn-agent-portability-triage/SKILL.md",
       "type": "document",
-      "sha256": "1e67347ff2a44439977bd386a7087439c39ee4dafd0ae019cf8a30fcf523e7d8",
-      "bytes": 4803,
+      "sha256": "07b089d4cc55be8145ef502545fa3daed8bfd32a1d70afcbfa7090f720561dfd",
+      "bytes": 4920,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "cursor/cairn-agent/skills/cairn-agent-portability-triage/reference/diagnostics.md",
       "type": "document",
-      "sha256": "3dcbbb91d6a0e7f80ee4aba7ab294567fc682633c1e08482459bade16fb314cf",
-      "bytes": 9007,
+      "sha256": "baca6c4a197d5fbd676f692ccbdf87cfabb9da111cc8261643450096848877c5",
+      "bytes": 9842,
       "mode": "0644",
       "origin": "portable"
     },
@@ -3301,7 +3301,7 @@
     {
       "path": "release-manifest.json",
       "type": "config",
-      "sha256": "874056276134759a8b245934dd6a17833bd3cac499c51a3c870ca002c9511f0e",
+      "sha256": "08c04c8f38e809c394989bed16410994e561619f2a306288637f8d7d27a79217",
       "bytes": 8504,
       "mode": "0644",
       "origin": "portable"

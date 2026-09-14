@@ -145,18 +145,7 @@ Approximate on Claude Code and Codex; **unsupported on Cursor**, which has no pe
 
 ## Conditional blocks
 
-The legacy form carries one literal target; the `platform:` spelling is still accepted, and
-the closer repeats the opener's keyword and name.
-
-```markdown
-<!-- target:cursor -->
-
-Cursor-specific instructions.
-
-<!-- /target:cursor -->
-```
-
-The conditional form carries OR, negation, and branching.
+One form, carrying OR, negation, and branching. **Every chain must end in `else`.**
 
 ```markdown
 <!-- if target:claude-code -->
@@ -172,12 +161,17 @@ Check the working tree before continuing.
 ```
 
 A comma list is an OR; `not` negates the whole list; blocks nest and take exactly one branch.
-Markers inside a fenced code block are inert, so an example like the ones above is safe to
+Markers inside a fenced code block are inert, so an example like the one above is safe to
 write in a skill.
+
+The `else` is required (`AB128`): a chain no target matches emits nothing, and no other
+diagnostic reports it, so the region is simply absent on the hosts nobody tested. The retired
+one-armed `<!-- target:cursor --> … <!-- /target:cursor -->` form and its `platform:` spelling
+are `AB125` — that form was a chain with no `else`, which is the hole `AB128` closes.
 
 Validated in **every** textual file, not only recognized components. An unknown target is
 `AB120`, an unbalanced block `AB121`, and a marker that looks conditional but does not parse
-(`<!-- target: cursor -->`, with a space) is `AB123` rather than being silently ignored.
+(`<!-- if target: cursor -->`, with a space) is `AB123` rather than being silently ignored.
 
 ## Cross-component references
 

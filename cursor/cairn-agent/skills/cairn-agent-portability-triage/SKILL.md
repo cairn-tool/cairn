@@ -24,8 +24,10 @@ The `AB3xx` range is organized by feature: `AB302` placeholders and `AB303` comp
 references, `AB310` skills, `AB32x` hooks, `AB33x`/`AB340` subagents, `AB35x` rules, `AB36x`
 policies, `AB370` MCP. Full list in [`reference/diagnostics.md`](reference/diagnostics.md).
 
-`AB124`, `AB156` and `AB157` are not in this range and not triage material: a broken component
-reference is an authoring error to correct, not an approximation to accept.
+`AB124`, `AB125`, `AB128`, `AB129`, `AB156` and `AB157` are not in this range and not triage
+material: a broken component reference, a retired conditional form, a chain with no `else`, and
+a preload a host will not honor are all authoring errors to correct, not approximations to
+accept.
 
 **`--strict` is a decision, not a default.** It turns approximations into blocking findings,
 which is right in CI for a bundle you publish and wrong for `agent audit`, where forwarded
@@ -38,7 +40,7 @@ render warnings say nothing about whether a bundle is safe to trust.
 | 1   | Accept it, and say so               | The loss is real but tolerable.               | You must name it in the description.                                      |
 | 2   | Restructure to a portable surface   | A portable kind already covers it.            | Usually none. This is the one people miss.                                |
 | 3   | `include:` / `exclude:` frontmatter | The component only makes sense on some hosts. | The feature is absent elsewhere, deliberately.                            |
-| 4   | A conditional block                 | Only the _prose_ differs.                     | One file stays one file. Branches with `if`/`elif`/`else`.                |
+| 4   | A conditional block                 | Only the _prose_ differs.                     | One file stays one file. `if`/`elif`/`else`, and the `else` is required.  |
 | 5   | A `native/<target>/` overlay        | There is genuinely no portable surface.       | Verbatim copy: no placeholders, no conditionals, not conformance-checked. |
 
 Reach down this list, not up. Most `AB310` and `AB302` findings are remedy 1; most "I need a
