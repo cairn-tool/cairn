@@ -301,8 +301,13 @@ export function checkAssets(
         continue;
       }
       for (const reference of declared) {
-        const found = [...byName.entries()].find(([candidate]) =>
-          candidate.endsWith(`/${reference}`),
+        // Exact match as well as suffix: a package nests every artifact under
+        // `<target>/<profile>/`, but an install writes them at the destination
+        // root, where the icon's path *is* the declared reference. Matching only
+        // on a prefix made `agent install --register` reject every bundle that
+        // declares an icon, while `agent package` accepted the same bundle.
+        const found = [...byName.entries()].find(
+          ([candidate]) => candidate === reference || candidate.endsWith(`/${reference}`),
         )?.[1];
         if (!found) {
           diagnostics.push(
