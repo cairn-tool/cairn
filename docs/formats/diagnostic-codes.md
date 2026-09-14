@@ -291,6 +291,11 @@ Per-feature mapping losses. Severity depends on what the target profile declares
 | `AB905` | error    | `agent marketplace` | Two bundles resolve to the same directory or the same name.   |
 | `AB906` | warning  | `agent marketplace` | A selected target has no bundles left after include/exclude.  |
 | `AB907` | notice   | `agent marketplace` | A bundle was skipped for a target by its own include/exclude. |
+| `AB908` | error    | `agent marketplace` | A published source bundle would carry the version sentinel.   |
+| `AB909` | error    | `agent marketplace` | A referenced resource resolves above the collection root.     |
+| `AB910` | error    | `agent marketplace` | Two different sources publish to the same path.               |
+| `AB911` | warning  | `agent marketplace` | A declared `resourceRoot` is referenced by nothing.           |
+| `AB912` | notice   | `agent marketplace` | A source bundle's version was stamped for the release.        |
 
 ## ADF invocation and input
 

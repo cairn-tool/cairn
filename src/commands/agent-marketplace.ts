@@ -9,6 +9,9 @@ import {
   buildCollection,
   collectionHasFindings,
 } from "../agent/marketplace/index.js";
+import type { CollectionLayout } from "../agent/marketplace/layout.js";
+import { COLLECTION_LAYOUTS, ownership } from "../agent/marketplace/layout.js";
+import { RELEASE_MANIFEST } from "../agent/marketplace/release-manifest.js";
 import type { InstallEntry, InstallPlan } from "../agent/install/index.js";
 import {
   INSTALL_CACHE,
@@ -33,6 +36,11 @@ export interface AgentMarketplaceOptions extends AgentOptions {
   into?: string;
   link?: boolean;
   register?: boolean;
+  layout?: string;
+  sourceBundles?: boolean;
+  stampVersion?: string;
+  sourceCommit?: string;
+  readme?: string;
 }
 
 function resolveThroughExistingAncestors(candidate: string): string {
@@ -53,7 +61,9 @@ function matchesCollection(output: string, artifacts: Artifact[]): boolean {
   for (const artifact of artifacts) {
     const file = path.join(output, artifact.path);
     if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return false;
-    if (artifact.path === MARKETPLACE_REPORT) continue;
+    // Both embed the generator version, and the release manifest also embeds the
+    // source commit, so byte-comparing either would call every tree stale.
+    if (artifact.path === MARKETPLACE_REPORT || artifact.path === RELEASE_MANIFEST) continue;
     if (!fs.readFileSync(file).equals(artifact.content)) return false;
   }
   return true;
@@ -89,6 +99,21 @@ export async function agentMarketplaceAction(
   const mode = (opts.marketplace ?? "repo") as CollectionMode;
   if (!(COLLECTION_MODES as readonly string[]).includes(mode))
     throw new Error(`Unknown --marketplace '${mode}'. Use one of: ${COLLECTION_MODES.join(", ")}.`);
+
+  const layout = (opts.layout ?? "nested") as CollectionLayout;
+  if (!(COLLECTION_LAYOUTS as readonly string[]).includes(layout))
+    throw new Error(`Unknown --layout '${layout}'. Use one of: ${COLLECTION_LAYOUTS.join(", ")}.`);
+  // --install strips a `<target>/` prefix to find the host marketplace directory,
+  // which the release layout does not have: its catalogs sit at the shared root.
+  if (layout === "release" && opts.install)
+    throw new Error("--layout release cannot be combined with --install");
+  for (const [flag, given] of [
+    ["--stamp-version", opts.stampVersion !== undefined],
+    ["--source-commit", opts.sourceCommit !== undefined],
+    ["--readme", opts.readme !== undefined],
+  ] as const)
+    if (given && layout !== "release")
+      throw new Error(`${flag} applies only with --layout release`);
 
   const { spec, diagnostics: specDiagnostics } = loadSpec(source);
   // With --install and no --output the collection is never written as a tree;
@@ -131,7 +156,17 @@ export async function agentMarketplaceAction(
     );
   const targets: AgentTarget[] = spec.targets.filter((target) => requested.includes(target));
 
-  const built = buildCollection(spec, targets, mode, { archive: opts.archive });
+  const built = buildCollection(spec, targets, mode, {
+    archive: opts.archive,
+    layout,
+    // Commander sets a `--no-x` option to true by default, so only an explicit
+    // false says anything; passing the default through would publish sources
+    // under the nested layout too.
+    ...(opts.sourceBundles === false ? { sourceBundles: false } : {}),
+    ...(opts.stampVersion !== undefined ? { stampVersion: opts.stampVersion } : {}),
+    ...(opts.sourceCommit !== undefined ? { sourceCommit: opts.sourceCommit } : {}),
+    ...(opts.readme !== undefined ? { readme: opts.readme } : {}),
+  });
   const diagnostics = [...specDiagnostics, ...built.diagnostics];
 
   const all = [
@@ -196,10 +231,11 @@ export async function agentMarketplaceAction(
     preflightInstallRegistrations(plans);
     if (output)
       writeArtifactsAtomically(output, all, {
-        managedRoots: targets,
-        looseFiles: all
-          .filter((artifact) => !targets.some((target) => artifact.path.startsWith(`${target}/`)))
-          .map((artifact) => artifact.path),
+        ...ownership(
+          layout,
+          targets,
+          all.map((artifact) => artifact.path),
+        ),
         force: Boolean(opts.force),
       });
     for (const plan of plans) commitInstall(plan);

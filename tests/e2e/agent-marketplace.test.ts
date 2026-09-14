@@ -960,3 +960,375 @@ describe("agent marketplace --install for Codex", () => {
     expect(fs.existsSync(path.join(home, ".codex", "marketplaces", "demo"))).toBe(false);
   });
 });
+
+/**
+ * A collection whose bundles reach outside themselves, which is the case the
+ * release layout exists to serve and the one cairn's own bundles never exercise:
+ * none of the eight declares a `resourceRoots` at all.
+ *
+ * `shared/` deliberately holds one file nobody references, so a test can prove
+ * the publisher ships what is reached for rather than the whole directory.
+ */
+function collectionWithResources(): { root: string; out: string } {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agent-marketplace-res-"));
+  temporary.push(root);
+
+  fs.mkdirSync(path.join(root, "shared"), { recursive: true });
+  fs.writeFileSync(path.join(root, "shared", "used.md"), "# Used\n");
+  fs.writeFileSync(path.join(root, "shared", "unused.md"), "# Unused\n");
+
+  const bundle = path.join(root, "bundles", "alpha");
+  fs.mkdirSync(path.join(bundle, "skills", "alpha"), { recursive: true });
+  fs.writeFileSync(
+    path.join(bundle, "agent-bundle.yaml"),
+    `schemaVersion: "2"\nname: alpha\nversion: 0.0.0-development\ndescription: The alpha bundle\n` +
+      `marketplace:\n  displayName: Alpha\n  publisher:\n    name: Test Owner\n` +
+      `  license: MIT\n  categories: [demo]\nresourceRoots:\n  - ../../shared\n`,
+  );
+  fs.writeFileSync(
+    path.join(bundle, "skills", "alpha", "SKILL.md"),
+    `---\nname: alpha\ndescription: Do alpha things.\nresources:\n` +
+      `  - path: ../../../../shared/used.md\n    as: reference/used.md\n---\nDo alpha things.\n`,
+  );
+
+  fs.writeFileSync(
+    path.join(root, "agent-marketplace.yaml"),
+    `schemaVersion: "1"\nname: demo\nversion: 2.1.0\ndescription: A demo collection.\n` +
+      `owner:\n  name: Test Owner\ntargets: [claude-code]\nbundles:\n  - path: bundles/alpha\n`,
+  );
+
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), "agent-marketplace-out-"));
+  temporary.push(out);
+  fs.rmSync(out, { recursive: true, force: true });
+  return { root, out };
+}
+
+interface ReleaseManifest {
+  schemaVersion: string;
+  marketplace: string;
+  version: string;
+  sourceCommit: string | null;
+  generator: { name: string; version: string };
+  targets: Record<
+    string,
+    { catalog: string | null; root: string | null; activation: string | null }
+  >;
+  bundles: Array<{
+    name: string;
+    version: string;
+    source: string;
+    sourceSha256: string;
+    targets: Record<string, { path: string; sha256: string }>;
+  }>;
+}
+
+function manifest(out: string): ReleaseManifest {
+  return JSON.parse(fs.readFileSync(path.join(out, "release-manifest.json"), "utf8"));
+}
+
+describe("agent marketplace --layout release", () => {
+  // The whole point of the layout: every host looks for its catalog at the
+  // repository root and nowhere else, so one branch can serve all of them only
+  // if the catalogs are hoisted out of their target directories.
+  it("hoists every catalog to the root and points entries into the target tree", async () => {
+    const { root, out } = collection(
+      SPEC.replace("targets: [claude-code]", "targets: [claude-code, cursor]"),
+    );
+    const result = await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--output",
+      out,
+    );
+    expect(result.exitCode).toBe(0);
+
+    const claude: Catalog = JSON.parse(
+      fs.readFileSync(path.join(out, ".claude-plugin", "marketplace.json"), "utf8"),
+    );
+    const cursor: Catalog = JSON.parse(
+      fs.readFileSync(path.join(out, ".cursor-plugin", "marketplace.json"), "utf8"),
+    );
+    expect(claude.plugins.map((entry) => entry.source)).toEqual([
+      "./claude-code/alpha",
+      "./claude-code/beta",
+    ]);
+    expect(cursor.plugins.map((entry) => entry.source)).toEqual([
+      "./cursor/alpha",
+      "./cursor/beta",
+    ]);
+    expect(fs.existsSync(path.join(out, "claude-code", ".claude-plugin"))).toBe(false);
+  });
+
+  // Publishing the sources is what makes the branch installable for a host that
+  // has no marketplace concept at all — `agent install` renders from a bundle.
+  it("publishes the source bundles", async () => {
+    const { root, out } = collection(SPEC);
+    await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--output",
+      out,
+    );
+    expect(fs.existsSync(path.join(out, "bundles", "alpha", "agent-bundle.yaml"))).toBe(true);
+    expect(fs.existsSync(path.join(out, "bundles", "beta", "skills", "beta", "SKILL.md"))).toBe(
+      true,
+    );
+  });
+
+  it("does not publish the sources under the nested layout", async () => {
+    const { root, out } = collection(SPEC);
+    await run("agent", "marketplace", path.join(root, "agent-marketplace.yaml"), "--output", out);
+    expect(fs.existsSync(path.join(out, "bundles"))).toBe(false);
+  });
+
+  // A catalog advertising one version while the published source carries another
+  // installs one thing and describes another, so the stamp has to reach the
+  // rendered manifests as well as the source.
+  it("stamps the catalog, the rendered manifest and the published source alike", async () => {
+    const { root, out } = collectionWithResources();
+    const result = await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--stamp-version",
+      "9.1.0",
+      "--output",
+      out,
+    );
+    expect(result.exitCode).toBe(0);
+
+    const document: Catalog = JSON.parse(
+      fs.readFileSync(path.join(out, ".claude-plugin", "marketplace.json"), "utf8"),
+    );
+    expect(document.plugins[0]?.version).toBe("9.1.0");
+
+    const rendered = JSON.parse(
+      fs.readFileSync(
+        path.join(out, "claude-code", "alpha", ".claude-plugin", "plugin.json"),
+        "utf8",
+      ),
+    ) as { version: string };
+    expect(rendered.version).toBe("9.1.0");
+
+    const source = fs.readFileSync(path.join(out, "bundles", "alpha", "agent-bundle.yaml"), "utf8");
+    expect(source).toContain("version: 9.1.0");
+    expect(source).not.toContain("0.0.0-development");
+    expect(manifest(out).bundles[0]?.version).toBe("9.1.0");
+  });
+
+  // Without a stamp the sentinel would reach the branch, where it would install
+  // and advertise a version that was never released.
+  it("refuses to publish the version sentinel", async () => {
+    const { root, out } = collectionWithResources();
+    const result = await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--output",
+      out,
+    );
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toContain("AB908");
+  });
+
+  // Only what is reached for: publishing a whole shared directory would put
+  // unrelated files on a branch people clone for plugins.
+  it("publishes referenced resources at their own depth and nothing else", async () => {
+    const { root, out } = collectionWithResources();
+    await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--stamp-version",
+      "9.1.0",
+      "--output",
+      out,
+    );
+    expect(fs.existsSync(path.join(out, "shared", "used.md"))).toBe(true);
+    expect(fs.existsSync(path.join(out, "shared", "unused.md"))).toBe(false);
+  });
+
+  // The proof that the depth arithmetic holds: the published bundle still
+  // resolves `../../shared` and renders the resource it reaches for.
+  it("publishes a source bundle that still renders", async () => {
+    const { root, out } = collectionWithResources();
+    await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--stamp-version",
+      "9.1.0",
+      "--output",
+      out,
+    );
+
+    const rendered = fs.mkdtempSync(path.join(os.tmpdir(), "agent-marketplace-render-"));
+    temporary.push(rendered);
+    fs.rmSync(rendered, { recursive: true, force: true });
+    const result = await run(
+      "agent",
+      "convert",
+      path.join(out, "bundles", "alpha"),
+      "--target",
+      "claude-code",
+      "--profile",
+      "plugin",
+      "--output",
+      rendered,
+    );
+    expect(result.exitCode).toBe(0);
+    expect(
+      fs.existsSync(
+        path.join(rendered, "claude-code", "plugin", "skills", "alpha", "reference", "used.md"),
+      ),
+    ).toBe(true);
+  });
+
+  it("records the targets, their catalogs and their activation in the manifest", async () => {
+    const { root, out } = collection(
+      SPEC.replace("targets: [claude-code]", "targets: [claude-code, cursor]"),
+    );
+    await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--output",
+      out,
+      "--source-commit",
+      "abc1234",
+    );
+
+    const document = manifest(out);
+    expect(document.schemaVersion).toBe("1");
+    expect(document.marketplace).toBe("demo");
+    expect(document.sourceCommit).toBe("abc1234");
+    expect(document.targets["claude-code"]).toEqual({
+      catalog: ".claude-plugin/marketplace.json",
+      root: "claude-code",
+      activation: "settings",
+    });
+    // Cursor auto-scans its plugin directory, so it has a catalog and no
+    // activation — which is why a consumer cannot infer one from the other.
+    expect(document.targets["cursor"]?.activation).toBeNull();
+    expect(document.bundles.map((entry) => entry.name)).toEqual(["alpha", "beta"]);
+    expect(Object.keys(document.bundles[0]?.targets ?? {})).toEqual(["claude-code", "cursor"]);
+    expect(document.bundles[0]?.sourceSha256).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  // A bundle excluded for a target must be absent from that target everywhere,
+  // or a consumer driving installs off the manifest would install it anyway.
+  it("omits an excluded target from the bundle's manifest entry", async () => {
+    const { root, out } = collection(
+      `${SPEC.replace("targets: [claude-code]", "targets: [claude-code, cursor]").replace(
+        "  - path: plugins/beta\n",
+        "  - path: plugins/beta\n    include: [claude-code]\n",
+      )}`,
+    );
+    await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--output",
+      out,
+    );
+
+    const beta = manifest(out).bundles.find((entry) => entry.name === "beta");
+    expect(Object.keys(beta?.targets ?? {})).toEqual(["claude-code"]);
+    const cursor: Catalog = JSON.parse(
+      fs.readFileSync(path.join(out, ".cursor-plugin", "marketplace.json"), "utf8"),
+    );
+    expect(cursor.plugins.map((entry) => entry.name)).toEqual(["alpha"]);
+  });
+
+  // `--install` strips a `<target>/` prefix to find the host marketplace
+  // directory, which the hoisted layout does not have.
+  it("refuses --install", async () => {
+    const { root, out } = collection(SPEC);
+    const result = await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--output",
+      out,
+      "--install",
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--layout release cannot be combined with --install");
+  });
+
+  // The landing page of the branch. Generated here so that every repository
+  // publishing one does not write the same generator.
+  it("generates a README naming both the marketplace and the from-source route", async () => {
+    const { root, out } = collection(
+      SPEC.replace("targets: [claude-code]", "targets: [claude-code, antigravity]"),
+    );
+    await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--output",
+      out,
+      "--readme",
+      "acme/widgets",
+    );
+
+    const readme = fs.readFileSync(path.join(out, "README.md"), "utf8");
+    expect(readme).toContain("# demo — release 2.1.0");
+    expect(readme).toContain("/plugin marketplace add git@github.com:acme/widgets.git#release");
+    expect(readme).toContain("/plugin install alpha@demo");
+    // Antigravity declares no catalog, so its section is the from-source route.
+    expect(readme).toContain("--target antigravity");
+    expect(readme).toContain("#release-v2.1.0");
+  });
+
+  it("writes no README unless asked", async () => {
+    const { root, out } = collection(SPEC);
+    await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--layout",
+      "release",
+      "--output",
+      out,
+    );
+    expect(fs.existsSync(path.join(out, "README.md"))).toBe(false);
+  });
+
+  it("refuses --stamp-version outside the release layout", async () => {
+    const { root, out } = collection(SPEC);
+    const result = await run(
+      "agent",
+      "marketplace",
+      path.join(root, "agent-marketplace.yaml"),
+      "--output",
+      out,
+      "--stamp-version",
+      "9.1.0",
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--stamp-version applies only with --layout release");
+  });
+});

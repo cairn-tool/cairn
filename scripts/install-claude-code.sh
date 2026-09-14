@@ -9,6 +9,9 @@
 # User scope writes ~/.claude/plugins/marketplaces/ and is the layout Claude Code
 # scans. Project scope merges .claude/ into the current directory instead.
 
+# This repository *is* cairn, so prefer its own build over a global install.
+export CAIRN_LOCAL_BUILD=${CAIRN_LOCAL_BUILD:-1}
+
 source "$(dirname -- "${BASH_SOURCE[0]}")/lib/common.sh"
 
 TARGET="claude-code"
@@ -44,6 +47,8 @@ while [ $# -gt 0 ]; do
 done
 
 discover_bundles
+MARKETPLACE=$(marketplace_name)
+[ -n "$MARKETPLACE" ] || die "$MARKETPLACE_SPEC declares no name"
 parse_args ${ARGS[@]+"${ARGS[@]}"}
 resolve_cairn
 
@@ -56,7 +61,7 @@ resolve_cairn
 # bundles falls back to a per-bundle install, and each of those is a marketplace
 # of its own.
 if [ "$SCOPE" = "user" ] && [ ${#BUNDLES[@]} -eq ${#ALL_BUNDLES[@]} ] && [ "$UNINSTALL" -eq 0 ]; then
-  step "Building and installing the cairn collection -> ~/.claude/plugins/marketplaces/cairn"
+  step "Building and installing the $MARKETPLACE collection -> ~/.claude/plugins/marketplaces/$MARKETPLACE"
   flags=(--install --scope user)
   [ -n "$INTO" ] && flags+=(--into "$INTO")
   [ "$REGISTER" -eq 1 ] && flags+=(--register)
@@ -74,7 +79,7 @@ if [ "$SCOPE" = "user" ] && [ ${#BUNDLES[@]} -eq ${#ALL_BUNDLES[@]} ] && [ "$UNI
     note "or re-run without --no-register."
   fi
   [ "$DRY_RUN" -eq 0 ] && [ "$CHECK" -eq 0 ] && {
-    ok "Installed. Verify with: claude plugin validate ~/.claude/plugins/marketplaces/cairn"
+    ok "Installed. Verify with: claude plugin validate ~/.claude/plugins/marketplaces/$MARKETPLACE"
     note "Remove with: scripts/install-claude-code.sh --uninstall"
   }
   exit 0
@@ -83,19 +88,19 @@ fi
 # Uninstalling the collection is one name, not six: the marketplace is what was
 # installed.
 if [ "$SCOPE" = "user" ] && [ "$UNINSTALL" -eq 1 ] && [ ${#BUNDLES[@]} -eq ${#ALL_BUNDLES[@]} ]; then
-  step "Removing the cairn marketplace from ~/.claude/plugins/marketplaces"
+  step "Removing the $MARKETPLACE marketplace from ~/.claude/plugins/marketplaces"
   flags=(--target claude-code --scope user)
   [ -n "$INTO" ] && flags+=(--into "$INTO")
   [ "$DRY_RUN" -eq 1 ] && flags+=(--dry-run)
   [ "$CHECK" -eq 1 ] && flags+=(--check)
   [ -n "$FORMAT" ] && flags+=(--format "$FORMAT")
-  cairn_run agent uninstall cairn "${flags[@]}"
+  cairn_run agent uninstall "$MARKETPLACE" "${flags[@]}"
   exit 0
 fi
 
 if [ "$SCOPE" = "user" ] && [ "$UNINSTALL" -eq 0 ]; then
   warn "installing named bundles one at a time: each becomes its own marketplace under"
-  warn "~/.claude/plugins/marketplaces/. Omit the names to install the single cairn collection."
+  warn "~/.claude/plugins/marketplaces/. Omit the names to install the single $MARKETPLACE collection."
   # Each of those is a marketplace layout, so each needs its own activation edit.
   [ "$REGISTER" -eq 1 ] && EXTRA_INSTALL_FLAGS+=(--register)
 fi

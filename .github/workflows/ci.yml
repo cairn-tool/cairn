@@ -175,11 +175,30 @@ jobs:
           node dist/cli.js agent marketplace agent-marketplace.yaml
           --output "$RUNNER_TEMP/marketplace"
 
+      # The tree that actually ships. Built here so a PR proves the release
+      # layout still assembles -- the source bundles, the hoisted catalogs and
+      # the manifest are only exercised by this layout, and `Plugins` runs too
+      # late to catch a break in it.
+      - name: Build the release tree
+        run: >-
+          node dist/cli.js agent marketplace agent-marketplace.yaml
+          --layout release --output "$RUNNER_TEMP/release"
+          --source-commit "$(git rev-parse HEAD)"
+
+      # Proves a published source bundle still renders: it is installed from the
+      # release tree, not from plugins/, so a resource the publisher failed to
+      # carry across would fail right here rather than on someone's machine.
+      - name: Install a published source bundle
+        run: >-
+          node dist/cli.js agent install "$RUNNER_TEMP/release/bundles/cairn-agent"
+          --target antigravity --scope user --into "$RUNNER_TEMP/from-release"
+
       # So a reviewer can `/plugin marketplace add` the built tree from a PR.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cairn-plugins
-          path: ${{ runner.temp }}/marketplace
+          path: ${{ runner.temp }}/release
+          include-hidden-files: true
 
   dogfood:
     name: Self-lint markdown

@@ -7,6 +7,9 @@
 #
 # Discovered plugins are enabled by default, so there is nothing to register.
 
+# This repository *is* cairn, so prefer its own build over a global install.
+export CAIRN_LOCAL_BUILD=${CAIRN_LOCAL_BUILD:-1}
+
 source "$(dirname -- "${BASH_SOURCE[0]}")/lib/common.sh"
 
 TARGET="antigravity"

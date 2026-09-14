@@ -29,25 +29,31 @@ is recorded so `agent uninstall` can reverse it.
 
 ## Options
 
-| Option                 | Default  | Description                                                             |
-| ---------------------- | -------- | ----------------------------------------------------------------------- |
-| `--output <dir>`       | Required | Collection root. Must not be inside any bundle.                         |
-| `--target <target>`    | The spec | Repeatable. **Narrows** the spec's targets; may not add to them.        |
-| `--marketplace <mode>` | `repo`   | Catalog mode: `repo` or `local`.                                        |
-| `--archive`            | Off      | Also emit a deterministic `.tar.gz` per plugin.                         |
-| `--install`            | Off      | Install into the host marketplace directory the profile declares.       |
-| `--scope <scope>`      | `user`   | `user` or `project`. `--install` only.                                  |
-| `--into <dir>`         | Profile  | Override the install root. `--install` only.                            |
-| `--link`               | Off      | Symlink the installed tree instead of copying it. `--install` only.     |
-| `--register`           | Off      | Activate the collection through the host integration. `--install` only. |
-| `--strict`             | Off      | Treat warnings as blocking findings.                                    |
-| `--force`              | Off      | Replace a nonempty destination.                                         |
-| `--dry-run`            | Off      | Build in memory without writing.                                        |
-| `--check`              | Off      | Compare against an existing collection without writing.                 |
-| `--format <fmt>`       | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.          |
-| `--envelope`           | Off      | Wrap `--format json` output in the versioned result envelope.           |
+| Option                  | Default  | Description                                                             |
+| ----------------------- | -------- | ----------------------------------------------------------------------- |
+| `--output <dir>`        | Required | Collection root. Must not be inside any bundle.                         |
+| `--target <target>`     | The spec | Repeatable. **Narrows** the spec's targets; may not add to them.        |
+| `--marketplace <mode>`  | `repo`   | Catalog mode: `repo` or `local`.                                        |
+| `--layout <layout>`     | `nested` | Output layout: `nested` or `release`.                                   |
+| `--no-source-bundles`   | —        | Do not publish the source bundles. `--layout release` only.             |
+| `--stamp-version <v>`   | Off      | Version written into every bundle. `--layout release` only.             |
+| `--source-commit <sha>` | Off      | Commit recorded in `release-manifest.json`. `--layout release` only.    |
+| `--readme <owner/name>` | Off      | Generate the branch's `README.md`. `--layout release` only.             |
+| `--archive`             | Off      | Also emit a deterministic `.tar.gz` per plugin.                         |
+| `--install`             | Off      | Install into the host marketplace directory the profile declares.       |
+| `--scope <scope>`       | `user`   | `user` or `project`. `--install` only.                                  |
+| `--into <dir>`          | Profile  | Override the install root. `--install` only.                            |
+| `--link`                | Off      | Symlink the installed tree instead of copying it. `--install` only.     |
+| `--register`            | Off      | Activate the collection through the host integration. `--install` only. |
+| `--strict`              | Off      | Treat warnings as blocking findings.                                    |
+| `--force`               | Off      | Replace a nonempty destination.                                         |
+| `--dry-run`             | Off      | Build in memory without writing.                                        |
+| `--check`               | Off      | Compare against an existing collection without writing.                 |
+| `--format <fmt>`        | `llm`    | Output as `llm`, `human`, or `json`. Shorthands: `-fh`, `-fj`.          |
+| `--envelope`            | Off      | Wrap `--format json` output in the versioned result envelope.           |
 
-`--check` and `--dry-run` cannot be combined.
+`--check` and `--dry-run` cannot be combined, and `--layout release` cannot be combined with
+`--install`.
 
 `agent package`'s third catalog mode, `none`, is deliberately absent: a collection whose whole
 product is a catalog has nothing left when the catalog is suppressed.
@@ -78,6 +84,56 @@ re-renders and compares.
   sbom.json
   marketplace-report.json
 ```
+
+## Release layout
+
+`--layout release` produces a tree meant to be **published as a branch** rather than installed
+locally. Two things change, and everything else is the same build:
+
+```text
+<output>/
+  .claude-plugin/marketplace.json     entries: "source": "./claude-code/<name>"
+  .cursor-plugin/marketplace.json     entries: "source": "./cursor/<name>"
+  .agents/plugins/marketplace.json    entries: "source": "./codex/<name>"
+  claude-code/<name>/   cursor/<name>/   codex/<name>/   antigravity/<name>/
+  bundles/<name>/                     the source bundles, version-stamped
+  <resource roots>/                   only the files the bundles reference
+  release-manifest.json
+  checksums.sha256   sbom.json   marketplace-report.json
+```
+
+**Every catalog is hoisted to the root.** Each host looks for its catalog at the repository root
+and nowhere else, so one branch can serve all of them only if the catalogs are not buried under a
+target directory. The three that declare one look in three different places, so they coexist.
+
+This is also why `--install` is refused here: it strips a `<target>/` prefix to find a host
+marketplace directory, and the release layout has no such prefix.
+
+**The source bundles are published too**, which is what makes the branch installable for a host
+with no marketplace concept at all — `agent install` takes a bundle root and renders it in memory:
+
+```bash
+cairn agent install bundles/cairn-usage --target antigravity --scope user
+```
+
+A bundle that reaches outside itself through `resourceRoots` has the files it references published
+alongside it, at the same path relative to the bundle that they had in the source repository. Only
+referenced files are published: a whole documentation tree does not belong on a branch people clone
+for plugins. Nothing in the bundle is rewritten, so the published copy renders exactly as the
+original does.
+
+`--stamp-version` writes one version into every bundle before anything renders, so the catalogs,
+the rendered plugin manifests and the published sources cannot disagree. Use it when a repository
+keeps a sentinel version in its committed manifests and lets its release pipeline decide the real
+one; omit it when the bundles carry their own versions, and they are published as they are. Either
+way a bundle that would publish the `0.0.0-development` sentinel is an error (`AB908`), because it
+would install and advertise a version that was never released.
+
+`--readme` writes the branch's landing page: the plugin table, and the install commands for each
+host that has a catalog plus the from-source route for those that do not. The repository is the one
+thing cairn cannot know, so it is the only input — everything else comes from the manifest it just
+built. It is generated here rather than by each publishing repository for the same reason the
+catalogs are: otherwise every repository that publishes a branch writes the same generator.
 
 > The collection root is **not** an `agent convert` output root. Do not point
 > `agent doctor --output` at it — the catalog and integrity files are not conversion artifacts and

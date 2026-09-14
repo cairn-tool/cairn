@@ -12,11 +12,17 @@ owner:
   name: Bryan Stockus
   url: https://github.com/cairn-tool
 
-# The three hosts that declare a marketplace catalog. Antigravity and OpenCode
-# are deliberately absent: neither has a marketplace concept, so a plugin there
-# is a directory drop, which `agent install` does and a catalog cannot describe.
-# `scripts/check-bundles.sh` still renders every bundle for all five.
-targets: [claude-code, codex, cursor]
+# Every host the release branch serves. The first three declare a marketplace
+# catalog; Antigravity does not, so it gets a rendered tree and no catalog and is
+# installed straight from the published sources under `bundles/`. That is what
+# publishing the sources buys: a host with no marketplace concept is served off
+# the same branch as one that has.
+#
+# OpenCode is deliberately absent. Its profile declares no *user*-scope install
+# location at all, so nothing on a release branch can be installed for it; it is
+# a project-scope merge, which `agent install` does from a checkout.
+# `scripts/check-bundles.sh` still renders and checks every bundle for all five.
+targets: [claude-code, codex, cursor, antigravity]
 
 bundles:
   - path: plugins/cairn-markdown

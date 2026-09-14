@@ -51,11 +51,37 @@ This checkout's own build, `dist/cli.js` — the bundles here are this checkout'
 installed `cairn` may predate a manifest key they use. A missing `node_modules` or `dist/` is
 installed and built first.
 
-| Variable           | Effect                                               |
-| ------------------ | ---------------------------------------------------- |
-| `CAIRN_BIN`        | Use this invocation instead, e.g. `CAIRN_BIN=cairn`. |
-| `CAIRN_NO_BUILD=1` | Never build; fall back to `cairn` on `PATH`.         |
-| `NO_COLOR`         | Plain output.                                        |
+| Variable              | Effect                                                         |
+| --------------------- | -------------------------------------------------------------- |
+| `CAIRN_BIN`           | Use this invocation instead, e.g. `CAIRN_BIN=cairn`.           |
+| `CAIRN_LOCAL_BUILD=1` | Prefer this checkout's `dist/cli.js`. Set by the scripts here. |
+| `CAIRN_NO_BUILD=1`    | Never build; fall back to `cairn` on `PATH`.                   |
+| `NO_COLOR`            | Plain output.                                                  |
+
+`lib/common.sh` is shared verbatim with the repositories that hold only bundles, where building a
+CLI from the checkout would be meaningless — which is why preferring the local build is opt-in
+through `CAIRN_LOCAL_BUILD` rather than the default. The scripts in _this_ directory set it; a
+repository that only carries bundles does not, and falls straight through to `cairn` on `PATH`.
+
+Where a repository keeps its bundles is read from `agent-marketplace.yaml` rather than assumed, for
+the same reason: cairn keeps them under `plugins/`, and the KPS repositories under `bundles/`.
+
+## Publishing
+
+`publish-release-branch.sh <version>` commits a built release tree onto the `release` branch and
+moves the `release-v<version>` tag. It is called from CI, after
+`agent marketplace --layout release`, and is the same file in every repository that publishes one.
+
+The commit is a **fast-forward, never a force push**. Claude Code's background refresh runs
+`git pull` inside each user's clone of that branch, so a rewritten history breaks the update path
+for every existing install. The tag moves with `--force`; the branch never does.
+
+| Variable            | Effect                                                                        |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `RELEASE_DIR`       | The built tree to publish. Defaults to `build/release`.                       |
+| `RELEASE_REMOTE`    | Push here instead — how the script is exercised against a scratch repository. |
+| `GITHUB_TOKEN`      | Required unless `RELEASE_REMOTE` is set; authenticates the remote inline.     |
+| `GITHUB_REPOSITORY` | Required unless `RELEASE_REMOTE` is set.                                      |
 
 ## Undoing an install
 

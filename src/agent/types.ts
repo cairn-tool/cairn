@@ -34,6 +34,28 @@ export interface SourceFile {
   mode: number;
 }
 
+/**
+ * A file materialized into a component from outside the bundle, with the origin
+ * it was read from.
+ *
+ * The rendered tree is self-contained, so nothing downstream needs the origin —
+ * but a *publisher* does: to ship a source bundle that still renders, it has to
+ * carry the files the bundle reaches for, and it can only know which those are
+ * from here. Recorded rather than recomputed, because the resolution rules
+ * (`resourceRoots`, symlink escape, `as` landing paths) live in the parser and
+ * a second implementation would drift from them.
+ */
+export interface ExternalResource {
+  /** Absolute path the file was read from. */
+  absolute: string;
+  /** The reference exactly as the component wrote it, for diagnostics. */
+  declared: string;
+  /** The declared `resourceRoots` entry, resolved, that covers `absolute`. */
+  hostRoot: string;
+  /** Name of the component that referenced it. */
+  component: string;
+}
+
 export interface MarkdownComponent {
   name: string;
   description: string;
@@ -91,6 +113,14 @@ export interface AgentBundle {
   policies: Array<{ path: string; value: Record<string, unknown> }>;
   mcp?: { path: string; value: Record<string, unknown> };
   assets: SourceFile[];
+  /**
+   * Absolute, existing roots resolved from the manifest's `resourceRoots`.
+   * Computed while loading and kept, rather than discarded, so a publisher can
+   * place them at the same relative depth in a published tree.
+   */
+  resourceRoots: string[];
+  /** Files materialized from outside the bundle, with their origin paths. */
+  externalResources: ExternalResource[];
   diagnostics: AgentDiagnostic[];
   graph: Record<string, string[]>;
 }
