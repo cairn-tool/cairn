@@ -3,7 +3,7 @@
   "marketplace": "cairn",
   "version": "1.2.0",
   "description": "Cairn's own toolsets, as plugins.",
-  "sourceCommit": "2ac041771ccb9eeef217a5259f584df3474a9738",
+  "sourceCommit": "cc3393207391a17614bd65fd90453d7db1318c61",
   "generator": {
     "name": "@cairn-tool/cairn",
     "version": "5.1.1"
