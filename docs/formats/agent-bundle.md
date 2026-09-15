@@ -377,6 +377,39 @@ still land inside the bundle or inside a declared root, and a symlink escaping e
 naming an executable from outside the bundle is a supply-chain question rather than a
 documentation-sharing one.
 
+## Declared dependencies
+
+A bundle may name components another bundle defines. `resourceRoots` shares a _file_ by copying
+it; this shares an _identity_, which cannot be copied — the whole point of naming `cr`'s
+`diff-reviewer` is that the host resolves it to the agent `cr` installed.
+
+```yaml
+dependencies:
+  - cr # resolved as a sibling directory
+  - bundle: shared-review # or wherever it actually is
+    path: ../vendor/shared-review
+```
+
+A bare string is a bundle name; an object carries an explicit `path` for a layout the sibling
+rule does not fit. Resolution is the declared `path`, else a sibling directory of that name
+beside this bundle. A dependency that does not resolve to a bundle, or resolves to one with a
+different `name`, is `AB163` — the declared name is the reference prefix _and_ what `{bundle}`
+renders to, so a mismatch would emit an identifier naming nothing on any host. A malformed,
+absolute, duplicated, or self-naming entry is `AB165`.
+
+**Resolution is one level deep and never transitive.** A reference may name a component in a
+bundle this one declares, not one the _dependency_ declares. That bounds the work to one extra
+manifest read per dependency, and it makes a cycle harmless rather than something to detect: `a`
+depending on `b` while `b` depends on `a` resolves fine when neither is followed further.
+
+`dependencies` requires `schemaVersion: "2"` (`AB127`).
+
+**This is the one thing that makes a rendered plugin not self-contained**, and it is the
+deliberate exception to the rule the `resourceRoots` section states. A materialized resource
+survives the other bundle being uninstalled; a cross-bundle reference does not. Declaring the
+dependency is what makes that a decision rather than an accident, and nothing in the rendered
+output records it — the host is assumed to have both plugins.
+
 ## Invocation and arguments
 
 Two further frontmatter fields shape how a host offers a skill. Both are portable, and both are
@@ -515,6 +548,18 @@ Run `<!-- ref:command:review -->` to start.
 | `agent`   | a subagent, to spawn            | `agents/`        |
 | `command` | a skill, as a person invokes it | `skills/`        |
 
+A name may be prefixed by a [declared dependency](#declared-dependencies), which is how a
+component in another bundle is named:
+
+```markdown
+Spawn `<!-- ref:agent:cr/diff-reviewer -->`, one per batch.
+```
+
+Both halves are kebab-case, so the slash is unambiguous and an unprefixed name is untouched.
+Naming a bundle the manifest does not declare is `AB162`; naming a component that bundle does
+not define is `AB164`, kept separate from `AB156` because the remediation differs — `AB156`
+means add the component here, `AB164` means the other bundle changed under you.
+
 `command` resolves against the skills because [there is no `commands` component
 kind](#invocation-and-arguments): a command is a skill the model does not reach for. Referencing one
 that has not declared `invocationPolicy: explicit` is `AB161`, because the host does not present
@@ -531,6 +576,12 @@ For a bundle named `cr`, a skill named `review` and an agent named `diff-reviewe
 The forms are [target-profile data](target-profile.md#naming), never a branch in the renderer.
 Where a host has no such surface the bare name is emitted and `AB303` says so, rather than a
 guessed identifier that would render, validate, and load nothing.
+
+A cross-bundle reference renders through the same forms, substituting the _dependency's_ name for
+`{bundle}`. Where a form drops the bundle — every project profile, and the plugin profiles of
+hosts that do not namespace — the reference renders as a bare name indistinguishable from a local
+component of the same name, and `AB304` says so. It is still the best available answer, so it is
+emitted rather than refused; the diagnostic is there because nothing at runtime would tell you.
 
 ### Where a reference resolves
 
@@ -567,13 +618,16 @@ that is not taken disappears with the branch.
 
 ### Diagnostics
 
-| Code    | Severity | Meaning                                                        |
-| ------- | -------- | -------------------------------------------------------------- |
-| `AB124` | error    | A comment looks like a reference but does not parse.           |
-| `AB156` | error    | A reference names a component the bundle does not define.      |
-| `AB157` | warning  | A reference sits in a file the renderer does not expand.       |
-| `AB161` | warning  | A `command` reference names a model-invocable skill.           |
-| `AB303` | varies   | The target has no identifier for that kind; bare name emitted. |
+| Code    | Severity | Meaning                                                         |
+| ------- | -------- | --------------------------------------------------------------- |
+| `AB124` | error    | A comment looks like a reference but does not parse.            |
+| `AB156` | error    | A reference names a component the bundle does not define.       |
+| `AB162` | error    | A reference names a bundle that is not a declared dependency.   |
+| `AB164` | error    | A reference names a component the dependency does not define.   |
+| `AB157` | warning  | A reference sits in a file the renderer does not expand.        |
+| `AB161` | warning  | A `command` reference names a model-invocable skill.            |
+| `AB303` | varies   | The target has no identifier for that kind; bare name emitted.  |
+| `AB304` | varies   | The profile drops the bundle; a cross-bundle name renders bare. |
 
 `AB124` exists for the same reason `AB123` does. A comment is held to the grammar when it starts
 with `ref:` or `refs:`, so `<!-- reference: docs/x.md -->` and `<!-- refactor this -->` stay

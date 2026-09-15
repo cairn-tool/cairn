@@ -1,5 +1,5 @@
 import type { AgentDiagnostic, AgentTarget } from "./types.js";
-import { diagnostic, TARGETS } from "./types.js";
+import { COMPONENT_NAME, diagnostic, TARGETS } from "./types.js";
 
 /**
  * Bundle manifest schema versions this release parses.
@@ -93,6 +93,23 @@ export interface NativeOverlayDeclaration {
   root: string;
 }
 
+/**
+ * A bundle this one may name components in, through a `bundle/name` reference.
+ *
+ * Declaring the dependency is the deliberate act, the way declaring a
+ * `resourceRoot` is: a reference that leaves the bundle is refused unless the
+ * bundle said which bundle it may leave for.
+ */
+export interface BundleDependency {
+  /** The dependency bundle's name, which is also the reference prefix. */
+  name: string;
+  /**
+   * Optional bundle-relative POSIX path to the dependency's root. Omitted, the
+   * parser looks for a sibling directory named after the dependency.
+   */
+  path?: string;
+}
+
 export interface BundleManifest {
   /** The manifest exactly as it was parsed, for callers that need untouched data. */
   raw: Record<string, unknown>;
@@ -112,6 +129,12 @@ export interface BundleManifest {
    * inside the bundle or inside one of these.
    */
   resourceRoots: string[];
+  /**
+   * Bundles whose components this one may name in a `bundle/name` reference.
+   * Empty unless declared, which is what keeps a reference bundle-local by
+   * default.
+   */
+  dependencies: BundleDependency[];
 }
 
 function error(
@@ -358,6 +381,82 @@ function parseResourceRoots(
   return roots;
 }
 
+/**
+ * Parses `dependencies:` -- the bundles whose components this one may name.
+ *
+ * Two spellings, because the common case deserves the short one: a bare string
+ * is a bundle name resolved as a sibling, and an object carries an explicit
+ * `path` for a layout the sibling rule does not fit.
+ *
+ * Shape only, like `parseResourceRoots`. Whether the dependency exists, and
+ * what it defines, is the parser's job -- it knows the bundle root these
+ * resolve against, and it is the only thing that can read the other manifest.
+ */
+function parseDependencies(
+  value: unknown,
+  path: string,
+  diagnostics: AgentDiagnostic[],
+): BundleDependency[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    error(diagnostics, "AB165", "Bundle dependencies must be an array", path);
+    return [];
+  }
+  const dependencies: BundleDependency[] = [];
+  for (const entry of value) {
+    const declared = typeof entry === "string" ? { bundle: entry } : record(entry);
+    if (!declared) {
+      error(
+        diagnostics,
+        "AB165",
+        "Each dependencies entry must be a bundle name or an object with a bundle field",
+        path,
+      );
+      continue;
+    }
+    const name = typeof declared.bundle === "string" ? declared.bundle.trim() : "";
+    if (!name) {
+      error(diagnostics, "AB165", "Each dependencies entry must name a bundle", path);
+      continue;
+    }
+    if (!COMPONENT_NAME.test(name)) {
+      error(
+        diagnostics,
+        "AB165",
+        `Dependency '${name}' is not a lowercase kebab-case bundle name`,
+        path,
+      );
+      continue;
+    }
+    let root: string | undefined;
+    if (declared.path !== undefined) {
+      if (typeof declared.path !== "string" || !declared.path.trim()) {
+        error(diagnostics, "AB165", `Dependency '${name}' has a malformed path`, path);
+        continue;
+      }
+      root = declared.path.trim();
+      if (root.startsWith("/") || /^[A-Za-z]:/.test(root)) {
+        error(
+          diagnostics,
+          "AB165",
+          `Dependency '${name}' path '${root}' must be relative to the bundle`,
+          path,
+          "Use a bundle-relative path such as ../cr.",
+        );
+        continue;
+      }
+    }
+    // A bundle depending on itself would make `self/name` a second spelling of
+    // every local reference, with a different diagnostic when it broke.
+    if (dependencies.some((existing) => existing.name === name)) {
+      error(diagnostics, "AB165", `Dependency '${name}' is declared more than once`, path);
+      continue;
+    }
+    dependencies.push({ name, ...(root ? { path: root } : {}) });
+  }
+  return dependencies;
+}
+
 const TARGET_HINT = `Use one of: ${TARGETS.join(", ")}.`;
 
 /**
@@ -392,7 +491,7 @@ export function normalizeManifest(
   // The marketplace and native blocks are v2 concepts. Reading them on a v1
   // bundle would silently change that bundle's output, so they are refused.
   if (layer === 1)
-    for (const field of ["marketplace", "native", "resourceRoots"] as const)
+    for (const field of ["marketplace", "native", "resourceRoots", "dependencies"] as const)
       if (raw[field] !== undefined)
         error(
           diagnostics,
@@ -414,11 +513,24 @@ export function normalizeManifest(
           ),
         );
 
+  const name = String(raw.name ?? fallbackName);
+  const dependencies =
+    layer === 2 ? parseDependencies(raw.dependencies, manifestPath, diagnostics) : [];
+
+  // Self-dependency would make `self/thing` a second spelling of every local
+  // reference, resolving through a different code path and failing with a
+  // different diagnostic.
+  const self = dependencies.findIndex((dependency) => dependency.name === name);
+  if (self !== -1) {
+    error(diagnostics, "AB165", `Bundle '${name}' declares itself as a dependency`, manifestPath);
+    dependencies.splice(self, 1);
+  }
+
   return {
     raw,
     schemaVersion,
     layer,
-    name: String(raw.name ?? fallbackName),
+    name,
     version: String(raw.version ?? "0.0.0"),
     description: String(raw.description ?? ""),
     marketplace:
@@ -426,6 +538,7 @@ export function normalizeManifest(
     native: layer === 2 ? parseNative(raw.native, manifestPath, diagnostics) : [],
     resourceRoots:
       layer === 2 ? parseResourceRoots(raw.resourceRoots, manifestPath, diagnostics) : [],
+    dependencies,
   };
 }
 

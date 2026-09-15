@@ -119,10 +119,38 @@ export interface AgentBundle {
    * place them at the same relative depth in a published tree.
    */
   resourceRoots: string[];
+  /**
+   * Declared dependencies, resolved to the components they actually define.
+   * Names only: enough to tell a good `cr/diff-reviewer` from a typo and to
+   * render its identity, without loading a second bundle in full.
+   */
+  dependencies: ResolvedDependency[];
   /** Files materialized from outside the bundle, with their origin paths. */
   externalResources: ExternalResource[];
   diagnostics: AgentDiagnostic[];
   graph: Record<string, string[]>;
+}
+
+/**
+ * A declared dependency, resolved.
+ *
+ * Resolution is one level deep and never transitive: a reference may name a
+ * component in a bundle this one declares, and not one the *dependency*
+ * declares. That bounds the work to one extra manifest read per dependency and
+ * makes a cycle harmless rather than something to detect — `a` depending on
+ * `b` while `b` depends on `a` resolves fine when neither is followed further.
+ */
+export interface ResolvedDependency {
+  /** The dependency's bundle name, which is also the reference prefix. */
+  name: string;
+  /** Absolute, symlink-resolved path to the dependency's root. */
+  root: string;
+  /** Skill names the dependency defines. */
+  skills: Set<string>;
+  /** Agent names the dependency defines. */
+  agents: Set<string>;
+  /** Of `skills`, those a host presents as an entry point — for AB161. */
+  explicitSkills: Set<string>;
 }
 
 export type ArtifactOrigin = "portable" | "native";

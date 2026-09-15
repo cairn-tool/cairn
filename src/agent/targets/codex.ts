@@ -191,7 +191,7 @@ export const codexProfile: TargetProfile = {
       profiles: ["plugin", "project"],
       summary: "no argument substitution; explanatory prose is emitted",
       surface: "${PLUGIN_ROOT}",
-      diagnostics: ["AB302", "AB303"],
+      diagnostics: ["AB302", "AB303", "AB304"],
     },
     native: {
       support: "native",

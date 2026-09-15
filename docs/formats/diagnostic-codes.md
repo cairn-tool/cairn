@@ -89,6 +89,10 @@ Emitted by the bundle and manifest parsers, so every command that loads a bundle
 | `AB157` | warning  | bundle parser   | An inline component reference sits in a file the renderer does not expand.                                           |
 | `AB160` | error    | bundle parser   | Components form a dependency cycle.                                                                                  |
 | `AB161` | warning  | bundle parser   | A `command` reference names a skill that is not `invocationPolicy: explicit`.                                        |
+| `AB162` | error    | bundle parser   | A cross-bundle reference names a bundle the manifest does not declare as a dependency.                               |
+| `AB163` | error    | bundle parser   | A declared dependency does not resolve to a bundle, or resolves to a differently-named one.                          |
+| `AB164` | error    | bundle parser   | A cross-bundle reference names a component the dependency does not define.                                           |
+| `AB165` | error    | manifest parser | A `dependencies` entry is malformed, absolute, duplicated, or names the bundle itself.                               |
 
 ## Native overlays
 
@@ -154,6 +158,7 @@ Per-feature mapping losses. Severity depends on what the target profile declares
 | ------- | -------- | ------------------------- | -------------------------------------------------------------------------------------------- |
 | `AB302` | varies   | renderer; target profiles | The target has no portable `${ARGUMENTS}` substitution; explanatory text is emitted instead. |
 | `AB303` | varies   | renderer; target profiles | The target has no identifier for a referenced component kind; the bare name was emitted.     |
+| `AB304` | varies   | renderer; target profiles | The profile drops the bundle from an identifier, so a cross-bundle reference renders bare.   |
 | `AB310` | varies   | renderer; target profiles | The target's skill invocation policy is advisory rather than enforced.                       |
 | `AB320` | varies   | renderer; target profiles | A hook event is not portable to the target.                                                  |
 | `AB321` | varies   | renderer; target profiles | A Windows-specific hook command requires a target override.                                  |
