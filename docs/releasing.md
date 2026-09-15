@@ -20,6 +20,16 @@ Commits **must** follow [Conventional Commits](https://www.conventionalcommits.o
 | `feat!:` or `BREAKING CHANGE:`   | major release |
 | `chore:` `docs:` `test:` `ci:` … | no release    |
 
+> **The `conventionalcommits` preset in `.releaserc.json` is what makes the `!` row true.**
+> semantic-release defaults to the `angular` preset, whose header pattern does not allow a `!` at
+> all — so `feat!: …` does not parse as a `feat`, and a breaking change with no `BREAKING CHANGE:`
+> footer is analyzed as **no release at all**. Not a smaller release: none. The commit merges, the
+> job reports success, and nothing ships.
+>
+> `conventional-changelog-conventionalcommits` is a declared devDependency for the same reason.
+> It resolves transitively through `@commitlint/config-conventional` today, and an `npm ci` after
+> that tree changes would take the preset with it.
+
 ## What semantic-release does not own
 
 Five versions are hand-owned and are **not** touched by a release. Bumping one is a deliberate
