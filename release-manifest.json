@@ -3,10 +3,10 @@
   "marketplace": "cairn",
   "version": "1.2.0",
   "description": "Cairn's own toolsets, as plugins.",
-  "sourceCommit": "cc3393207391a17614bd65fd90453d7db1318c61",
+  "sourceCommit": "182414be8ea60d466261105876851737441bc20e",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "5.1.1"
+    "version": "5.2.0"
   },
   "targets": {
     "claude-code": {
@@ -136,23 +136,23 @@
       "version": "1.2.0",
       "description": "Author, convert, migrate, test, and publish portable agent bundles.",
       "source": "bundles/cairn-agent",
-      "sourceSha256": "815e7f8726fab73c957b155f99e11a5856663c9974bfe8a918655d3d3252f468",
+      "sourceSha256": "69ac041a808fb059ad58bafdcee2e05fcdf851a37ef4e586f7d1a49ca1fdc06b",
       "targets": {
         "claude-code": {
           "path": "claude-code/cairn-agent",
-          "sha256": "a202e786a5ac07f87ce614a1e168238613b32d98b8640548c94f9f8fbcf928b3"
+          "sha256": "2e2d65a8497b5cb7659b3a98ca5bc1f8b74be40f4f252c1c442da42845dbe25b"
         },
         "codex": {
           "path": "codex/cairn-agent",
-          "sha256": "9dd4ab044d806484a1c18ff76ea9341aca4fcf71048cc4c21b7c4eafc9b2f452"
+          "sha256": "a631e6dd5cfdddee96c0658e45e4ed4a715740e56584ccd1543bbb583b24c6c3"
         },
         "cursor": {
           "path": "cursor/cairn-agent",
-          "sha256": "6ec9958f100a79e651fdb8b6a56d4254aa8370006874742bccc668e940ef5510"
+          "sha256": "040e05cad8e9882eb3169dcf64e2fbdbde0ba1a3c504cb4897344e5efd5155c6"
         },
         "antigravity": {
           "path": "antigravity/cairn-agent",
-          "sha256": "eb788050e4fd0daee910d76806a50f5952e4a1a802e05adabdc17cc57db8c29f"
+          "sha256": "ae994f215dc9de2679231cc464adba9b39783227b823c8159598b548b5b63a88"
         }
       }
     },

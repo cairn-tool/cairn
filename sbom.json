@@ -3,7 +3,7 @@
   "specVersion": "1",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "5.1.1"
+    "version": "5.2.0"
   },
   "subject": {
     "name": "cairn",
@@ -117,8 +117,8 @@
     {
       "path": "antigravity/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "1dad11e65adb26aa8dbc92825223979ee317298b910ae0f6874e77712acc30a1",
-      "bytes": 9366,
+      "sha256": "514410a3474b0bb7ef47608827fe901569b6319a292ac2cb5b29e493ff3196aa",
+      "bytes": 10326,
       "mode": "0644",
       "origin": "portable"
     },
@@ -733,8 +733,8 @@
     {
       "path": "bundles/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "2298e0b951b986c1aa3c5506b1cdfa6791fd91e323e826c478a192547de19dcb",
-      "bytes": 9379,
+      "sha256": "8b22e57477c471d285c9b90caa1eb2f0033a78194252b41d26b481dc42163e49",
+      "bytes": 10339,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1429,8 +1429,8 @@
     {
       "path": "claude-code/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "a0d32fb5c90f0f2f38c8e115f25724c91f4683820909de45a2fb8e6b29cc2c61",
-      "bytes": 9386,
+      "sha256": "12cd19f07c9503b07c6aef4ee9cc0f7fd21709acdb7b4b747e3c4df36c667089",
+      "bytes": 10346,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2077,8 +2077,8 @@
     {
       "path": "codex/cairn-agent/skills/bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "2c218f560eac01e7aa2571b65867ed1530b22169b0dedefc1cb8d56917f9eefd",
-      "bytes": 9379,
+      "sha256": "b50baaeb52a7373af6f7833a5caf76cb704e85a5d80419288925146374cb8949",
+      "bytes": 10339,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2749,8 +2749,8 @@
     {
       "path": "cursor/cairn-agent/skills/cairn-agent-bundle-authoring/reference/bundle-format.md",
       "type": "document",
-      "sha256": "1dad11e65adb26aa8dbc92825223979ee317298b910ae0f6874e77712acc30a1",
-      "bytes": 9366,
+      "sha256": "514410a3474b0bb7ef47608827fe901569b6319a292ac2cb5b29e493ff3196aa",
+      "bytes": 10326,
       "mode": "0644",
       "origin": "portable"
     },
@@ -3301,7 +3301,7 @@
     {
       "path": "release-manifest.json",
       "type": "config",
-      "sha256": "4ec4238dd7202003426c0993b4a203e3f4cdcdcd617de8c8702d3a5d54883c66",
+      "sha256": "dd5ea699f1df8687f780925c329fee1485b644fe9badd00b9ae11b61d84195ff",
       "bytes": 8504,
       "mode": "0644",
       "origin": "portable"
