@@ -29,6 +29,13 @@ Commits **must** follow [Conventional Commits](https://www.conventionalcommits.o
 > `conventional-changelog-conventionalcommits` is a declared devDependency for the same reason.
 > It resolves transitively through `@commitlint/config-conventional` today, and an `npm ci` after
 > that tree changes would take the preset with it.
+>
+> **It is pinned to `^9`, and that is load-bearing.** Preset 10 requires
+> `conventional-changelog-writer@9`; `@semantic-release/release-notes-generator@14.1.1` — the
+> newest there is — depends on `^8.0.0`. With preset 10 the commit analysis succeeds and then
+> `generateNotes` dies on `Missing helper`, so the release fails _after_ deciding the version.
+> Commitlint keeps its own copy of 10 nested; only the root copy reaches semantic-release. Do not
+> bump this to 10 until release-notes-generator ships a writer-9 dependency.
 
 ## What semantic-release does not own
 
