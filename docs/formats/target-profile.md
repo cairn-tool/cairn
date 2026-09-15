@@ -171,6 +171,14 @@ the failure this file exists to prevent — so the honest answer is recorded ins
 kind that is prefixed in some profile must have a reference form for that profile. A prefixed
 identity nothing can spell is a component no document can name.
 
+A [cross-bundle reference](agent-bundle.md#declared-dependencies) renders through these same
+forms with the dependency's name as `{bundle}`, so no profile field is needed for it. What the
+forms cannot express is the case where `{bundle}` is absent: every project profile, and the
+plugin profiles of hosts that do not namespace, render `{name}` alone, so a component in another
+bundle is spelled exactly like a local one. `AB304` reports that. It is a weaker statement than
+`AB303` — the identifier is right for the host, it is just not unique — which is why it is a
+separate code rather than a second cause of the same one.
+
 ## `placeholders`
 
 ```ts

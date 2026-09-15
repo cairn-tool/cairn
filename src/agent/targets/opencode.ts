@@ -206,7 +206,7 @@ export const opencodeProfile: TargetProfile = {
       profiles: ["plugin", "project"],
       summary: "argument substitution is documented for commands, not skills",
       surface: null,
-      diagnostics: ["AB303"],
+      diagnostics: ["AB303", "AB304"],
     },
     native: {
       support: "native",

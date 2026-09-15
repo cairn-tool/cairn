@@ -204,3 +204,48 @@ describe("deprecated top-level component paths", () => {
     expect(normalize({ ...V1, skills: "lib/skills" }).codes).toEqual([]);
   });
 });
+
+describe("declared dependencies", () => {
+  it("accepts a bare name and an explicit path, in either spelling", () => {
+    const { manifest, codes } = normalize({
+      ...V2,
+      dependencies: ["cr", { bundle: "shared-review", path: "../shared-review" }],
+    });
+    expect(codes).toEqual([]);
+    expect(manifest.dependencies).toEqual([
+      { name: "cr" },
+      { name: "shared-review", path: "../shared-review" },
+    ]);
+  });
+
+  it("requires schemaVersion 2, like every other field that widens reach", () => {
+    // Reading it on a v1 bundle would change that bundle's output, which is the
+    // property AB224 protects when `agent upgrade` re-renders.
+    expect(normalize({ ...V1, dependencies: ["cr"] }).codes).toEqual(["AB127"]);
+    expect(normalize({ ...V1, dependencies: ["cr"] }).manifest.dependencies).toEqual([]);
+  });
+
+  it("refuses a malformed, absolute, duplicated, or self-naming entry", () => {
+    for (const dependencies of [
+      "cr",
+      [42],
+      [{ path: "../cr" }],
+      [{ bundle: "Cr" }],
+      [{ bundle: "cr", path: "/abs/cr" }],
+      ["cr", "cr"],
+      ["demo"],
+    ])
+      expect(normalize({ ...V2, dependencies }).codes).toEqual(["AB165"]);
+  });
+
+  it("drops the self-dependency rather than carrying it forward", () => {
+    // `demo/thing` would otherwise be a second spelling of every local
+    // reference, resolving through the cross-bundle path and failing with a
+    // different diagnostic when it broke.
+    expect(normalize({ ...V2, dependencies: ["demo"] }).manifest.dependencies).toEqual([]);
+  });
+
+  it("is empty when nothing is declared, so a reference stays bundle-local", () => {
+    expect(normalize(V2).manifest.dependencies).toEqual([]);
+  });
+});

@@ -1,0 +1,11 @@
+# A bundle that names components in another one. The dependency sits beside this
+# bundle rather than inside it, which is the layout a repository of plugins has
+# and the one the sibling resolution rule is written for -- so `provider` needs
+# no path.
+schemaVersion: '2'
+name: dependent
+version: 0.1.0
+description: Names components another bundle defines
+
+dependencies:
+  - provider

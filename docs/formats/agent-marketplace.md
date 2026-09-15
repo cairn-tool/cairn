@@ -98,6 +98,13 @@ path that is not a directory, or one that escapes raises `AB904`.
 Two entries resolving to the same directory, or to two bundles with the same `name`, raise
 `AB905`: a host resolves a duplicated plugin name arbitrarily.
 
+A collection does **not** resolve
+[declared dependencies](agent-bundle.md#declared-dependencies) between its own bundles. Each
+bundle is loaded and rendered on its own, and a dependency resolves from disk relative to the
+bundle that declares it — so a bundle referencing another's components renders the same whether
+it is built alone or as part of a collection. What a collection adds is publishing them together,
+which is what makes the reference resolvable at install time.
+
 ## Targets
 
 `targets` selects the hosts a catalog is built for. `all` expands to every known target and is the

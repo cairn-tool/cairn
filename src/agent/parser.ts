@@ -6,12 +6,14 @@ import type {
   AgentDiagnostic,
   BundleRule,
   MarkdownComponent,
+  ResolvedDependency,
   SourceFile,
   ExternalResource,
 } from "./types.js";
 import { COMPONENT_NAME, diagnostic, TARGETS } from "./types.js";
 import { CONDITIONAL_TEXT, validateConditionals } from "./conditionals.js";
 import type { RefUse } from "./conditionals.js";
+import type { BundleDependency } from "./manifest.js";
 import { configuredPath, normalizeManifest } from "./manifest.js";
 import { loadOverlays } from "./overlays.js";
 
@@ -518,6 +520,139 @@ function loadMarkdownComponents(
   });
 }
 
+/**
+ * The component names a dependency defines, read without loading it in full.
+ *
+ * A cross-bundle reference needs two facts: that `cr` defines an agent called
+ * `diff-reviewer`, and — for a `command` reference — whether the skill it names
+ * is an entry point. Calling `loadBundle` on the dependency would answer both
+ * and cost far more: it would re-run that bundle's own diagnostics under this
+ * bundle's path, and recurse into its dependencies, which is exactly the
+ * transitivity this feature does not have.
+ *
+ * Names are inferred the way `loadMarkdownComponents` infers them, so the two
+ * cannot disagree about what a component is called.
+ */
+function dependencyComponents(
+  root: string,
+  raw: Record<string, unknown>,
+): Pick<ResolvedDependency, "skills" | "agents" | "explicitSkills"> {
+  const skills = new Set<string>();
+  const agents = new Set<string>();
+  const explicitSkills = new Set<string>();
+
+  const scan = (relative: string, kind: "skill" | "agent"): void => {
+    const directory = path.join(root, relative);
+    if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) return;
+    const candidates =
+      kind === "skill"
+        ? allFiles(directory).filter(
+            (file) => file.path === "SKILL.md" || file.path.endsWith(`${path.sep}SKILL.md`),
+          )
+        : allFiles(directory).filter((file) => file.path.endsWith(".md"));
+    for (const candidate of candidates) {
+      const full = path.join(directory, candidate.path);
+      let metadata: Record<string, unknown> = {};
+      try {
+        ({ metadata } = splitFrontmatter(candidate.content.toString("utf8"), full));
+      } catch {
+        // Unreadable frontmatter in the *other* bundle is that bundle's problem;
+        // fall back to the inferred name rather than failing this parse.
+      }
+      const inferred =
+        kind === "skill"
+          ? path.basename(path.dirname(candidate.path))
+          : path.basename(candidate.path).replace(/\.agent\.md$|\.md$/, "");
+      const name = typeof metadata.name === "string" ? metadata.name : inferred;
+      if (kind === "agent") {
+        agents.add(name);
+        continue;
+      }
+      skills.add(name);
+      if (
+        ["explicit", "manual"].includes(
+          String(metadata.invocationPolicy ?? metadata.invocation ?? "auto"),
+        )
+      )
+        explicitSkills.add(name);
+    }
+  };
+
+  scan(configuredPath(raw, "skills", "skills"), "skill");
+  scan(configuredPath(raw, "agents", "agents"), "agent");
+  return { skills, agents, explicitSkills };
+}
+
+/**
+ * Resolves each declared dependency to a bundle on disk.
+ *
+ * The explicit `path` wins; otherwise a sibling directory named after the
+ * dependency. Sibling-by-default is what makes the common case — several
+ * bundles in one repository — need no path at all, and it is also the
+ * constraint that keeps a dependency inside the same source tree.
+ */
+function resolveDependencies(
+  root: string,
+  declared: BundleDependency[],
+  manifestPath: string,
+  diagnostics: AgentDiagnostic[],
+): ResolvedDependency[] {
+  const resolved: ResolvedDependency[] = [];
+  for (const dependency of declared) {
+    const candidate = dependency.path
+      ? path.resolve(root, dependency.path)
+      : path.resolve(root, "..", dependency.name);
+    const manifestFile = path.join(candidate, "agent-bundle.yaml");
+    const exists =
+      fs.existsSync(candidate) &&
+      fs.statSync(candidate).isDirectory() &&
+      fs.existsSync(manifestFile);
+    if (!exists) {
+      diagnostics.push({
+        ...diagnostic(
+          "AB163",
+          `Dependency '${dependency.name}' does not resolve to a bundle`,
+          "unsupported",
+          {
+            path: manifestPath,
+            remediation: dependency.path
+              ? `No agent-bundle.yaml at '${dependency.path}'. Correct the path.`
+              : `Looked for a sibling directory '../${dependency.name}'. Add a path: to say where it is.`,
+          },
+        ),
+        severity: "error",
+      });
+      continue;
+    }
+    const raw = readStructured(manifestFile);
+    // The declared name is the reference prefix *and* what `{bundle}` renders
+    // to, so a directory holding a differently-named bundle would render an
+    // identifier that names nothing on any host.
+    const actual = String(raw.name ?? "");
+    if (actual !== dependency.name) {
+      diagnostics.push({
+        ...diagnostic(
+          "AB163",
+          `Dependency '${dependency.name}' resolves to a bundle named '${actual}'`,
+          "unsupported",
+          {
+            path: manifestPath,
+            remediation: `Declare it as '${actual}', or point the path at the '${dependency.name}' bundle.`,
+          },
+        ),
+        severity: "error",
+      });
+      continue;
+    }
+    resolved.push({
+      name: dependency.name,
+      root: fs.realpathSync(candidate),
+      ...dependencyComponents(candidate, raw),
+    });
+  }
+  return resolved;
+}
+
 function findStructured(
   root: string,
   relative: string,
@@ -739,6 +874,12 @@ export function loadBundle(source: string): AgentBundle {
     legacy ? legacyPath : neutralPath,
     diagnostics,
   );
+  const dependencies = resolveDependencies(
+    root,
+    normalized.dependencies,
+    legacy ? legacyPath : neutralPath,
+    diagnostics,
+  );
   const refs: RefUse[] = [];
   const externalResources: ExternalResource[] = [];
   const skills = loadMarkdownComponents(
@@ -923,17 +1064,58 @@ export function loadBundle(source: string): AgentBundle {
     return file.endsWith(".md") && componentRoots.some((directory) => under(file, directory));
   };
   for (const use of refs) {
-    const pool = use.kind === "agent" ? agentNames : skillNames;
-    if (!pool.has(use.name)) {
+    // `bundle/name` names a component in a declared dependency. `COMPONENT_NAME`
+    // forbids a slash, so the split is unambiguous and a local reference is
+    // untouched by it.
+    const slash = use.name.indexOf("/");
+    const qualifier = slash === -1 ? undefined : use.name.slice(0, slash);
+    const local = slash === -1 ? use.name : use.name.slice(slash + 1);
+    const dependency = qualifier
+      ? dependencies.find((candidate) => candidate.name === qualifier)
+      : undefined;
+
+    if (qualifier && !dependency) {
+      // Either the bundle is not declared, or it is declared and unresolvable —
+      // and AB163 has already said so for the second, so this one stays quiet
+      // about it rather than reporting the same broken link twice.
+      if (!normalized.dependencies.some((declared) => declared.name === qualifier))
+        diagnostics.push({
+          ...diagnostic(
+            "AB162",
+            `Reference '${use.name}' on line ${use.line} names bundle '${qualifier}', which is not a declared dependency`,
+            "unsupported",
+            {
+              path: use.file,
+              remediation: `Add '${qualifier}' to dependencies in agent-bundle.yaml, or correct the reference.`,
+            },
+          ),
+          severity: "error",
+        });
+      continue;
+    }
+
+    const kindLabel = use.kind === "agent" ? "agent" : "skill";
+    const pool = dependency
+      ? use.kind === "agent"
+        ? dependency.agents
+        : dependency.skills
+      : use.kind === "agent"
+        ? agentNames
+        : skillNames;
+
+    if (!pool.has(local)) {
       diagnostics.push({
         ...diagnostic(
-          "AB156",
-          `Missing referenced ${use.kind === "agent" ? "agent" : "skill"} '${use.name}' on line ${use.line}`,
+          dependency ? "AB164" : "AB156",
+          dependency
+            ? `Bundle '${dependency.name}' defines no ${kindLabel} '${local}', referenced on line ${use.line}`
+            : `Missing referenced ${kindLabel} '${use.name}' on line ${use.line}`,
           "unsupported",
           {
             path: use.file,
-            remediation:
-              use.kind === "command"
+            remediation: dependency
+              ? `Correct the reference, or add the ${kindLabel} to '${dependency.name}'.`
+              : use.kind === "command"
                 ? "A command reference names a skill. Add the skill or correct the reference."
                 : "Add the component or correct the reference.",
           },
@@ -942,7 +1124,7 @@ export function loadBundle(source: string): AgentBundle {
       });
       continue;
     }
-    if (use.kind === "command" && !explicitSkills.has(use.name))
+    if (use.kind === "command" && !(dependency?.explicitSkills ?? explicitSkills).has(local))
       diagnostics.push({
         ...diagnostic(
           "AB161",
@@ -950,7 +1132,9 @@ export function loadBundle(source: string): AgentBundle {
           "approximate",
           {
             path: use.file,
-            remediation: `Set invocationPolicy: explicit on '${use.name}', or reference it with ref:skill instead.`,
+            remediation: dependency
+              ? `Set invocationPolicy: explicit on '${local}' in '${dependency.name}', or reference it with ref:skill instead.`
+              : `Set invocationPolicy: explicit on '${local}', or reference it with ref:skill instead.`,
           },
         ),
         severity: "warning",
@@ -1000,6 +1184,7 @@ export function loadBundle(source: string): AgentBundle {
     mcp: findStructured(root, configuredPath(manifest, "mcp", "mcp")),
     assets: legacy ? legacyAssets : fs.existsSync(assetsDir) ? allFiles(assetsDir) : [],
     resourceRoots: extraResourceRoots,
+    dependencies,
     externalResources,
     diagnostics,
     graph,

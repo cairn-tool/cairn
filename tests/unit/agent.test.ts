@@ -737,3 +737,173 @@ describe("inline reference diagnostics", () => {
     ).not.toContain("AB160");
   });
 });
+
+describe("cross-bundle references", () => {
+  /**
+   * Two bundles side by side, the way a repository of plugins holds them, so
+   * the sibling resolution rule is exercised rather than mocked. `dependency`
+   * carries one skill and one agent; `dependent` carries one skill whose body
+   * the caller supplies.
+   */
+  function pair(options: {
+    manifest?: string;
+    body: string;
+    dependencyName?: string;
+    explicit?: boolean;
+  }): { root: string; codes: string[] } {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "agent-bundle-pair-"));
+    temporary.push(parent);
+    const name = options.dependencyName ?? "cr";
+
+    const other = path.join(parent, name);
+    fs.mkdirSync(path.join(other, "skills", "review-record"), { recursive: true });
+    fs.mkdirSync(path.join(other, "agents"), { recursive: true });
+    fs.writeFileSync(
+      path.join(other, "agent-bundle.yaml"),
+      `schemaVersion: '2'\nname: ${name}\nversion: 1.0.0\ndescription: Reviewer\n`,
+    );
+    fs.writeFileSync(
+      path.join(other, "skills", "review-record", "SKILL.md"),
+      `---\nname: review-record\ndescription: The record standard\n${
+        options.explicit ? "invocationPolicy: explicit\n" : ""
+      }---\nShapes.\n`,
+    );
+    fs.writeFileSync(
+      path.join(other, "agents", "diff-reviewer.agent.md"),
+      "---\nname: diff-reviewer\ndescription: Reviews a slice\n---\nReview.\n",
+    );
+
+    const root = path.join(parent, "pr");
+    fs.mkdirSync(path.join(root, "skills", "review"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "agent-bundle.yaml"),
+      options.manifest ??
+        "schemaVersion: '2'\nname: pr\nversion: 1.0.0\ndescription: Author side\ndependencies:\n  - cr\n",
+    );
+    fs.writeFileSync(
+      path.join(root, "skills", "review", "SKILL.md"),
+      `---\nname: review\ndescription: Review the branch\n---\n${options.body}\n`,
+    );
+    return { root, codes: loadBundle(root).diagnostics.map((item) => item.code) };
+  }
+
+  it("resolves a reference into a declared sibling dependency", () => {
+    const { codes } = pair({ body: "Spawn <!-- ref:agent:cr/diff-reviewer -->." });
+    expect(codes).not.toContain("AB156");
+    expect(codes).not.toContain("AB162");
+    expect(codes).not.toContain("AB163");
+    expect(codes).not.toContain("AB164");
+  });
+
+  it("reports AB162 when the reference names an undeclared bundle", () => {
+    // The dependency is on disk and resolvable; what is missing is the
+    // declaration, which is the deliberate act that widens the reference scope.
+    const { codes } = pair({
+      manifest: "schemaVersion: '2'\nname: pr\nversion: 1.0.0\ndescription: Author side\n",
+      body: "Spawn <!-- ref:agent:cr/diff-reviewer -->.",
+    });
+    expect(codes).toContain("AB162");
+  });
+
+  it("reports AB163 when a declared dependency is not on disk", () => {
+    const { codes } = pair({
+      manifest:
+        "schemaVersion: '2'\nname: pr\nversion: 1.0.0\ndescription: Author side\ndependencies:\n  - missing\n",
+      body: "Nothing referenced.",
+    });
+    expect(codes).toContain("AB163");
+  });
+
+  it("reports AB163 when the resolved bundle has a different name", () => {
+    // The declared name is the reference prefix and what {bundle} renders to,
+    // so a mismatch would emit an identifier that names nothing on any host.
+    const { codes } = pair({
+      dependencyName: "cr",
+      manifest:
+        "schemaVersion: '2'\nname: pr\nversion: 1.0.0\ndescription: Author side\ndependencies:\n  - bundle: review\n    path: ../cr\n",
+      body: "Nothing referenced.",
+    });
+    expect(codes).toContain("AB163");
+  });
+
+  it("reports AB164 when the dependency does not define the component", () => {
+    const { codes } = pair({ body: "Spawn <!-- ref:agent:cr/ui-reviewer -->." });
+    expect(codes).toContain("AB164");
+    expect(codes).not.toContain("AB156");
+  });
+
+  it("resolves an explicit path, and does not follow the dependency's own dependencies", () => {
+    // One level, never transitive: `cr` declaring something of its own does not
+    // put it within reach of `pr`, which is what makes a cycle harmless.
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), "agent-bundle-chain-"));
+    temporary.push(parent);
+    for (const [name, extra] of [
+      ["deep", ""],
+      ["cr", "dependencies:\n  - deep\n"],
+    ] as const) {
+      const dir = path.join(parent, name);
+      fs.mkdirSync(path.join(dir, "agents"), { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, "agent-bundle.yaml"),
+        `schemaVersion: '2'\nname: ${name}\nversion: 1.0.0\ndescription: ${name}\n${extra}`,
+      );
+      fs.writeFileSync(
+        path.join(dir, "agents", `${name}-agent.agent.md`),
+        `---\nname: ${name}-agent\ndescription: An agent\n---\nWork.\n`,
+      );
+    }
+    const root = path.join(parent, "pr");
+    fs.mkdirSync(path.join(root, "skills", "review"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "agent-bundle.yaml"),
+      "schemaVersion: '2'\nname: pr\nversion: 1.0.0\ndescription: Author side\ndependencies:\n  - bundle: cr\n    path: ../cr\n",
+    );
+    fs.writeFileSync(
+      path.join(root, "skills", "review", "SKILL.md"),
+      "---\nname: review\ndescription: Review\n---\nSpawn <!-- ref:agent:cr/cr-agent -->, not <!-- ref:agent:deep/deep-agent -->.\n",
+    );
+    const codes = loadBundle(root).diagnostics.map((item) => item.code);
+    // `cr` resolved through the explicit path; `deep` is `cr`'s dependency, not
+    // this bundle's, so naming it is an undeclared bundle rather than a hit.
+    expect(codes).toContain("AB162");
+    expect(codes).not.toContain("AB164");
+  });
+
+  it("reports AB161 for a cross-bundle command reference to a model-invocable skill", () => {
+    const openCodes = pair({ body: "Run <!-- ref:command:cr/review-record -->." }).codes;
+    expect(openCodes).toContain("AB161");
+    const explicitCodes = pair({
+      body: "Run <!-- ref:command:cr/review-record -->.",
+      explicit: true,
+    }).codes;
+    expect(explicitCodes).not.toContain("AB161");
+  });
+
+  it("renders the dependency's identity, and reports AB304 where the bundle is dropped", () => {
+    const { root } = pair({ body: "Spawn <!-- ref:agent:cr/diff-reviewer -->." });
+    const bundle = loadBundle(root);
+
+    const plugin = renderBundle(bundle, ["claude-code"], ["plugin"]);
+    const pluginSkill = plugin.artifacts.find((artifact) =>
+      artifact.path.endsWith(path.join("skills", "review", "SKILL.md")),
+    );
+    expect(pluginSkill?.content.toString()).toContain("cr:diff-reviewer");
+    expect(plugin.diagnostics.map((item) => item.code)).not.toContain("AB304");
+
+    const cursor = renderBundle(bundle, ["cursor"], ["plugin"]);
+    const cursorSkill = cursor.artifacts.find((artifact) =>
+      artifact.path.endsWith(path.join("skills", "pr-review", "SKILL.md")),
+    );
+    expect(cursorSkill?.content.toString()).toContain("cr-diff-reviewer");
+
+    // Every target's project form is `{name}`, so the reference renders bare and
+    // cannot be told from a local agent of the same name.
+    const project = renderBundle(bundle, ["claude-code"], ["project"]);
+    const projectSkill = project.artifacts.find((artifact) =>
+      artifact.path.endsWith(path.join("skills", "review", "SKILL.md")),
+    );
+    expect(projectSkill?.content.toString()).toContain("diff-reviewer");
+    expect(projectSkill?.content.toString()).not.toContain("cr:diff-reviewer");
+    expect(project.diagnostics.map((item) => item.code)).toContain("AB304");
+  });
+});

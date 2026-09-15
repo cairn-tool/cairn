@@ -1,0 +1,45 @@
+{
+  "legacy": false,
+  "layouts": {
+    "claude-code/plugin": [
+      ".claude-plugin/plugin.json",
+      "skills/review/SKILL.md"
+    ],
+    "claude-code/project": [
+      ".claude/skills/review/SKILL.md"
+    ],
+    "codex/plugin": [
+      ".codex-plugin/plugin.json",
+      "skills/review/SKILL.md"
+    ],
+    "codex/project": [
+      ".agents/skills/review/SKILL.md"
+    ],
+    "cursor/plugin": [
+      ".cursor-plugin/plugin.json",
+      "skills/dependent-review/SKILL.md"
+    ],
+    "cursor/project": [
+      ".cursor/skills/review/SKILL.md"
+    ],
+    "antigravity/plugin": [
+      "plugin.json",
+      "skills/review/SKILL.md"
+    ],
+    "antigravity/project": [
+      ".agents/skills/review/SKILL.md"
+    ],
+    "opencode/plugin": [
+      ".opencode-plugin/plugin.json",
+      "skills/review/SKILL.md"
+    ],
+    "opencode/project": [
+      ".opencode/skills/review/SKILL.md"
+    ]
+  },
+  "diagnostics": [
+    "AB303",
+    "AB304"
+  ],
+  "executableModes": {}
+}

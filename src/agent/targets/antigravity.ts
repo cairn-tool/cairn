@@ -204,7 +204,7 @@ export const antigravityProfile: TargetProfile = {
       profiles: ["plugin", "project"],
       summary: "no argument substitution",
       surface: null,
-      diagnostics: ["AB302", "AB303"],
+      diagnostics: ["AB302", "AB303", "AB304"],
     },
     native: {
       support: "native",

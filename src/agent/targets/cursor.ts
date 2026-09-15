@@ -196,7 +196,7 @@ export const cursorProfile: TargetProfile = {
       profiles: ["plugin", "project"],
       summary: "argument substitution is advisory",
       surface: null,
-      diagnostics: [],
+      diagnostics: ["AB304"],
     },
     native: {
       support: "native",

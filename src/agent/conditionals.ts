@@ -1,7 +1,7 @@
 import { visit } from "unist-util-visit";
 import { parseMarkdown } from "../markdown-ast.js";
 import type { Root } from "../markdown-ast.js";
-import { COMPONENT_NAME, TARGETS } from "./types.js";
+import { TARGETS } from "./types.js";
 import type { AgentDiagnostic, AgentTarget } from "./types.js";
 import { diagnostic } from "./types.js";
 import { REFERENCE_KINDS } from "./targets/schema.js";
@@ -59,6 +59,16 @@ const COMMENT = /<!--([\s\S]*?)-->/g;
 /** The retired one-armed form. Still recognised, only so it can be reported. */
 const LEGACY = /^(\/)?(target|platform):(\S+)$/;
 const REF = /^ref:(skill|agent|command):(\S+)$/;
+/**
+ * What a reference may name: a component in this bundle, or `bundle/component`
+ * in one this bundle declares as a dependency.
+ *
+ * Both halves are held to `COMPONENT_NAME`, so a slash is the only thing that
+ * can separate them and the split is never ambiguous. Whether the bundle is
+ * actually declared, and whether it defines the component, is the parser's
+ * question -- this one runs before any of that exists.
+ */
+const REFERENCE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
 /**
  * A comment *meant* to be a reference.
  *
@@ -133,8 +143,9 @@ function classify(body: string): Marker | "malformed" | "malformed-ref" | null {
   const ref = REF.exec(text);
   if (ref) {
     // A reference names a component, so it is held to the same grammar the
-    // parser holds a component name to; anything else is a typo worth saying so.
-    if (COMPONENT_NAME.test(ref[2]))
+    // parser holds a component name to -- optionally prefixed by the bundle
+    // that defines it; anything else is a typo worth saying so.
+    if (REFERENCE_NAME.test(ref[2]))
       return { kind: "ref", refKind: ref[1] as ReferenceKind, name: ref[2] };
     return "malformed-ref";
   }
@@ -368,7 +379,7 @@ export function validateConditionals(
         "unsupported",
         {
           path: file,
-          remediation: `Write <!-- ref:<kind>:<name> --> with no spaces, where <kind> is ${REFERENCE_KINDS.join(", ")} and <name> is a lowercase kebab-case component name.`,
+          remediation: `Write <!-- ref:<kind>:<name> --> with no spaces, where <kind> is ${REFERENCE_KINDS.join(", ")} and <name> is a lowercase kebab-case component name, optionally prefixed by a declared dependency as <bundle>/<name>.`,
         },
       ),
       severity: "error",

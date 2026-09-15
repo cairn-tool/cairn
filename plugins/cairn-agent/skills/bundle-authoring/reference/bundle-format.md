@@ -50,16 +50,22 @@ marketplace:
 
 native:
   claude-code: native/claude-code
+
+dependencies:
+  - cr
 ```
 
 Required: `schemaVersion`, `name` (kebab-case), `version` (semver), `description`.
+
+`dependencies:` names bundles whose components this one may reference as `cr/diff-reviewer`.
+Each entry is a bundle name resolved as a sibling directory, or `- bundle: cr` with a `path:`.
 
 **Component paths must stay inside the bundle root**, including after resolving symlinks. A path
 that escapes is refused rather than followed — which is why a shared file cannot be symlinked in
 from a sibling bundle.
 
-Schema `2` adds `marketplace:` and `native:` and nothing else; a v1 bundle renders
-byte-identically under either. Using either block on a v1 bundle is an error.
+Schema `2` adds `marketplace:`, `native:` and `dependencies:` and nothing else; a v1 bundle
+renders byte-identically under either. Using any of those blocks on a v1 bundle is `AB127`.
 
 ## Component frontmatter
 
@@ -206,8 +212,22 @@ Where they work:
 - **Never** in `name:` (circular) or `skills:` (the portable list `AB150` validates — keep those
   bare). Anywhere else the renderer copies verbatim, such as a hook script, is `AB157`.
 
-An unknown component is `AB156`; a comment that looks like a reference but does not parse is
-`AB124`. A host with no such surface emits the bare name and reports `AB303`.
+A name may be prefixed by a bundle this one declares in `dependencies:`, which is how a
+component in **another** bundle is named:
+
+```markdown
+Spawn `<!-- ref:agent:cr/diff-reviewer -->`, one per batch.
+```
+
+Declare it first — `dependencies: [cr]`, or `- bundle: cr` with a `path:` — or the reference is
+`AB162`. Resolution is one level deep: a reference may name a component in a bundle you declare,
+never one your dependency declares. Note what it costs: a materialized `resources:` copy keeps
+the rendered plugin self-contained, and this does not. The other plugin has to be installed.
+
+An unknown component is `AB156`, or `AB164` when the dependency is the one missing it; a comment
+that looks like a reference but does not parse is `AB124`. A host with no such surface emits the
+bare name and reports `AB303`, and a profile that drops the bundle from a cross-bundle name
+reports `AB304`.
 
 ## Diagnostics
 

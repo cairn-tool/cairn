@@ -207,7 +207,7 @@ export const claudeCodeProfile: TargetProfile = {
       profiles: ["plugin", "project"],
       summary: "native root and argument substitution",
       surface: "${CLAUDE_PLUGIN_ROOT}",
-      diagnostics: ["AB303"],
+      diagnostics: ["AB303", "AB304"],
     },
     native: {
       support: "native",

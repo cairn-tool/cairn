@@ -982,9 +982,27 @@ function refResolver(
 ): RefResolver {
   const reported = new Set<string>();
   return (kind: ReferenceKind, name: string): string => {
-    const pool = kind === "agent" ? bundle.agents : bundle.skills;
-    if (!pool.some((component) => component.name === name)) return `<!-- ref:${kind}:${name} -->`;
-    const { text, exact } = referenceIdentifier(kind, name, target, profile, bundle.name);
+    // `bundle/name` names a component in a declared dependency. The parser has
+    // already refused an undeclared bundle or a missing component, so anything
+    // reaching here either resolves or is a suppressed error, and the marker is
+    // returned verbatim for the same reason a local unknown name is.
+    const slash = name.indexOf("/");
+    const dependency =
+      slash === -1
+        ? undefined
+        : bundle.dependencies.find((candidate) => candidate.name === name.slice(0, slash));
+    if (slash !== -1 && !dependency) return `<!-- ref:${kind}:${name} -->`;
+    const local = slash === -1 ? name : name.slice(slash + 1);
+
+    const defined = dependency
+      ? (kind === "agent" ? dependency.agents : dependency.skills).has(local)
+      : (kind === "agent" ? bundle.agents : bundle.skills).some(
+          (component) => component.name === local,
+        );
+    if (!defined) return `<!-- ref:${kind}:${name} -->`;
+
+    const owner = dependency ? dependency.name : bundle.name;
+    const { text, exact } = referenceIdentifier(kind, local, target, profile, owner);
     if (!exact && !reported.has(`${kind}:${name}`)) {
       reported.add(`${kind}:${name}`);
       diagnostics.push(
@@ -993,10 +1011,31 @@ function refResolver(
           `${target} has no ${kind} identifier; emitted the bare name`,
           "approximate",
           {
-            component: name,
+            component: local,
             target,
             profile,
             remediation: `Reference it in prose, or provide targets.${target} instructions, if the exact identifier matters.`,
+          },
+        ),
+      );
+    }
+    // A form that drops the bundle renders a cross-bundle reference as a bare
+    // name — identical to what a local component of the same name would render
+    // as, in a profile where both are installed side by side. The reference is
+    // still the best available answer, so it is emitted and reported rather
+    // than refused.
+    if (dependency && exact && !text.includes(dependency.name) && !reported.has(`ns:${name}`)) {
+      reported.add(`ns:${name}`);
+      diagnostics.push(
+        diagnostic(
+          "AB304",
+          `${target} ${profile} drops the bundle from ${kind === "agent" ? "an" : "a"} ${kind} identifier; '${name}' rendered as '${text}'`,
+          "approximate",
+          {
+            component: local,
+            target,
+            profile,
+            remediation: `Nothing distinguishes it from a local ${kind} named '${local}'. Name the bundle in prose if the distinction matters here.`,
           },
         ),
       );

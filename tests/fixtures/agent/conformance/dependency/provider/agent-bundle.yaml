@@ -1,0 +1,6 @@
+# Not a fixture of its own: the conformance harness renders `<name>/bundle`, so
+# this directory is only ever reached through the dependent bundle's declaration.
+schemaVersion: '2'
+name: provider
+version: 0.1.0
+description: Defines the components the dependent bundle names
