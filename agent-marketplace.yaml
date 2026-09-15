@@ -1,6 +1,7 @@
-# The collection published by `.github/workflows/plugins.yml`, one branch per
-# target: claude-code -> `claude-plugins`, codex -> `codex-plugins`, cursor ->
-# `cursor-plugins`. Build it with:
+# The collection published by `.github/workflows/plugins.yml` to the single
+# `release` branch. Build that tree with:
+#   cairn agent marketplace agent-marketplace.yaml --layout release --output ./dist-plugins
+# Build the nested per-target tree, which is what `--install` consumes:
 #   cairn agent marketplace agent-marketplace.yaml --output ./dist-plugins
 # Install it locally with:
 #   cairn agent marketplace agent-marketplace.yaml --install --register
