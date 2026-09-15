@@ -85,7 +85,7 @@
     "@types/mdast": "^4.0.4",
     "@types/node": "^26.4.0",
     "ajv-draft-04": "^1.0.0",
-    "conventional-changelog-conventionalcommits": "^10.4.0",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
     "eslint": "^10.9.1",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
