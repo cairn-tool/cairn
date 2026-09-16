@@ -3301,7 +3301,7 @@
     {
       "path": "release-manifest.json",
       "type": "config",
-      "sha256": "dd5ea699f1df8687f780925c329fee1485b644fe9badd00b9ae11b61d84195ff",
+      "sha256": "9cbd5960ad54348fe03a2bcdbbc57541a9274e42455e6baecc79c4206d43d6dc",
       "bytes": 8504,
       "mode": "0644",
       "origin": "portable"
