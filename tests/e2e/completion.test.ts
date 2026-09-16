@@ -76,9 +76,9 @@ describe("completion", () => {
 
     const bash = (await run("completion", "bash")).stdout;
     for (const command of described.commands) {
-      for (const option of command.options)
-        if (option.long)
-          expect(bash, `bash is missing ${command.id} ${option.long}`).toContain(option.long);
+      // Every option here has a long form, so `name` is always `--…`.
+      for (const option of command.options as Array<{ name: string }>)
+        expect(bash, `bash is missing ${command.id} ${option.name}`).toContain(option.name);
     }
   });
 

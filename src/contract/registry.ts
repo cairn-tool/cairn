@@ -1,6 +1,8 @@
 import { BASE_FORMATS, agentFormatsFor, formatsFor } from "../formats.js";
 import { SARIF_SCHEMA_URI } from "./version.js";
-import type { CommandContract, ExitCodeMeaning } from "./types.js";
+import type { ContractRow } from "./types.js";
+
+type ExitCodeMeaning = ContractRow["exitCodes"][number];
 
 const STRICT_NOTE =
   "A scan over thousands of transcripts routinely meets a file removed mid-walk or a truncated final line in a session still being appended to. Those are counted under `scan` and reported, never fatal, because failing by default would make the command useless in the automated context it is most wanted in. `--strict` is how a caller opts into exit 2.";
@@ -10,7 +12,7 @@ const USAGE: ExitCodeMeaning = { code: 1, meaning: "Invocation, I/O, or configur
 const FINDINGS = (meaning: string): ExitCodeMeaning => ({ code: 2, meaning });
 
 /** A read-only `md` command whose payload always goes to stdout. */
-function inspection(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+function inspection(name: string, extra: Partial<ContractRow> = {}): ContractRow {
   return {
     id: `md ${name}`,
     formats: formatsFor(name),
@@ -26,11 +28,7 @@ function inspection(name: string, extra: Partial<CommandContract> = {}): Command
 }
 
 /** A `md` command that reports findings on stderr and exits 2. */
-function diagnostic(
-  name: string,
-  findings: string,
-  extra: Partial<CommandContract> = {},
-): CommandContract {
+function diagnostic(name: string, findings: string, extra: Partial<ContractRow> = {}): ContractRow {
   return {
     id: `md ${name}`,
     formats: formatsFor(name),
@@ -45,7 +43,7 @@ function diagnostic(
   };
 }
 
-function agentCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+function agentCommand(name: string, extra: Partial<ContractRow> = {}): ContractRow {
   return {
     id: `agent ${name}`,
     formats: agentFormatsFor(name),
@@ -71,7 +69,7 @@ const AUTOMATION = { jsonlSchema: "diagnostic-record", sarifSchema: SARIF_SCHEMA
  * cache. Exit `2` exists solely for `--strict`: see the note on the individual
  * entries.
  */
-function usageCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+function usageCommand(name: string, extra: Partial<ContractRow> = {}): ContractRow {
   return {
     id: `usage ${name}`,
     formats: BASE_FORMATS,
@@ -118,7 +116,7 @@ const PDF_NOTE =
  * are one decision rather than two. Each command's help text and docs page state
  * the specific meaning of 2 rather than declaring a code that never fires.
  */
-function pdfCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+function pdfCommand(name: string, extra: Partial<ContractRow> = {}): ContractRow {
   return {
     id: `pdf ${name}`,
     formats: BASE_FORMATS,
@@ -142,7 +140,7 @@ function pdfCommand(name: string, extra: Partial<CommandContract> = {}): Command
  * rather than resolving a named registry entry, inlines each plan into a
  * prompt, and bypasses the backend's permission checks.
  */
-function qaCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+function qaCommand(name: string, extra: Partial<ContractRow> = {}): ContractRow {
   return {
     id: `qa ${name}`,
     formats: BASE_FORMATS,
@@ -159,7 +157,7 @@ function qaCommand(name: string, extra: Partial<CommandContract> = {}): CommandC
   };
 }
 
-function jiraAdfCommand(name: string, extra: Partial<CommandContract> = {}): CommandContract {
+function jiraAdfCommand(name: string, extra: Partial<ContractRow> = {}): ContractRow {
   return {
     id: `jira adf ${name}`,
     formats: BASE_FORMATS,
@@ -174,7 +172,7 @@ function jiraAdfCommand(name: string, extra: Partial<CommandContract> = {}): Com
   };
 }
 
-const CONTRACTS: CommandContract[] = [
+const CONTRACTS: ContractRow[] = [
   // Top level
   {
     id: "check-update",
@@ -873,6 +871,6 @@ const CONTRACTS: CommandContract[] = [
   }),
 ];
 
-export const COMMAND_CONTRACTS: Readonly<Record<string, CommandContract>> = Object.fromEntries(
+export const COMMAND_CONTRACTS: Readonly<Record<string, ContractRow>> = Object.fromEntries(
   CONTRACTS.map((contract) => [contract.id, contract]),
 );

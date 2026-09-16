@@ -7,9 +7,15 @@ import { afterAll, afterEach, describe, expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormatsImport from "ajv-formats";
 import { pdfFixture } from "../helpers/pdf-fixture.js";
+import {
+  CONTRACT_VERSION as CLI_SCHEMA_VERSION,
+  cliSchema,
+  validate as validateCliSchema,
+} from "@cairn-tool/cli-schema";
 import { COMMAND_CONTRACTS } from "../../src/contract/registry.js";
 import { SCHEMA_BY_ID } from "../../src/contract/schemas/index.js";
-import { CONTRACT_VERSION } from "../../src/contract/version.js";
+import { CLI_SCHEMA_URI } from "../../src/contract/version.js";
+import { NOTIFIER_CONTRACT } from "../../src/update-notifier.js";
 
 const exec = promisify(execFile);
 const cli = path.resolve("dist/cli.js");
@@ -231,7 +237,11 @@ describe("describe", () => {
     const result = await run("describe", "--format", "json");
     expect(result.exitCode).toBe(0);
     const described = JSON.parse(result.stdout);
-    expect(described.schemaVersion).toBe(CONTRACT_VERSION);
+    // The describe payload is a cli-schema document, so it carries that
+    // specification's version rather than this tool's contract version.
+    expect(described.schemaVersion).toBe(CLI_SCHEMA_VERSION);
+    expect(described.advisoryOutput).toEqual(NOTIFIER_CONTRACT);
+    expect(described).not.toHaveProperty("machineStreams");
     const ids = described.commands.map((command: { id: string }) => command.id);
     for (const id of ["md graph", "agent convert", "agent doctor", "describe", "schema"])
       expect(ids).toContain(id);
@@ -239,9 +249,10 @@ describe("describe", () => {
     expect(ids).not.toContain("__refresh-update-cache");
   });
 
-  it("is self-consistent with its own published schema", async () => {
+  it("conforms to the cli-schema specification", async () => {
     const result = await run("describe", "-fj");
-    validate("describe", JSON.parse(result.stdout), "describe");
+    const { valid, errors } = validateCliSchema(JSON.parse(result.stdout));
+    expect(valid, JSON.stringify(errors)).toBe(true);
   });
 
   it("matches the registry in both directions", async () => {
@@ -278,7 +289,8 @@ describe("describe", () => {
     const described = JSON.parse(result.stdout);
     expect(described.commands).toHaveLength(1);
     expect(described.commands[0].id).toBe("md graph");
-    expect(described.commands[0].usage).toContain("md graph");
+    // Usage is spec-derived, not commander's own string.
+    expect(described.commands[0].usage).toMatch(/^cairn md graph \[options\]/);
   });
 
   it("survives a reader that closes the pipe early", async () => {
@@ -319,6 +331,15 @@ describe("schema", () => {
       expect(result.exitCode).toBe(0);
       expect(JSON.parse(result.stdout).$id).toContain("/v1/md-graph.json");
     }
+  });
+
+  it("serves the cli-schema document under the describe id", async () => {
+    // Owned by the cli-schema project and re-served here verbatim.
+    const result = await run("schema", "describe");
+    expect(result.exitCode).toBe(0);
+    const document = JSON.parse(result.stdout);
+    expect(document).toEqual(cliSchema);
+    expect(document.$id).toBe(CLI_SCHEMA_URI);
   });
 
   it("rejects an unknown id", async () => {

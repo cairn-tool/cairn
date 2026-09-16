@@ -1,5 +1,5 @@
 /**
- * Accumulator for repeatable options. `src/contract/describe.ts` detects
+ * Accumulator for repeatable options. `src/contract/walk-options.ts` detects
  * repeatability by comparing an option's coercion against this function by
  * identity, so it must not be wrapped at registration sites.
  */

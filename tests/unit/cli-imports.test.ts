@@ -39,10 +39,17 @@ describe("cli.ts command-module imports", () => {
   });
 
   it("keeps `collect` a single static import", () => {
-    // src/contract/describe.ts detects a repeatable option by comparing its
+    // src/contract/walk-options.ts detects a repeatable option by comparing its
     // coercion against `collect` by identity, so a second instance would report
-    // every repeatable option as `repeatable: false`.
+    // every repeatable option with a bounded arity.
     expect(source).toContain('import { collect } from "./option-utils.js";');
     expect(source).not.toMatch(/import\("\.\/option-utils\.js"\)/);
+  });
+
+  it("never loads the cli-schema packages at registration time", () => {
+    // `@cairn-tool/cli-schema`'s index compiles an Ajv validator at import. The
+    // library's `addDescribeCommand` would need a static import here, so
+    // `describe` is registered by hand and the packages reach it lazily.
+    expect(source).not.toMatch(/^import (?!type ).*"@cairn-tool\/cli-schema/m);
   });
 });

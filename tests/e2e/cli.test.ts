@@ -2387,10 +2387,13 @@ describe("md query composable predicates", () => {
   it("reports --where and --select as repeatable in describe", async () => {
     const result = await runCli("describe", "md", "query", "-fj");
     const options = JSON.parse(result.stdout).commands[0].options as Array<{
-      flags: string;
-      repeatable?: boolean;
+      name: string;
+      arity: { min: number; max: number | null };
     }>;
-    const where = options.find((option) => option.flags.includes("--where"));
-    expect(where?.repeatable).toBe(true);
+    // Unbounded arity is how a cli-schema document says "repeatable".
+    for (const name of ["--where", "--select"]) {
+      const option = options.find((candidate) => candidate.name === name);
+      expect(option?.arity.max, name).toBeNull();
+    }
   });
 });

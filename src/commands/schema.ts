@@ -1,5 +1,5 @@
 import { BASE_FORMATS } from "../formats.js";
-import { SCHEMAS, SCHEMA_BY_ID } from "../contract/schemas/index.js";
+import { SCHEMA_REFS, loadSchema } from "../contract/schemas/index.js";
 import { CONTRACT_VERSION } from "../contract/version.js";
 
 export interface SchemaCommandOptions {
@@ -21,21 +21,16 @@ export async function schemaAction(
     throw new Error(`Invalid output format: ${format}`);
 
   if (id) {
-    const entry = SCHEMA_BY_ID.get(id);
-    if (!entry)
+    const schema = await loadSchema(id);
+    if (!schema)
       throw new Error(
         `Unknown schema id: ${id}. Run "cairn schema" to list the published schemas.`,
       );
-    process.stdout.write(JSON.stringify(entry.schema, null, 2) + "\n");
+    process.stdout.write(JSON.stringify(schema, null, 2) + "\n");
     return;
   }
 
-  const index = SCHEMAS.map(({ id: schemaId, uri, title, commands }) => ({
-    id: schemaId,
-    uri,
-    title,
-    commands,
-  }));
+  const index = SCHEMA_REFS;
   if (format === "json") {
     process.stdout.write(
       JSON.stringify({ schemaVersion: CONTRACT_VERSION, schemas: index }, null, 2) + "\n",

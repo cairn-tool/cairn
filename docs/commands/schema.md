@@ -40,6 +40,10 @@ They are identifiers, not fetchable URLs. `cairn schema <id>` is how you retriev
 Every schema is self-contained — no `$ref` leaves its own document — so what you retrieve can
 be compiled on its own by any JSON Schema 2020-12 validator.
 
+The one exception to the path is `describe`, whose document is the
+[cli-schema](https://github.com/cairn-tool/cli-schema) specification's own,
+`https://github.com/cairn-tool/cli-schema/v1/cli-schema.json`, re-served here verbatim.
+
 No published schema sets `additionalProperties: false`. Consumers must ignore unknown
 properties, since adding one is a non-breaking change.
 

@@ -16,9 +16,17 @@ cairn schema md-graph                 # one schema document
 
 ## Contract version
 
-`schemaVersion` (currently `3`) versions the **contract surface**: the envelope shape, the
-`describe` payload, the schema id scheme, and the machine-stream guarantees below. It is
-hand-owned and unrelated to the package version, which semantic-release manages.
+`schemaVersion` (currently `4`) versions the **contract surface**: the envelope shape, the
+schema id scheme, and the machine-stream guarantees below. It is hand-owned and unrelated to
+the package version, which semantic-release manages. It is reported by the `--envelope` wrapper
+and by `schema --format json`.
+
+The `describe` payload is the one shape it does not version. That document conforms to the
+[cli-schema specification](https://github.com/cairn-tool/cli-schema), a portable description
+of a command-line interface that this tool's own walker was extracted into, and its
+`schemaVersion` field is that specification's (currently `1`), owned there. Cairn's contract
+version records when the payload _consumed_ from `describe` changes — see the 3 → 4 entry in
+the [history](#contract-history) — but the field itself is the spec's.
 
 Individual payloads are versioned separately, by the major in their schema id path. A breaking
 change to one command's output publishes `v2/<id>.json` and changes that command's
@@ -31,13 +39,16 @@ them is the package version. They version different things and move independentl
 
 | Version                          | Versions                                               | Reported by                                    |
 | -------------------------------- | ------------------------------------------------------ | ---------------------------------------------- |
-| Contract `schemaVersion`         | The contract surface described here                    | `describe`, the `--envelope` wrapper           |
+| Contract `schemaVersion`         | The contract surface described here                    | `--envelope`, `schema --format json`           |
 | Target profile `schemaVersion`   | The structure of a target conformance profile          | `agent specs`                                  |
 | Bundle `schemaVersion`           | The `agent-bundle.yaml` format authors write           | `agent inspect`                                |
 | Test file `schemaVersion`        | The assertion format `agent test` cases are written in | `agent test` (`test.schemaVersion`)            |
 | Marketplace spec `schemaVersion` | The `agent-marketplace.yaml` format authors write      | `agent marketplace`                            |
 | Release manifest `schemaVersion` | The `release-manifest.json` a release branch carries   | `agent marketplace --layout release`           |
 | Usage store version              | The SQLite schema of `usage.db`                        | `usage index`, `usage migrate`, `usage import` |
+
+An eighth version appears in output but is not this project's to bump: the cli-schema
+`schemaVersion` that `describe` carries.
 
 A normal release bumps none of them.
 
@@ -74,6 +85,10 @@ https://github.com/cairn-tool/cairn/schema/v1/md-graph.json
 They are **identifiers, not fetchable URLs**. Retrieve a schema with `cairn schema <id>`.
 Every schema is self-contained — no `$ref` leaves its own document — so a retrieved schema can
 be compiled on its own.
+
+One published id is not under that path. `describe` is the cli-schema document, so its `$id` is
+`https://github.com/cairn-tool/cli-schema/v1/cli-schema.json`, owned by that project and
+re-served here verbatim; `cairn schema describe` still retrieves it.
 
 **No published schema sets `additionalProperties: false`, and consumers must ignore properties
 they do not recognize.** Adding a property is a non-breaking change; a consumer that rejects
@@ -145,7 +160,7 @@ holds:
   refresh
 
 The same gate also blocks the background refresh, so a non-interactive caller never spawns a
-child process. `describe` reports these conditions under `machineStreams`, read directly from
+child process. `describe` reports these conditions under `advisoryOutput`, read directly from
 the code that enforces them.
 
 ## The result envelope
@@ -159,8 +174,8 @@ cairn md graph docs --format json --envelope
 
 ```json
 {
-  "schemaVersion": "2",
-  "tool": { "name": "@cairn-tool/cairn", "version": "1.6.0" },
+  "schemaVersion": "4",
+  "tool": { "name": "@cairn-tool/cairn", "version": "6.0.0" },
   "command": "md graph",
   "ok": false,
   "exitCode": 2,
@@ -194,29 +209,29 @@ are unaffected.
 
 ## Published schemas
 
-| Id                  | Covers                                                                     |
-| ------------------- | -------------------------------------------------------------------------- |
-| `issue`             | A single finding record.                                                   |
-| `issue-list`        | `md lint`, `md lint-dir`, `md validate-frontmatter`, `md refs`, `md links` |
-| `diagnostic-record` | One line of `--format jsonl` output.                                       |
-| `lint-dir-summary`  | `md lint-dir --summary --format json`                                      |
-| `md-graph`          | `md graph --output report`                                                 |
-| `md-audit`          | `md audit`                                                                 |
-| `md-query`          | `md query`                                                                 |
-| `md-check-urls`     | `md check-urls`                                                            |
-| `md-orphans`        | `md orphans`                                                               |
-| `md-index`          | `md index`                                                                 |
-| `md-context`        | `md context`                                                               |
-| `md-diff`           | `md diff`                                                                  |
-| `md-fix`            | `md fix`                                                                   |
-| `agent-result`      | Every `agent` subcommand, including the failure form.                      |
-| `adf-result`        | Every `jira adf` subcommand, including the failure form.                   |
-| `pdf-result`        | Every `pdf` subcommand, including the failure form.                        |
-| `qa-result`         | Every `qa` subcommand.                                                     |
-| `check-update`      | `check-update`                                                             |
-| `describe`          | `describe --format json`                                                   |
-| `schema-list`       | `schema --format json` with no id                                          |
-| `envelope`          | The `--envelope` wrapper                                                   |
+| Id                  | Covers                                                                       |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `issue`             | A single finding record.                                                     |
+| `issue-list`        | `md lint`, `md lint-dir`, `md validate-frontmatter`, `md refs`, `md links`   |
+| `diagnostic-record` | One line of `--format jsonl` output.                                         |
+| `lint-dir-summary`  | `md lint-dir --summary --format json`                                        |
+| `md-graph`          | `md graph --output report`                                                   |
+| `md-audit`          | `md audit`                                                                   |
+| `md-query`          | `md query`                                                                   |
+| `md-check-urls`     | `md check-urls`                                                              |
+| `md-orphans`        | `md orphans`                                                                 |
+| `md-index`          | `md index`                                                                   |
+| `md-context`        | `md context`                                                                 |
+| `md-diff`           | `md diff`                                                                    |
+| `md-fix`            | `md fix`                                                                     |
+| `agent-result`      | Every `agent` subcommand, including the failure form.                        |
+| `adf-result`        | Every `jira adf` subcommand, including the failure form.                     |
+| `pdf-result`        | Every `pdf` subcommand, including the failure form.                          |
+| `qa-result`         | Every `qa` subcommand.                                                       |
+| `check-update`      | `check-update`                                                               |
+| `describe`          | `describe --format json` — the cli-schema v1 document, owned by that project |
+| `schema-list`       | `schema --format json` with no id                                            |
+| `envelope`          | The `--envelope` wrapper                                                     |
 
 SARIF output follows the external
 [SARIF 2.1.0 schema](https://json.schemastore.org/sarif-2.1.0.json); it is referenced, not
@@ -247,9 +262,33 @@ does not depend on the working directory.
 
 ## Contract history
 
-`schemaVersion` has moved twice, both times because a _published value_ changed rather than a
-payload _shape_. In both bumps the `v1` segment of every schema id is unchanged — the payloads
-are identical — and the short ids `cairn schema <id>` takes are unchanged.
+`schemaVersion` has moved three times. The first two were because a _published value_ changed
+rather than a payload _shape_; the third changed the shape of `describe`. In every bump the
+`v1` segment of every schema id this project authors is unchanged — those payloads are
+identical — and the short ids `cairn schema <id>` takes are unchanged.
+
+### 3 → 4: `describe` conforms to cli-schema v1
+
+The private walker behind `describe` became the
+[cli-schema](https://github.com/cairn-tool/cli-schema) project, and `describe` now emits that
+specification's document. Everything at the command level — `id`, `path`, `formats`,
+`exitCodes`, `exitCodePassthrough`, `stream`, `writes`, `stability`, `notes` — is unchanged.
+What moved:
+
+- `schemaVersion` on the `describe` payload is the spec's `"1"`, not this contract's `"4"`.
+- `machineStreams` is now `advisoryOutput`, with the same four fields.
+- Each option's `{flags, long, short, valueRequired, valueOptional, mandatory, variadic,
+negated, repeatable}` became `{name, aliases, arity, required, negatable, valueType,
+allowedValues, recursive}`: `long` → `name`, `short` → `aliases[0]`, `mandatory` →
+  `required`, `negated` → `negatable`, `repeatable` ⇔ `arity.max === null`, `valueRequired`
+  ⇔ `valueName` set and `arity.min ≥ 1`, `valueOptional` ⇔ `valueName` set and
+  `arity.min === 0`.
+- Each argument's `{required, variadic}` became `arity`: `required` ⇔ `arity.min ≥ 1`,
+  `variadic` ⇔ `arity.max === null`.
+- `jsonlSchema` and `sarifSchema` are omitted rather than `null` when a command has none.
+- `usage` is derived by the spec's rule rather than taken from commander.
+- The `describe` schema's `$id` moved from `…/cairn/schema/v1/describe.json` to
+  `https://github.com/cairn-tool/cli-schema/v1/cli-schema.json`.
 
 ### 2 → 3: the move to the `cairn-tool` organisation
 
