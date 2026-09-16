@@ -1,7 +1,7 @@
 {
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "5.2.0"
+    "version": "6.0.0"
   },
   "name": "cairn",
   "version": "1.2.0",
