@@ -111,7 +111,7 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   registry.npmjs.org as `@cairn-tool/cairn`. `access: "public"` is required because npm
   defaults a _scoped_ package to restricted, and a restricted publish fails outright.
   `provenance: true` is redundant under trusted publishing, which attests automatically, but
-  it keeps a token-authenticated publish attested too — so it stays. `GITHUB_TOKEN` covers
+  it keeps the intent explicit if the auth path ever changes — so it stays. `GITHUB_TOKEN` covers
   only the tag, the Release, and the CHANGELOG commit; the registry is a separate identity.
 - **Publishing is OIDC trusted publishing, and `npm install -g npm@12` in `release.yml` is
   what makes it work.** Trusted publishing needs npm >= 11.5.1 and Node >= 22.14.0. `.nvmrc`
@@ -133,10 +133,11 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   Recovery is to undo the git side, not to retry: delete the remote tag, force-push `main`
   back to the commit before the release commit, fix the cause, then re-run. Reordering
   `.releaserc.json` cannot avoid this; the phase boundary is semantic-release's, not ours.
-- **The npm credential must bypass 2FA, which means granular or classic-Automation.** A
-  classic _Publish_ token fails with `EOTP - This operation requires a one-time password`
-  after the tarball has already been packed — i.e. late, in the publish step, with the git
-  side already committed. This is the most likely way to hit the stranded-release case above.
+- **If a token is ever reintroduced it must bypass 2FA, which means granular or
+  classic-Automation.** A classic _Publish_ token fails with `EOTP - This operation requires a
+one-time password` after the tarball has already been packed — i.e. late, in the publish
+  step, with the git side already committed. This is the most likely way to hit the
+  stranded-release case above.
 - **The release job pushes as a GitHub App, not as `github-actions[bot]`.** The `main` ruleset
   requires four CI checks, and semantic-release's own CHANGELOG-and-version commit cannot
   satisfy them — it is created after CI ran. A ruleset bypass can only name an org-installed
@@ -146,12 +147,19 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   them back to `contents: write` would not help, because the identity is what the ruleset
   checks, not the scope. `RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY` are the only two
   long-lived secrets, and the token they mint expires in an hour.
-- **`NPM_TOKEN` is a bootstrap, not the auth path.** npm configures a trusted publisher on an
-  existing package's settings page, so the first ever publish of a name has nowhere to
-  configure it and needs a token. `verify-auth.js` tries OIDC first and only falls back to a
-  token, so both can coexist: publish once with the secret, register the trusted publisher
-  against the `release.yml` filename, then delete the secret. The workflow filename is part
-  of that registration — renaming `release.yml` breaks publishing.
+- **There is no npm token, and the release job must not be handed one.** The trusted publisher
+  on npmjs.com is registered against `cairn-tool/cairn` and the `release.yml` filename, so
+  renaming that file breaks publishing. `verify-auth.js` tries OIDC first and falls back to
+  `NPM_TOKEN` when the exchange fails — which is how 5.2.0 actually shipped: the exchange
+  returned `404 OIDC token exchange error - package not found` because no publisher was
+  registered, and the org-level token quietly carried the publish instead. With no token in the
+  environment that 404 is fatal at verification, before the tag exists, which is the behavior we
+  want. The token was only ever a bootstrap: the first publish of a name has no settings page to
+  register a publisher on.
+- **`create-github-app-token` takes `client-id`, and `RELEASE_APP_ID` is the numeric App ID.**
+  That is fine — the action forwards either value unchanged as the JWT `iss`, which GitHub
+  accepts in both forms — but it means the secret's name is misleading. `app-id` is the same
+  input under a deprecated name.
 - **`ci.yml` must stay on `pull_request`, never `pull_request_target`.** It checks out and
   executes the PR's own code; the current trigger gives a fork a read-only token and no
   secrets. The other trigger would hand a fork's code a writable token and this repository's

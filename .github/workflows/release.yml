@@ -49,7 +49,10 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
+          # The secret holds the numeric App ID, not the Client ID. The action
+          # forwards either unchanged as the JWT issuer, and GitHub accepts both
+          # there; `app-id` is the same input under a deprecated name.
+          client-id: ${{ secrets.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -83,24 +86,22 @@ jobs:
       # No test step: this job only runs after the CI workflow went green across
       # the full Node matrix, so re-running them here would duplicate that work.
 
-      # Auth precedence is the plugin's, not ours: verify-auth.js attempts the
-      # OIDC exchange first and only falls back to a token when that fails. So
-      # NPM_TOKEN is a bootstrap, not the intended path — npm configures a
-      # trusted publisher on an existing package's settings page, which a package
-      # that has never been published does not have. Publish once with the token,
-      # configure the trusted publisher against this workflow filename, then
-      # delete the secret; the fallback then has nothing to fall back to and
-      # every later release goes through OIDC.
+      # npm authentication is OIDC only. The trusted publisher on npmjs.com is
+      # registered against this repository and this workflow's filename, and no
+      # token is handed to the job: verify-auth.js attempts the OIDC exchange
+      # first and would fall back to NPM_TOKEN if one were set, so leaving the
+      # variable out is what guarantees a publish never silently succeeds on a
+      # credential. The 404 "package not found" the exchange returns when the
+      # publisher is missing or misnamed is therefore fatal here, and it is
+      # caught at verification, before the tag exists.
       #
-      # Provenance is automatic under trusted publishing. `publishConfig` still
-      # sets it explicitly so the bootstrap publish is attested too.
+      # Provenance is automatic under trusted publishing; `publishConfig` keeps
+      # it explicit so the intent survives if the auth path ever changes.
       - name: semantic-release
         env:
           # The App installation token, not GITHUB_TOKEN: it authenticates the
           # tag, the CHANGELOG commit, and the GitHub Release, and it is the
           # identity the main ruleset grants a bypass to. The npm registry is a
-          # separate identity again.
+          # separate identity again, established by the OIDC exchange above.
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
