@@ -1,5 +1,5 @@
-import { schemaUri } from "../version.js";
-import type { SchemaEntry } from "../types.js";
+import { CLI_SCHEMA_URI, schemaUri } from "../version.js";
+import type { ExternalSchemaEntry, SchemaEntry } from "../types.js";
 import { DRAFT, stringArray } from "./shared.js";
 
 export const checkUpdateSchema: SchemaEntry = {
@@ -24,154 +24,17 @@ export const checkUpdateSchema: SchemaEntry = {
   },
 };
 
-const EXIT_CODE_DEF = {
-  type: "object",
-  required: ["code", "meaning"],
-  properties: { code: { enum: [0, 1, 2] }, meaning: { type: "string" } },
-};
-
-export const describeSchema: SchemaEntry = {
+/**
+ * `describe` conforms to the cli-schema specification, so the document it is
+ * validated against is that project's, re-served here under the id consumers
+ * already know. Loaded lazily: the library index compiles a validator at import.
+ */
+export const describeSchema: ExternalSchemaEntry = {
   id: "describe",
-  uri: schemaUri("v1", "describe"),
+  uri: CLI_SCHEMA_URI,
   title: "CLI contract description",
   commands: ["describe"],
-  schema: {
-    $schema: DRAFT,
-    $id: schemaUri("v1", "describe"),
-    title: "CLI contract description",
-    description:
-      "The static contract. Project configuration is not applied, so `defaultFormat` is the built-in default rather than the resolved one.",
-    type: "object",
-    required: [
-      "schemaVersion",
-      "tool",
-      "formatShorthands",
-      "machineStreams",
-      "schemas",
-      "commands",
-    ],
-    properties: {
-      schemaVersion: { type: "string" },
-      tool: {
-        type: "object",
-        required: ["name", "version"],
-        properties: { name: { type: "string" }, version: { type: "string" } },
-      },
-      formatShorthands: {
-        type: "object",
-        additionalProperties: { type: "string" },
-        description: "argv token to the --format value it expands to before parsing.",
-      },
-      machineStreams: {
-        type: "object",
-        required: ["description", "stream", "suppressedWhen", "optOutEnv"],
-        properties: {
-          description: { type: "string" },
-          stream: { type: "string" },
-          suppressedWhen: stringArray,
-          optOutEnv: { type: "string" },
-        },
-      },
-      schemas: {
-        type: "array",
-        items: {
-          type: "object",
-          required: ["id", "uri", "title", "commands"],
-          properties: {
-            id: { type: "string" },
-            uri: { type: "string" },
-            title: { type: "string" },
-            commands: stringArray,
-          },
-        },
-      },
-      commands: { type: "array", items: { $ref: "#/$defs/command" } },
-    },
-    $defs: {
-      command: {
-        type: "object",
-        required: ["id", "path", "description", "usage", "arguments", "options", "subcommands"],
-        properties: {
-          id: { type: "string", description: "Space-joined command path, e.g. 'md graph'." },
-          path: stringArray,
-          description: { type: "string" },
-          usage: { type: "string" },
-          arguments: { type: "array", items: { $ref: "#/$defs/argument" } },
-          options: { type: "array", items: { $ref: "#/$defs/option" } },
-          subcommands: stringArray,
-          formats: { type: ["array", "null"], items: { type: "string" } },
-          defaultFormat: { type: ["string", "null"] },
-          formatConfigurable: { type: "boolean" },
-          outputSchema: { type: ["string", "null"] },
-          jsonlSchema: { type: ["string", "null"] },
-          sarifSchema: { type: ["string", "null"] },
-          exitCodes: { type: "array", items: EXIT_CODE_DEF },
-          exitCodePassthrough: {
-            type: "object",
-            description:
-              "Present only when the command forwards a child process's exit status verbatim, which is outside the three codes `exitCodes` declares.",
-            required: ["min", "max", "description"],
-            properties: {
-              min: { type: "integer" },
-              max: { type: "integer" },
-              description: { type: "string" },
-            },
-          },
-          stream: {
-            type: ["object", "null"],
-            properties: {
-              success: { enum: ["stdout", "stderr"] },
-              findings: { enum: ["stdout", "stderr"] },
-            },
-          },
-          writes: { type: ["boolean", "null"] },
-          stability: { enum: ["stable", "experimental", "undeclared"] },
-          notes: { type: "string" },
-        },
-      },
-      argument: {
-        type: "object",
-        required: ["name", "required", "variadic", "description"],
-        properties: {
-          name: { type: "string" },
-          required: { type: "boolean" },
-          variadic: { type: "boolean" },
-          description: { type: "string" },
-          default: {},
-        },
-      },
-      option: {
-        type: "object",
-        required: [
-          "flags",
-          "long",
-          "short",
-          "description",
-          "valueName",
-          "valueRequired",
-          "valueOptional",
-          "mandatory",
-          "variadic",
-          "negated",
-          "repeatable",
-        ],
-        properties: {
-          flags: { type: "string" },
-          long: { type: ["string", "null"] },
-          short: { type: ["string", "null"] },
-          description: { type: "string" },
-          valueName: { type: ["string", "null"] },
-          valueRequired: { type: "boolean" },
-          valueOptional: { type: "boolean" },
-          mandatory: { type: "boolean" },
-          variadic: { type: "boolean" },
-          negated: { type: "boolean" },
-          repeatable: { type: "boolean" },
-          default: {},
-        },
-      },
-    },
-  },
+  load: async () => (await import("@cairn-tool/cli-schema")).cliSchema,
 };
 
 export const schemaListSchema: SchemaEntry = {

@@ -15,7 +15,8 @@ src/formatters.ts      llm / human / json output rendering
 src/result.ts          the single `--format json` write path, and `--envelope`
 src/agent/targets/*.ts versioned per-target capability profiles
 src/agent/test/*.ts    bundle contract-test parsing, assertion evaluation, and digests
-src/contract/*.ts      published JSON Schemas + the per-command contract registry
+src/contract/*.ts      published JSON Schemas, the per-command contract registry, and the
+                       options handed to the cli-schema walker
 src/scripts/*.ts       named-script registry parsing, chain resolution, and execution
 src/usage/*.ts         transcript parsing, day-bucketed aggregates, scan orchestration
 src/usage/db/*.ts      the SQLite usage store: schema, migrations, import, queries
@@ -69,8 +70,8 @@ nested group such as `jira adf` is two entries, not one: the walk emits a node p
   from ~100ms to 260ms. `import type` is erased and stays allowed; the option interfaces
   handlers annotate with are imported that way. `collect`, `TARGETS`, `formatsFor`, and the
   config/runtime/version/notifier imports are registration-time and stay static —
-  **`collect` especially**, because `src/contract/describe.ts` compares `option.parseArg` against
-  it by identity. `tests/unit/cli-imports.test.ts` enforces all of this against the source, and
+  **`collect` especially**, because `src/contract/walk-options.ts` compares `option.parseArg`
+  against it by identity. `tests/unit/cli-imports.test.ts` enforces all of this against the source, and
   `tests/e2e/startup.test.ts` enforces it against a real process: it runs the CLI under a
   `module.register()` resolve hook (`tests/helpers/import-log-*.mjs`) and asserts `--help` loads
   **no** command module and a command loads exactly one. Assert on which modules resolved, never
@@ -187,10 +188,32 @@ one-time password` after the tarball has already been packed — i.e. late, in t
   declare.
 - **Every visible command needs a `src/contract/registry.ts` entry.** `describe` merges the
   registry into the walked command tree, and `tests/e2e/contract.test.ts` fails on any command
-  reported as `stability: "undeclared"` and on any registry id that no longer maps to a command.
-  The registry records current behavior, including the known inconsistencies (`md links -fj`
-  never exiting 2, `md lint-dir --summary`'s divergent shape) — those are documented in
-  `notes`, not quietly fixed, because changing them is breaking.
+  reported as `stability: "undeclared"` and on any registry id that no longer maps to a command
+  — the library itself tolerates undeclared commands by design, so that check is ours. Rows are
+  `ContractRow`, the library's `CommandContract` plus an `id`, because `CommandContractRegistry`
+  is keyed rather than self-identifying and the tests assert key and `id` agree. The registry
+  records current behavior, including the known inconsistencies (`md links -fj` never exiting 2,
+  `md lint-dir --summary`'s divergent shape) — those are documented in `notes`, not quietly
+  fixed, because changing them is breaking.
+- **`describe` is the cli-schema walker, and `@cairn-tool/cli-schema`'s index compiles an Ajv
+  validator at import.** The walker, its types, the text renderer, and the `describe` help text
+  were extracted from here into `@cairn-tool/cli-schema` and `@cairn-tool/cli-schema-commander`;
+  `src/contract/walk-options.ts` is what this repository still owns — the registry, the
+  advisory-output block, the schema references, and **`isRepeatable`**, whose library default is
+  `option.variadic` alone. Drop that hook and every `collect` option reports `arity.max: 1` with
+  nothing failing. `src/result.ts` reaches `registry.ts`, `version.ts`, and `schemas/index.ts`
+  from every command, so those and `types.ts`, `update-notifier.ts`, and `walk-options.ts` use
+  `import type` only; the runtime imports live in `src/commands/describe.ts`,
+  `src/completion/model.ts`, and the `load` thunk on the `describe` schema entry.
+  `tests/e2e/startup.test.ts` asserts `md outline` resolves neither the library nor ajv. The
+  library's `addDescribeCommand` is deliberately unused: it registers at startup, which means a
+  static import in `src/cli.ts`; `tests/unit/cli-imports.test.ts` has a tripwire.
+- **`describe`'s `schemaVersion` is the cli-schema spec's, not `CONTRACT_VERSION`.** The payload
+  is that project's document, so the field is `"1"` while the envelope reports `"4"`. The
+  `describe` schema entry is the one `EXTERNAL_SCHEMAS` member: its `uri` is the library's
+  `cliSchema.$id`, not `schemaUri("v1", …)`, and its body is loaded on demand.
+  `SCHEMAS`/`SCHEMA_BY_ID` hold only what is authored here; `SCHEMA_REFS`/`SCHEMA_REF_BY_ID`
+  hold everything published, and `schemaUriFor` reads the latter.
 - **Schemas and target profiles are TypeScript modules, not data directories.** `tsconfig` sets
   `rootDir: "src"` with no `resolveJsonModule`, so a top-level `schemas/` or `.json` profile
   would never reach `dist` and the published package would silently lack it — the same trap as
@@ -199,7 +222,9 @@ one-time password` after the tarball has already been packed — i.e. late, in t
 - **`CONTRACT_VERSION` and `PROFILE_SCHEMA_VERSION` are hand-owned.** They version the contract
   surface and the target-profile structure, not the package. Do not bump them for a normal
   release; semantic-release does not touch them. Payload-level breaking changes are versioned by
-  the major in the schema `$id` path instead. The rules are in `docs/contract.md`.
+  the major in the schema `$id` path instead. The rules are in `docs/contract.md`. A change to
+  what `describe` emits is the exception: the shape belongs to the cli-schema spec, but
+  consumers of `describe` still see it, so it is recorded in the contract history.
 - **The bundle `schemaVersion` is a third hand-owned version.** It versions the _source_ format
   authors write (`src/agent/manifest.ts`), separate from `CONTRACT_VERSION` and
   `PROFILE_SCHEMA_VERSION`. Schema 2 is a strict superset of 1: it adds `marketplace:` and
@@ -347,7 +372,8 @@ one-time password` after the tarball has already been packed — i.e. late, in t
   instead of throwing. It must never call `process.exit()` — a piped `--format json` write is
   asynchronous and would be truncated. The divergence is declared through the optional
   `exitCodePassthrough` field on `CommandContract`, added rather than widening
-  `ExitCodeMeaning.code`, whose `enum: [0,1,2]` is published in the `describe` schema.
+  `ExitCodeMeaning.code`. The cli-schema publishes `code` as any integer; the `0 | 1 | 2`
+  narrowing lives in `ContractRow` and in the envelope schema's `enum: [0,1,2]`.
   **`--ignore-exit-code` is the one flag that turns that passthrough off**, and it suppresses the
   status for _every_ outcome, a refused resolution included — `scriptsRunAction` is a wrapper
   that catches around the real body for exactly that reason. It exists because an invocation
@@ -596,7 +622,7 @@ outputTokens}` on a `bubbleId:` record is a real per-request figure with no dist
 - **No published schema may set `additionalProperties: false` or `$ref` another document.**
   The first would make every additive change break validating consumers; the second would make
   `cairn schema <id>` return something that cannot be compiled on its own.
-  `tests/unit/contract-schemas.test.ts` enforces both.
+  `tests/unit/contract-schemas.test.ts` enforces both, on the external `describe` document too.
 - **The `jira adf` commands put the document on stdout and findings on stderr.** Every `agent`
   subcommand puts findings on stdout; these do the opposite, because
   `cairn jira adf to-markdown x.json > out.md` must not splice diagnostics into the document.

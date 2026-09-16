@@ -931,7 +931,7 @@ const usage = program
 /**
  * Options every `usage` subcommand shares.
  *
- * `--project` uses the unwrapped `collect` because `src/contract/describe.ts`
+ * `--project` uses the unwrapped `collect` because `src/contract/walk-options.ts`
  * detects a repeatable option by comparing its coercion against that function by
  * identity.
  */

@@ -73,9 +73,12 @@ describe("cli startup", () => {
   });
 
   it("loads only the module the invoked command needs", () => {
-    expect(commandModules(modulesLoadedBy(["md", "outline", "README.md"]))).toEqual([
-      expect.stringContaining("/dist/commands/outline.js"),
-    ]);
+    const outline = modulesLoadedBy(["md", "outline", "README.md"]);
+    expect(commandModules(outline)).toEqual([expect.stringContaining("/dist/commands/outline.js")]);
+    // `src/result.ts` reaches the contract registry and schema index from every
+    // command, and `@cairn-tool/cli-schema`'s index compiles an Ajv validator at
+    // import. Only `describe`, `schema <id>`, and `completion` may load it.
+    expect(outline.filter((url) => /@cairn-tool\/cli-schema|\/ajv\//.test(url))).toEqual([]);
     expect(commandModules(modulesLoadedBy(["usage", "providers"]))).toEqual([
       expect.stringContaining("/dist/commands/usage.js"),
     ]);

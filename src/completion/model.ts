@@ -1,6 +1,8 @@
 import type { Command } from "commander";
-import { walkCommands, type DescribedCommand, type DescribedOption } from "../contract/describe.js";
+import { walkCommands } from "@cairn-tool/cli-schema-commander";
+import type { DescribedCommand, DescribedOption } from "@cairn-tool/cli-schema";
 import { COMMAND_CONTRACTS } from "../contract/registry.js";
+import { walkOptions } from "../contract/walk-options.js";
 import { TARGETS } from "../agent/types.js";
 import { TOOL_KINDS } from "../usage/events.js";
 import {
@@ -133,18 +135,22 @@ function choicesFor(commandId: string, long: string): string[] {
 }
 
 function describeToCompletion(option: DescribedOption, commandId: string): CompletionOption | null {
-  if (!option.long) return null;
-  const kind = valueKind(commandId, option.long, option.valueName);
+  // `name` is the long form whenever one exists; a short-only option has
+  // nothing a completion script keys on.
+  if (!option.name.startsWith("--")) return null;
+  const kind = valueKind(commandId, option.name, option.valueName);
   return {
-    long: option.long,
-    short: option.short ?? null,
+    long: option.name,
+    short: option.aliases.find((alias) => !alias.startsWith("--")) ?? null,
     description: option.description,
     takesValue: option.valueName !== null,
-    // A negated form (`--no-style`) never accumulates, and commander gives it
-    // the same coercion as its positive twin, so trust the flag shape too.
-    repeatable: option.repeatable && !option.negated,
+    // Unbounded arity is what `isRepeatable` (`collect`) produces; this CLI has
+    // no variadic option. A negated form (`--no-style`) never accumulates, and
+    // commander gives it the same coercion as its positive twin, so trust the
+    // flag shape too.
+    repeatable: option.arity.max === null && !option.negatable,
     value: kind,
-    choices: kind === "choice" ? choicesFor(commandId, option.long) : [],
+    choices: kind === "choice" ? choicesFor(commandId, option.name) : [],
   };
 }
 
@@ -172,7 +178,7 @@ export function buildModel(
   program: Command,
   tool: { name: string; version: string },
 ): CompletionModel {
-  const described = walkCommands(program);
+  const described = walkCommands(program, walkOptions());
   const root: CompletionCommand = {
     id: "",
     path: [],

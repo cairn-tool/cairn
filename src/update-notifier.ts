@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import type { AdvisoryOutput } from "@cairn-tool/cli-schema";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -32,7 +33,7 @@ export const SCRIPTS_RUN_SUBCOMMAND = "run";
  * read them rather than infer them. Exported from here, next to the gate that
  * enforces them, so the two cannot drift.
  */
-export const NOTIFIER_CONTRACT = {
+export const NOTIFIER_CONTRACT: AdvisoryOutput = {
   description: "The update notice is advisory only and never appears on a machine-readable stream.",
   stream: "stderr",
   suppressedWhen: [
@@ -43,7 +44,7 @@ export const NOTIFIER_CONTRACT = {
     "the command is check-update, describe, schema, completion, scripts run, or the internal cache refresh",
   ],
   optOutEnv: "CAIRN_NO_UPDATE_NOTIFIER",
-} as const;
+};
 
 /**
  * How long a held refresh lock is trusted. Must exceed the child's own fetch

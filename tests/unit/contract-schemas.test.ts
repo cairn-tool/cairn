@@ -1,9 +1,19 @@
 import { describe, it, expect } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormatsImport from "ajv-formats";
-import { SCHEMAS, SCHEMA_BY_ID, schemaUriFor } from "../../src/contract/schemas/index.js";
+import { cliSchema } from "@cairn-tool/cli-schema";
+import {
+  EXTERNAL_SCHEMAS,
+  SCHEMAS,
+  SCHEMA_REFS,
+  SCHEMA_REF_BY_ID,
+  loadSchema,
+  schemaUriFor,
+} from "../../src/contract/schemas/index.js";
+import { describeSchema } from "../../src/contract/schemas/meta.js";
 import { COMMAND_CONTRACTS } from "../../src/contract/registry.js";
 import {
+  CLI_SCHEMA_URI,
   CONTRACT_VERSION,
   SARIF_SCHEMA_URI,
   SCHEMA_BASE,
@@ -32,7 +42,7 @@ describe("published schemas", () => {
   });
 
   it("uses unique, well-formed ids", () => {
-    const ids = SCHEMAS.map((entry) => entry.id);
+    const ids = SCHEMA_REFS.map((entry) => entry.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const entry of SCHEMAS) {
       expect(entry.uri).toBe(schemaUri("v1", entry.id));
@@ -76,12 +86,44 @@ describe("published schemas", () => {
   });
 
   it("names only real commands", () => {
-    for (const entry of SCHEMAS)
+    for (const entry of SCHEMA_REFS)
       for (const command of entry.commands)
         expect(
           COMMAND_CONTRACTS[command],
           `${entry.id} names unknown command ${command}`,
         ).toBeDefined();
+  });
+});
+
+describe("external schemas", () => {
+  // `describe` is a cli-schema document, owned by that project. It is the one
+  // published id whose `$id` is not under SCHEMA_BASE, and the one whose body
+  // is loaded on demand — the library index compiles a validator at import.
+  it("is exactly the describe schema", () => {
+    expect(EXTERNAL_SCHEMAS.map((entry) => entry.id)).toEqual(["describe"]);
+    expect(SCHEMAS.some((entry) => entry.id === "describe")).toBe(false);
+    expect(SCHEMA_REFS.some((entry) => entry.id === "describe")).toBe(true);
+  });
+
+  it("serves the library's own document under the library's own id", async () => {
+    expect(CLI_SCHEMA_URI).toBe(cliSchema.$id);
+    expect(describeSchema.uri).toBe(CLI_SCHEMA_URI);
+    expect(await describeSchema.load()).toBe(cliSchema);
+    expect(await loadSchema("describe")).toBe(cliSchema);
+    expect(await loadSchema("nope")).toBeUndefined();
+    expect(cliSchema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
+  });
+
+  it("holds to the same rules as an owned schema", () => {
+    const ajv = addFormats(new Ajv2020({ allErrors: true, strict: false }));
+    expect(() => ajv.compile(cliSchema)).not.toThrow();
+    const defs = Object.keys((cliSchema.$defs as Record<string, unknown>) ?? {});
+    walk(cliSchema, (node) => {
+      expect(node.additionalProperties, "cli-schema closes a payload").not.toBe(false);
+      if (typeof node.$ref !== "string") return;
+      expect(node.$ref.startsWith("#/"), `cli-schema has external $ref ${node.$ref}`).toBe(true);
+      expect(defs).toContain(node.$ref.replace("#/$defs/", ""));
+    });
   });
 });
 
@@ -133,7 +175,7 @@ describe("command contract registry", () => {
     for (const contract of entries)
       for (const id of [contract.outputSchema, contract.jsonlSchema])
         if (id)
-          expect(SCHEMA_BY_ID.has(id), `${contract.id} names unknown schema ${id}`).toBe(true);
+          expect(SCHEMA_REF_BY_ID.has(id), `${contract.id} names unknown schema ${id}`).toBe(true);
   });
 
   it("declares a findings stream exactly when it can exit 2", () => {
@@ -165,6 +207,7 @@ describe("command contract registry", () => {
 describe("schema id resolution", () => {
   it("maps a known id to its uri", () => {
     expect(schemaUriFor("md-graph")).toBe(schemaUri("v1", "md-graph"));
+    expect(schemaUriFor("describe")).toBe(CLI_SCHEMA_URI);
   });
 
   it("returns null for an unknown or absent id", () => {
@@ -174,6 +217,6 @@ describe("schema id resolution", () => {
   });
 
   it("pins the contract version", () => {
-    expect(CONTRACT_VERSION).toBe("3");
+    expect(CONTRACT_VERSION).toBe("4");
   });
 });
