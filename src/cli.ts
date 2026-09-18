@@ -22,6 +22,7 @@ import type { QaSummaryOptions } from "./commands/qa-summary.js";
 import type { QaListOptions } from "./commands/qa-list.js";
 import type { UsageOptions } from "./commands/usage.js";
 import type { AgentDoctorOptions } from "./commands/agent-doctor.js";
+import type { AgentGuardOptions } from "./commands/agent-guard.js";
 import type { AgentImportOptions } from "./commands/agent-import.js";
 import type { AgentInstallOptions } from "./commands/agent-install.js";
 import type { AgentInstalledOptions } from "./commands/agent-installed.js";
@@ -523,6 +524,24 @@ agent
       import("./commands/agent-verify.js"),
     ]);
     return agentActionBoundary("verify", opts, () => agentVerifyAction(opts));
+  });
+
+agent
+  .command("guard <file>")
+  .description("Report whether a path is cairn-generated, and which bundle file to edit instead")
+  .option("--config <file>", "Configuration document declaring the agent.guard block")
+  .option("--format <fmt>", "Output format: llm, human, json", "llm")
+  .option("--envelope", "Wrap --format json output in the versioned result envelope")
+  .addHelpText(
+    "after",
+    "\nReads the agent.guard block of a cairn configuration document, discovered by\nwalking up from the named path. A repository that declares no block is not\nguarded and the command exits 0, which is what makes the `cairn-agent` bundle's\npre-tool-use hook safe to install globally.\n\nNothing is rendered and no bundle is loaded: the path is matched against the\ntarget's declared output patterns and confirmed against the bundle that sources\nit. Writes nothing, ever.\n\nExit codes:\n  0  The path may be edited, or the guard is set to warn\n  1  Invocation, configuration, or I/O error\n  2  The path is cairn-generated and the guard blocks",
+  )
+  .action(async (file: string, opts: AgentGuardOptions) => {
+    const [{ agentActionBoundary }, { agentGuardAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-guard.js"),
+    ]);
+    return agentActionBoundary("guard", opts, () => agentGuardAction(file, opts));
   });
 
 agent

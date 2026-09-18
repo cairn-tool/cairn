@@ -18,7 +18,15 @@ const PROFILES = ["plugin", "project"] as const;
  * rather than a surprise in CI.
  */
 
-const ROOT_KEYS = new Set(["verify", "install"]);
+/**
+ * The keys of the `agent:` block itself, not of `agent.verify`.
+ *
+ * It lives here because this was the first parser of the block, and every
+ * sibling parser reaches its own key through `object(value, "agent")` without
+ * re-validating the set. Adding a key under `agent:` means adding it here or
+ * `knownKeys` rejects a document that is in fact correct.
+ */
+const ROOT_KEYS = new Set(["verify", "install", "guard"]);
 const VERIFY_KEYS = new Set(["pins", "defaults", "entries"]);
 const PIN_KEYS = new Set(["cli", "profileSchemaVersion", "targets"]);
 const BOUND_KEYS = new Set(["exact", "min", "max"]);

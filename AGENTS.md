@@ -283,6 +283,37 @@ one-time password` after the tarball has already been packed — i.e. late, in t
   (`buildSourceInventory`): `bundle.hookFiles` paths are relative to the hook directory, so
   passing them straight through would miss `checkExecutables`' `hooks/` prefix and flag every
   scaffolded hook script. `agent init` output auditing clean is a guarded constraint.
+- **The edit guard is a plugin-profile hook gated by per-repository config, and that pairing is
+  the whole design.** `render.ts:1078` gates hook emission on
+  `features.hooks.profiles.includes(profile)`, and every target declares `["plugin"]` — so
+  `cairn-agent`'s `pre-tool-use` hook ships with a _plugin_ install while the tree it protects
+  is the _project_-profile one in whatever repository the assistant is working in. The hook is
+  therefore global and unconditional, and `cairn agent guard` exits 0 on any repository
+  declaring no `agent.guard` block, which is what makes that safe. Three consequences are
+  load-bearing: this repository's own `cairn-verify.yml` install is `profile: project`, so it
+  deliberately does **not** receive the hook; OpenCode declares no hook events at all, so no
+  guard is installed there and no diagnostic says so; and **every failure of the guard's own
+  must exit 0** — a missing CLI, a timeout, a typo'd config — because a guard that failed
+  closed would block editing on any machine without cairn installed, which is worse than the
+  edit it prevents. `tests/e2e/agent-guard.test.ts` pins the not-on-PATH case.
+- **`agent guard` matches paths and never renders, and `matchOutputPattern` is why it can.**
+  A `renderBundle` is ~400ms and the guard runs on every write, so the oracle is the target
+  profile's declared `outputs` patterns plus an `fs.existsSync` against the bundle that sources
+  the component the pattern's `{name}` names. That second half is not belt-and-braces: it is
+  the same lookup that produces the "edit this instead" pointer, and it is what stops a
+  hand-written `.claude/agents/scratch.md` being refused. `outputPatternToRegExp` **stays
+  non-capturing** — `import/detect.ts` compares its compiled source by identity against the
+  declared pattern set — so the capturing form is a separate compiler beside it, and
+  `tests/unit/agent-guard.test.ts` asserts the two agree over the whole profile matrix and that
+  no cell declares two patterns describing one path. The feature key of an output pattern is
+  the component key of a manifest, so the reverse map is `configuredPath` on the same key and
+  no second table exists. The one place the guard must copy a renderer rule rather than share
+  it is `marketplaceAssets`, because `render.ts` withholds `marketplace.icon` from the project
+  profile; that test asserts those agree too.
+- **The keys of the `agent:` block live in `src/agent/verify/config.ts`,** not with the parser
+  that reads each one. `parseInstallBlock` and `parseGuardBlock` reach their own key through
+  `object(value, "agent")` without re-validating the set, so a new key under `agent:` must be
+  added to that `ROOT_KEYS` or `knownKeys` rejects a document that is in fact correct.
 - **`src/sarif.ts` builds its document in a load-bearing key order.** The five `md` diagnostic
   commands share `sarifDocument` with `agent audit`, and `JSON.stringify` follows insertion
   order, so reordering a key silently changes bytes every existing SARIF consumer receives.

@@ -135,17 +135,18 @@ reject the same file.
 
 ## Agent installs and verification
 
-`agent` is a top-level key, not a `commands.` entry. It has two members, which pair up:
-`install` declares what a repository places into itself, and `verify` declares what
-[`agent verify`](commands/agent/verify.md) asserts about the result.
+`agent` is a top-level key, not a `commands.` entry. It has three members: `install` declares
+what a repository places into itself, `verify` declares what
+[`agent verify`](commands/agent/verify.md) asserts about the result, and `guard` declares which
+of those generated files [`agent guard`](commands/agent/guard.md) refuses direct edits to.
 
 Markdown commands never read either block, but they do validate both — the same rule as
 `scripts`, and for the same reason. A typo here is an error for every command that loads
 configuration rather than a surprise in CI.
 
-They are separate blocks rather than one because they answer different questions — one says
-what to _write_, the other asserts what is _there_ — and a flag that widened either would be a
-surprise in the other. A repository may declare one without the other.
+They are separate blocks rather than one because they answer different questions — what to
+_write_, what is _there_, and what may be _edited_ — and a flag that widened one would be a
+surprise in the others. A repository may declare any of them without the rest.
 
 ## `agent.install`
 
@@ -258,6 +259,51 @@ At least one is required, so an empty block cannot read as a pass.
 file and must stay inside it. A checked-in document describes its own repository; letting one
 name an arbitrary path would make cloning a repository a way to have arbitrary directories
 read.
+
+## `agent.guard`
+
+Which generated files [`agent guard`](commands/agent/guard.md) refuses direct edits to, and
+what to tell the editor instead. The `cairn-agent` bundle's `pre-tool-use` hook calls that
+command before every write, so this block is what turns the hook on for a repository.
+
+**A repository that declares no `agent.guard` block is not guarded.** That is the point: the
+hook installs once, globally, and each repository opts in.
+
+```yaml
+agent:
+  guard:
+    mode: block
+    unowned: allow
+    allow:
+      - .claude/settings.local.json
+    regenerate: "cairn agent install"
+```
+
+| Key          | Required | Description                                                                             |
+| ------------ | -------- | --------------------------------------------------------------------------------------- |
+| `mode`       | No       | `block` (default), `warn`, or `off`.                                                    |
+| `unowned`    | No       | `allow` (default) or `block`. What to do with a cairn-shaped path no bundle sources.    |
+| `allow`      | No       | Destination-relative paths the guard never claims. A trailing `/**` covers a directory. |
+| `regenerate` | No       | The command quoted back to the editor as the way to apply the change.                   |
+| `entries`    | No       | Explicit bundle-to-destination list. Derived from `agent.install` when absent.          |
+
+There is no `enabled:` key. `mode: off` is the switch, and a second spelling of the same state
+is a way for the two to disagree.
+
+`entries` takes the same `bundle`, `target`, `profile` and `destination` keys `agent.verify`
+does, and is only needed by a repository that has no `agent.install` block or that generates
+through [`agent convert`](commands/agent/convert.md) instead. When it is absent, entries are
+derived from `agent.install` — its `bundles` crossed with its `targets`, at each target's
+**project**-scope location. A user-scope install derives nothing: those land under `~` in a
+layout that nests the bundle name below the declared root, which is not a tree an assistant
+edits by accident.
+
+`unowned` defaults to `allow` because a repository may keep hand-written content beside
+generated content; a `.claude/agents/scratch.md` nobody renders is not a cairn artifact. Set
+it to `block` in a repository whose agent tree is generated in full.
+
+Every path here is resolved against the directory holding the configuration file and must stay
+inside it, the same rule `agent.install` and `agent.verify` apply.
 
 ## QA
 

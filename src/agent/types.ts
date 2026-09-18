@@ -7,6 +7,7 @@ import type { TestReport } from "./test/index.js";
 import type { InstallReport } from "./install/index.js";
 import type { MarketplaceReport } from "./marketplace/index.js";
 import type { VerifyReport } from "./verify/index.js";
+import type { GuardReport } from "./guard/index.js";
 
 export const TARGETS = ["claude-code", "codex", "cursor", "antigravity", "opencode"] as const;
 export type AgentTarget = (typeof TARGETS)[number];
@@ -238,7 +239,8 @@ export interface AgentResult {
     | "uninstall"
     | "installed"
     | "marketplace"
-    | "verify";
+    | "verify"
+    | "guard";
   ok: boolean;
   source?: string;
   targets: AgentTarget[];
@@ -269,6 +271,8 @@ export interface AgentResult {
   marketplace?: MarketplaceReport;
   /** Drift and pin result, emitted by `agent verify`. */
   verify?: VerifyReport;
+  /** Edit-guard verdict, emitted by `agent guard`. */
+  guard?: GuardReport;
   dryRun?: boolean;
   check?: boolean;
   stale?: boolean;

@@ -28,6 +28,7 @@ export const agentResultSchema: SchemaEntry = {
     "agent installed",
     "agent marketplace",
     "agent verify",
+    "agent guard",
   ],
   schema: {
     $schema: DRAFT,
@@ -58,6 +59,7 @@ export const agentResultSchema: SchemaEntry = {
           "installed",
           "marketplace",
           "verify",
+          "guard",
         ],
       },
       ok: { type: "boolean" },
@@ -611,6 +613,93 @@ export const agentResultSchema: SchemaEntry = {
               orphaned: { type: "integer", minimum: 0 },
               unmanaged: { type: "integer", minimum: 0 },
             },
+          },
+        },
+      },
+      guard: {
+        description:
+          "Edit-guard verdict, emitted by `agent guard`. Present on every invocation, including one where nothing is configured.",
+        type: "object",
+        required: ["path", "decision", "reason", "sources", "config", "mode", "message"],
+        properties: {
+          path: { type: "string", description: "The resolved absolute path that was judged." },
+          decision: {
+            enum: ["block", "warn", "allow"],
+            description:
+              "`block` is the only one that exits 2. `warn` reports and allows; the edit is still overwritten by the next render.",
+          },
+          reason: {
+            enum: [
+              "generated",
+              "unowned",
+              "unmatched",
+              "allowlisted",
+              "disabled",
+              "not-configured",
+            ],
+            description:
+              "`generated` means a configured bundle sources the path. `unowned` means a declared output pattern describes it but no bundle sources it, whose severity `agent.guard.unowned` decides. `not-configured` means no document declares an `agent.guard` block, which is the commonest outcome.",
+          },
+          config: {
+            type: ["string", "null"],
+            description: "The document the block was read from, or null when none declares one.",
+          },
+          mode: {
+            type: ["string", "null"],
+            enum: ["block", "warn", "off", null],
+            description: "The configured mode, or null when nothing is configured.",
+          },
+          match: {
+            description: "The declared output pattern that describes the path, when one does.",
+            type: "object",
+            required: ["target", "profile", "destination", "relative", "feature", "pattern"],
+            properties: {
+              target: { enum: TARGETS },
+              profile: { enum: PROFILES },
+              destination: {
+                type: "string",
+                description: "Absolute root the match was made under.",
+              },
+              relative: { type: "string", description: "The path, relative to `destination`." },
+              feature: {
+                type: "string",
+                description:
+                  "The output pattern's feature key: one of the manifest component keys, or `manifest`.",
+              },
+              name: {
+                type: "string",
+                description: "The segment the pattern's `{name}` consumed, when it has one.",
+              },
+              pattern: {
+                type: "string",
+                description: "The declared pattern, as the profile writes it.",
+              },
+            },
+          },
+          bundle: {
+            description:
+              "The bundle that sources the path. Absent when several bundles merge into one rendered file, and when nothing sources it.",
+            type: "object",
+            required: ["name", "path"],
+            properties: {
+              name: { type: "string" },
+              path: { type: "string", description: "Bundle root as the configuration writes it." },
+            },
+          },
+          sources: {
+            description:
+              "Bundle source files to edit instead, relative to the configuration directory. More than one when the rendered file merges several bundles.",
+            type: "array",
+            items: { type: "string" },
+          },
+          regenerate: {
+            type: "string",
+            description: "The command that regenerates the tree, when the configuration names one.",
+          },
+          message: {
+            type: "string",
+            description:
+              "The prose an editor is shown, empty when the decision is `allow`. The hook reads this rather than reformatting the other fields, so every surface says the same thing.",
           },
         },
       },
