@@ -376,7 +376,16 @@ export interface InstallProfile {
   project: InstallLocation | null;
 }
 
-function segmentToSource(segment: string): string {
+/**
+ * Compiles one path segment of an {@link OutputPattern}.
+ *
+ * `placeholder` decides what a `{…}` becomes, and is the *only* way the
+ * capturing compiler behind {@link matchOutputPattern} differs from the
+ * matching one. It is a parameter rather than a second copy of this function
+ * because the two would otherwise each carry the meta-character escape below
+ * and be free to drift apart at it.
+ */
+function segmentToSource(segment: string, placeholder = () => "[^/]+"): string {
   if (segment === "**") return "(?:.+)?";
   let source = "";
   for (let index = 0; index < segment.length;) {
@@ -384,7 +393,7 @@ function segmentToSource(segment: string): string {
     if (char === "{") {
       const close = segment.indexOf("}", index);
       if (close !== -1) {
-        source += "[^/]+";
+        source += placeholder();
         index = close + 1;
         continue;
       }
@@ -394,7 +403,11 @@ function segmentToSource(segment: string): string {
       index++;
       continue;
     }
-    source += char.replace(/[.+^${}()|[\]\\?]/, "\\$&");
+    // `char` is one character, so the `g` flag cannot change what this produces
+    // today. It is here because a partial escape is a real defect class and an
+    // expression that only escapes the first occurrence should not be the thing
+    // a future edit inherits.
+    source += char.replace(/[.+^${}()|[\]\\?]/g, "\\$&");
     index++;
   }
   return source;
@@ -407,7 +420,9 @@ function segmentToSource(segment: string): string {
 export function outputPatternToRegExp(pattern: string): RegExp {
   const source = pattern
     .split("/")
-    .map(segmentToSource)
+    // An explicit lambda: a bare reference would hand `map`'s index argument to
+    // the `placeholder` parameter.
+    .map((segment) => segmentToSource(segment))
     .join("/")
     // A trailing `/**` must also match the bare directory prefix.
     .replace(/\/\(\?:\.\+\)\?$/, "(?:/.+)?");
@@ -449,28 +464,10 @@ type CaptureRole = "name" | "rest";
 
 /** {@link segmentToSource}, with `{…}` captured and its position recorded. */
 function capturingSegment(segment: string, roles: CaptureRole[]): string {
-  if (segment === "**") return "(?:.+)?";
-  let source = "";
-  for (let index = 0; index < segment.length;) {
-    const char = segment[index];
-    if (char === "{") {
-      const close = segment.indexOf("}", index);
-      if (close !== -1) {
-        source += "([^/]+)";
-        roles.push("name");
-        index = close + 1;
-        continue;
-      }
-    }
-    if (char === "*") {
-      source += "[^/]*";
-      index++;
-      continue;
-    }
-    source += char.replace(/[.+^${}()|[\]\\?]/, "\\$&");
-    index++;
-  }
-  return source;
+  return segmentToSource(segment, () => {
+    roles.push("name");
+    return "([^/]+)";
+  });
 }
 
 function compileCapturing(pattern: string): { regex: RegExp; roles: CaptureRole[] } {
