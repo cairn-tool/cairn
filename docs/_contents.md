@@ -147,6 +147,7 @@ subagent, hook, MCP server, asset, and contract test.
 - [`agent test`](commands/agent/test.md)
 - [`agent doctor`](commands/agent/doctor.md)
 - [`agent verify`](commands/agent/verify.md)
+- [`agent guard`](commands/agent/guard.md)
 - [`agent specs`](commands/agent/specs.md)
 
 ## Script commands

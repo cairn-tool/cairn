@@ -24,6 +24,21 @@ agent:
       - path: plugins/cairn-jira
       - path: plugins/cairn-pdf
       - path: plugins/cairn-qa
+  # What `cairn agent guard` refuses a direct edit to. Entries are derived from
+  # the install block above, so nothing here restates them.
+  #
+  # Two things keep this from acting on its own, both deliberate. The guard's
+  # hook ships in the `cairn-agent` *plugin* profile, and the install above is
+  # `profile: project`, so this repository does not install the hook into
+  # itself. And the hook discovers configuration the ordinary way, which finds
+  # `.cairn.yml` and not this file -- see the note above on why there is no
+  # `.cairn.yml` here. So the guard runs here only when asked:
+  #
+  #   cairn agent guard <path> --config cairn-verify.yml
+  guard:
+    mode: block
+    regenerate: "cairn agent install --config cairn-verify.yml"
+
   verify:
     defaults:
       scope: project

@@ -13,6 +13,7 @@ import {
 import { parseScriptsBlock } from "./scripts/registry.js";
 import { parseVerifyBlock } from "./agent/verify/config.js";
 import { parseInstallBlock } from "./agent/install/config.js";
+import { parseGuardBlock } from "./agent/guard/config.js";
 import type { OutputFormat } from "./types.js";
 
 export type PathStyle = "absolute" | "relative";
@@ -525,6 +526,10 @@ export function loadConfig(
     // error at `md lint` rather than a surprise in CI.
     parseVerifyBlock(rootObject.agent, { file: configPath, directory: base });
     parseInstallBlock(rootObject.agent, { file: configPath, directory: base });
+    // `agent.guard` matters here more than its siblings do: it is read from
+    // inside a pre-tool-use hook, where a throw is swallowed and the guard
+    // silently allows everything. `md lint` is where a typo in it gets noticed.
+    parseGuardBlock(rootObject.agent, { file: configPath, directory: base });
   }
 
   // Unlike `scripts:` and `agent:`, the `qa:` block is stored: qa commands read

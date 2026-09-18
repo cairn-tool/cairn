@@ -686,6 +686,16 @@ const CONTRACTS: ContractRow[] = [
     notes:
       "Reads what to verify from the `agent.verify` block of a cairn configuration document rather than from flags, so CI runs it bare. Renders each declared bundle in memory through the same install planner agent install uses, so a verification is always derived from the bundle and never from a possibly-drifted tree. Pins are asserted against the running CLI — its version, PROFILE_SCHEMA_VERSION, and each target's documentationRevision — which together with byte equality prove the tree was produced by a cairn matching the pin, without requiring a provenance document to exist. Provenance found at a destination is reported as corroboration and never decides the verdict. The unmanaged walk is bounded to the directory prefixes the target profile declares and that the render actually populated; a wholly-literal declared path such as AGENTS.md or .mcp.json is compared by bytes and never walked, so pointing an entry at a repository root cannot enumerate the repository. Approximate render diagnostics do not fail verify, unlike convert and validate.",
   }),
+  agentCommand("guard", {
+    stability: "experimental",
+    exitCodes: [
+      OK("The path may be edited, the guard warns, or nothing is configured"),
+      USAGE,
+      FINDINGS("The path is cairn-generated and the guard is set to block"),
+    ],
+    notes:
+      "Decides whether one path is generated output that should be edited at its bundle source instead, and is the decision half of the cairn-agent bundle's pre-tool-use hook. Reads the `agent.guard` block of a cairn configuration document, discovered by walking up from the named path and skipping node_modules; entries are derived from `agent.install` unless the block declares its own. Nothing is rendered and no bundle is loaded — the path is matched against the target profile's declared output patterns and confirmed against the bundle that sources the component the pattern's {name} identifies, which is the same lookup that produces the source pointer. A path a pattern describes but that no bundle sources is `unowned`, allowed by default because a repository may keep hand-written content beside generated content. Exits 0 for every outcome that is not a refusal, including a missing configuration and an unreadable bundle: a guard that failed closed would block editing on any repository whose configuration has a typo. Writes nothing, ever.",
+  }),
   agentCommand("install", {
     writes: true,
     stability: "experimental",

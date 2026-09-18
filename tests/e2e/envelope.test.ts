@@ -133,6 +133,12 @@ describe("--envelope", () => {
     },
     { label: "agent inspect", args: (c) => ["agent", "inspect", c.bundle] },
     { label: "agent specs", args: () => ["agent", "specs", "--target", "all"] },
+    {
+      // A path in a directory declaring no `agent.guard` block: the guard exits
+      // 0 with a `not-configured` verdict, which is the payload to wrap.
+      label: "agent guard",
+      args: (c) => ["agent", "guard", path.join(c.workspace, "index.md")],
+    },
     // `usage` reads logs outside the workspace, so it is pointed at a fixture
     // corpus.
     { label: "usage summary", args: () => ["usage", "summary", ...usageLogs] },

@@ -196,6 +196,9 @@ Per-feature mapping losses. Severity depends on what the target profile declares
 | `AB424` | error    | `agent verify`                 | A recorded file is no longer rendered by the bundle.                    |
 | `AB425` | notice   | `agent verify`                 | The tree records a different generator version than the one verifying.  |
 | `AB426` | notice   | `agent verify`                 | No install of this bundle recorded here, so orphans cannot be detected. |
+| `AB430` | error    | `agent guard`                  | The path is cairn-generated; edit the bundle source instead.            |
+| `AB431` | warning  | `agent guard`                  | The path is cairn-generated and the guard is set to warn.               |
+| `AB432` | warning  | `agent guard`                  | `agent.guard` resolves to no entries, so nothing is guarded.            |
 
 ## Packaging
 

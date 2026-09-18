@@ -376,7 +376,16 @@ export interface InstallProfile {
   project: InstallLocation | null;
 }
 
-function segmentToSource(segment: string): string {
+/**
+ * Compiles one path segment of an {@link OutputPattern}.
+ *
+ * `placeholder` decides what a `{…}` becomes, and is the *only* way the
+ * capturing compiler behind {@link matchOutputPattern} differs from the
+ * matching one. It is a parameter rather than a second copy of this function
+ * because the two would otherwise each carry the meta-character escape below
+ * and be free to drift apart at it.
+ */
+function segmentToSource(segment: string, placeholder = () => "[^/]+"): string {
   if (segment === "**") return "(?:.+)?";
   let source = "";
   for (let index = 0; index < segment.length;) {
@@ -384,7 +393,7 @@ function segmentToSource(segment: string): string {
     if (char === "{") {
       const close = segment.indexOf("}", index);
       if (close !== -1) {
-        source += "[^/]+";
+        source += placeholder();
         index = close + 1;
         continue;
       }
@@ -394,7 +403,11 @@ function segmentToSource(segment: string): string {
       index++;
       continue;
     }
-    source += char.replace(/[.+^${}()|[\]\\?]/, "\\$&");
+    // `char` is one character, so the `g` flag cannot change what this produces
+    // today. It is here because a partial escape is a real defect class and an
+    // expression that only escapes the first occurrence should not be the thing
+    // a future edit inherits.
+    source += char.replace(/[.+^${}()|[\]\\?]/g, "\\$&");
     index++;
   }
   return source;
@@ -407,7 +420,9 @@ function segmentToSource(segment: string): string {
 export function outputPatternToRegExp(pattern: string): RegExp {
   const source = pattern
     .split("/")
-    .map(segmentToSource)
+    // An explicit lambda: a bare reference would hand `map`'s index argument to
+    // the `placeholder` parameter.
+    .map((segment) => segmentToSource(segment))
     .join("/")
     // A trailing `/**` must also match the bare directory prefix.
     .replace(/\/\(\?:\.\+\)\?$/, "(?:/.+)?");
@@ -423,6 +438,87 @@ export function describesPath(
   return (profile.outputs[outputProfile] ?? []).some((entry) =>
     outputPatternToRegExp(entry.pattern).test(candidate),
   );
+}
+
+/**
+ * A pattern match that records what the wildcards consumed.
+ *
+ * {@link outputPatternToRegExp} compiles `{name}` to a non-capturing `[^/]+` on
+ * purpose: `import/detect.ts` and `verify/compare.ts` only ever ask whether a
+ * path is described, and `detect.ts` compares the compiled source by identity
+ * against the declared pattern set. `agent guard` needs the other half — *which*
+ * skill, *which* agent — so it can name the bundle source to edit instead. The
+ * capturing form is therefore compiled separately rather than by widening that
+ * one, whose behaviour two other call sites depend on.
+ */
+export interface OutputPatternMatch {
+  feature: FeatureKey | "manifest";
+  pattern: string;
+  /** The segment a `{…}` placeholder consumed. Absent when the pattern has none. */
+  name?: string;
+  /** What a trailing `**` consumed; `""` when the candidate is the bare directory. */
+  rest?: string;
+}
+
+type CaptureRole = "name" | "rest";
+
+/** {@link segmentToSource}, with `{…}` captured and its position recorded. */
+function capturingSegment(segment: string, roles: CaptureRole[]): string {
+  return segmentToSource(segment, () => {
+    roles.push("name");
+    return "([^/]+)";
+  });
+}
+
+function compileCapturing(pattern: string): { regex: RegExp; roles: CaptureRole[] } {
+  const roles: CaptureRole[] = [];
+  let source = pattern
+    .split("/")
+    .map((segment) => capturingSegment(segment, roles))
+    .join("/");
+  // A trailing `/**` must also match the bare directory prefix — the same
+  // rewrite `outputPatternToRegExp` makes, except the tail is captured, because
+  // it is the path *inside* a skill directory that names the source file.
+  const trailing = "/(?:.+)?";
+  if (source.endsWith(trailing)) {
+    source = `${source.slice(0, -trailing.length)}(?:/(.+))?`;
+    roles.push("rest");
+  }
+  return { regex: new RegExp(`^${source}$`), roles };
+}
+
+/**
+ * The declared output pattern describing `candidate`, with the segments its
+ * wildcards consumed, or `null` when no pattern describes it.
+ *
+ * First match wins. No shipped profile declares two patterns in one cell that
+ * can both describe a single path, and `tests/unit/agent-guard.test.ts` asserts
+ * that over the whole matrix so a future profile cannot introduce one silently.
+ */
+export function matchOutputPattern(
+  profile: TargetProfile,
+  outputProfile: AgentProfile,
+  candidate: string,
+): OutputPatternMatch | null {
+  for (const entry of profile.outputs[outputProfile] ?? []) {
+    const { regex, roles } = compileCapturing(entry.pattern);
+    const found = regex.exec(candidate);
+    if (!found) continue;
+    const match: OutputPatternMatch = { feature: entry.feature, pattern: entry.pattern };
+    roles.forEach((role, index) => {
+      const value = found[index + 1];
+      // An unmatched trailing `**` is the directory itself, not a missing
+      // capture: `hooks` matching `hooks/**` consumed nothing.
+      if (value === undefined) {
+        if (role === "rest") match.rest = "";
+        return;
+      }
+      if (role === "name") match.name = value;
+      else match.rest = value;
+    });
+    return match;
+  }
+  return null;
 }
 
 export interface ParsedVersion {

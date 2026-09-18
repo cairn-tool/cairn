@@ -1,0 +1,24 @@
+# PreToolUse: refuse an edit to a file cairn generated, and name the bundle
+# source to edit instead.
+#
+# Opt-in per repository. `cairn agent guard` exits 0 on any repository that
+# declares no `agent.guard` block, which is what makes this safe to install
+# globally alongside the rest of the bundle.
+#
+# One declaration serves every host. Event casing, envelope, and handler nesting
+# are the renderer's job, and it already does them. Two differences reach the
+# handler instead, and the script absorbs both:
+#
+#   - Cursor's handler shape is `flat`: the matcher is emitted as a sibling key
+#     rather than as the wrapper it is elsewhere, and whether the host applies
+#     it there is the host's business. The script filters on the tool name
+#     itself so the hook behaves the same wherever it lands.
+#   - The refusal is written in each host's own form. Exit 2 with the reason on
+#     stderr is what Claude Code and Codex block on; Cursor reads a JSON
+#     decision on stdout.
+hooks:
+  pre-tool-use:
+    - type: command
+      matcher: Edit|Write|MultiEdit|NotebookEdit
+      command: "${BUNDLE_ROOT}/hooks/guard-generated.mjs"
+      timeout: 10
