@@ -1,7 +1,7 @@
 {
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "6.0.0"
+    "version": "6.1.0"
   },
   "name": "cairn",
   "version": "1.2.0",
@@ -33,7 +33,7 @@
         },
         {
           "name": "cairn-agent",
-          "version": "1.2.0",
+          "version": "1.3.0",
           "source": "plugins/cairn-agent"
         },
         {
@@ -79,7 +79,7 @@
         },
         {
           "name": "cairn-agent",
-          "version": "1.2.0",
+          "version": "1.3.0",
           "source": "plugins/cairn-agent"
         },
         {
@@ -125,7 +125,7 @@
         },
         {
           "name": "cairn-agent",
-          "version": "1.2.0",
+          "version": "1.3.0",
           "source": "plugins/cairn-agent"
         },
         {
@@ -171,7 +171,7 @@
         },
         {
           "name": "cairn-agent",
-          "version": "1.2.0",
+          "version": "1.3.0",
           "source": "plugins/cairn-agent"
         },
         {
@@ -216,7 +216,7 @@
     {
       "name": "cairn-agent",
       "source": "bundles/cairn-agent",
-      "version": "1.2.0"
+      "version": "1.3.0"
     },
     {
       "name": "cairn-jira",

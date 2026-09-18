@@ -3,7 +3,7 @@
   "specVersion": "1",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "6.0.0"
+    "version": "6.1.0"
   },
   "subject": {
     "name": "cairn",
@@ -21,7 +21,7 @@
     {
       "path": ".claude-plugin/marketplace.json",
       "type": "config",
-      "sha256": "ae379b549b4a224a1181870978af49301b883b5716b617311179b01388a7b1a0",
+      "sha256": "66ca7e410a3ecae30e2bb952e6bce307dfcf8bc38ca729f1b8112779f39355d5",
       "bytes": 3118,
       "mode": "0644",
       "origin": "portable"
@@ -29,7 +29,7 @@
     {
       "path": ".cursor-plugin/marketplace.json",
       "type": "config",
-      "sha256": "82393b2808ce41f1d5aca8a770a074fa4d337a3020de8524e69ab458011fe44b",
+      "sha256": "700ae21525861938616b97acd45a6abf6cc5f9a19ad9e8885b099f283f07bc63",
       "bytes": 3204,
       "mode": "0644",
       "origin": "portable"
@@ -59,9 +59,25 @@
       "origin": "portable"
     },
     {
+      "path": "antigravity/cairn-agent/hooks.json",
+      "type": "config",
+      "sha256": "948c61cb0e86155afa9e7527c7a320b846c2920831bb51eb38276181d6c78863",
+      "bytes": 289,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "antigravity/cairn-agent/hooks/guard-generated.mjs",
+      "type": "script",
+      "sha256": "fca714ba388c90a5e1cbcb1fa7a30aa405059b3eb4710f5beb41a188a4b7298e",
+      "bytes": 5261,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
       "path": "antigravity/cairn-agent/plugin.json",
       "type": "config",
-      "sha256": "77cd9ebe3d9aac5e559e345b165ca0da89a109aa0a0e5bf47e48006c288bb67e",
+      "sha256": "565c174b0cc531582eb5998d833b8755acb99cb1ab6ab7c8b420d5ab2956f6b1",
       "bytes": 138,
       "mode": "0644",
       "origin": "portable"
@@ -653,7 +669,7 @@
     {
       "path": "bundles/cairn-agent/agent-bundle.yaml",
       "type": "config",
-      "sha256": "3f244f32ba97b9f306de19d40191fef607ae1ea611218c64e466319f5d5490db",
+      "sha256": "d7ff663ecdf57897845c015313430feb56394df87010cd37feb1659e17c07836",
       "bytes": 1189,
       "mode": "0644",
       "origin": "portable"
@@ -679,6 +695,22 @@
       "type": "asset",
       "sha256": "9ddaaba9c513888ed08dfbd53f6e518401407c3246e4c1beaaa5197d30bd803a",
       "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/hooks/guard-generated.mjs",
+      "type": "script",
+      "sha256": "fca714ba388c90a5e1cbcb1fa7a30aa405059b3eb4710f5beb41a188a4b7298e",
+      "bytes": 5261,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
+      "path": "bundles/cairn-agent/hooks/hooks.yaml",
+      "type": "config",
+      "sha256": "1d5ae5de51330dc2fa90e88ea24556bd64a9dbb2f8fc0424025fc015a3c67795",
+      "bytes": 1154,
       "mode": "0644",
       "origin": "portable"
     },
@@ -805,8 +837,8 @@
     {
       "path": "bundles/cairn-agent/tests/render.test.yaml",
       "type": "config",
-      "sha256": "cc6f78377401055673f419672d2e5ea5bc1c76c47d2be4a5775ce9240fc58db1",
-      "bytes": 5636,
+      "sha256": "1bacaed85b11c5172f746507163418b5dbf27154a38c4092a040327d993387d0",
+      "bytes": 7704,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1349,7 +1381,7 @@
     {
       "path": "claude-code/cairn-agent/.claude-plugin/plugin.json",
       "type": "config",
-      "sha256": "224d455939cd91f65d348f6cdcef824c2b89f3df886eff230a1b4c74f30a4fb5",
+      "sha256": "bfb53a194ccc44f9e9ff03cacf1084058c6fbf70f2fc884e7a5b035bb302fb88",
       "bytes": 163,
       "mode": "0644",
       "origin": "portable"
@@ -1375,6 +1407,22 @@
       "type": "asset",
       "sha256": "9ddaaba9c513888ed08dfbd53f6e518401407c3246e4c1beaaa5197d30bd803a",
       "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/hooks/guard-generated.mjs",
+      "type": "script",
+      "sha256": "fca714ba388c90a5e1cbcb1fa7a30aa405059b3eb4710f5beb41a188a4b7298e",
+      "bytes": 5261,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
+      "path": "claude-code/cairn-agent/hooks/hooks.json",
+      "type": "config",
+      "sha256": "65adf1f907500af1da59cc21356a04be6eeca43957de20ad3423d4669b2c36e0",
+      "bytes": 303,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1981,8 +2029,8 @@
     {
       "path": "codex/cairn-agent/.codex-plugin/plugin.json",
       "type": "config",
-      "sha256": "224d455939cd91f65d348f6cdcef824c2b89f3df886eff230a1b4c74f30a4fb5",
-      "bytes": 163,
+      "sha256": "47c658876435a66c0f212500fe695ea29f0317f048c179afe0eb3b93b5c169a9",
+      "bytes": 196,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1999,6 +2047,22 @@
       "type": "asset",
       "sha256": "9ddaaba9c513888ed08dfbd53f6e518401407c3246e4c1beaaa5197d30bd803a",
       "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/hooks/guard-generated.mjs",
+      "type": "script",
+      "sha256": "fca714ba388c90a5e1cbcb1fa7a30aa405059b3eb4710f5beb41a188a4b7298e",
+      "bytes": 5261,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
+      "path": "codex/cairn-agent/hooks/hooks.json",
+      "type": "config",
+      "sha256": "19388bf24df24b7ecff4b28cfeec34fb7c8aaec70b0e9a344a404fe389889af3",
+      "bytes": 296,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2669,8 +2733,8 @@
     {
       "path": "cursor/cairn-agent/.cursor-plugin/plugin.json",
       "type": "config",
-      "sha256": "94a839bce695d01f2f48d594dd3c166730e09e5b93d7e553062fa6f9692faba4",
-      "bytes": 188,
+      "sha256": "a2f63b30235ebad9bc8c8debce384bf180e54117232a3bd2051b153b60e0aa6d",
+      "bytes": 221,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2695,6 +2759,22 @@
       "type": "asset",
       "sha256": "9ddaaba9c513888ed08dfbd53f6e518401407c3246e4c1beaaa5197d30bd803a",
       "bytes": 523,
+      "mode": "0644",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/hooks/guard-generated.mjs",
+      "type": "script",
+      "sha256": "fca714ba388c90a5e1cbcb1fa7a30aa405059b3eb4710f5beb41a188a4b7298e",
+      "bytes": 5261,
+      "mode": "0755",
+      "origin": "portable"
+    },
+    {
+      "path": "cursor/cairn-agent/hooks/hooks.json",
+      "type": "config",
+      "sha256": "fad5ee7db183166325180887c63d63294be9680a0e7a05240dde42baa3bd875f",
+      "bytes": 207,
       "mode": "0644",
       "origin": "portable"
     },
@@ -3301,7 +3381,7 @@
     {
       "path": "release-manifest.json",
       "type": "config",
-      "sha256": "202853472d26570c723bb354f495b322f3222c1c6ce9c262713670665d7ee75d",
+      "sha256": "a28815e4b6fabc2c319f2d63fae8477bc02ec2c262ccc4c9e646e4e73380a080",
       "bytes": 8504,
       "mode": "0644",
       "origin": "portable"
