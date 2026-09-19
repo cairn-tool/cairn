@@ -27,6 +27,7 @@ import {
   PROFILE_SCHEMA_VERSION,
   TARGET_PROFILES,
   compatibilityMatrix,
+  featureVisible,
 } from "../agent/targets/index.js";
 import type { ConversionProvenance } from "../agent/output.js";
 import { CONVERSION_REPORT, diffOutput, outputMatches } from "../agent/output.js";
@@ -442,20 +443,9 @@ interface InspectSelection {
   profiles: AgentProfile[];
 }
 
-/**
- * Whether any selected target emits a feature into any selected profile.
- *
- * Read from the target profiles rather than branched on the target name, so a
- * new target needs no change here.
- */
-function featureVisible(feature: FeatureKey, selection: InspectSelection): boolean {
-  return selection.targets.some((target) => {
-    const profile = TARGET_PROFILES[target].features[feature];
-    return (
-      profile.support !== "unsupported" &&
-      profile.profiles.some((value) => selection.profiles.includes(value))
-    );
-  });
+/** Narrows the shared profile lookup to an inspect selection. */
+function visibleInSelection(feature: FeatureKey, selection: InspectSelection): boolean {
+  return featureVisible(feature, selection.targets, selection.profiles);
 }
 
 function byBytes(a: string, b: string): number {
@@ -468,7 +458,7 @@ function publicBundle(bundle: AgentBundle, selection?: InspectSelection): unknow
   const reaches = (component: MarkdownComponent): boolean =>
     !selection || selection.targets.some((target) => selected(component, target));
   const visible = (feature: FeatureKey): boolean =>
-    !selection || featureVisible(feature, selection);
+    !selection || visibleInSelection(feature, selection);
 
   const skills = bundle.skills.filter(reaches);
   const agents = bundle.agents.filter(reaches);
@@ -495,7 +485,7 @@ function publicBundle(bundle: AgentBundle, selection?: InspectSelection): unknow
             .sort(byBytes),
         },
         unsupported: INSPECTED_FEATURES.filter(
-          (feature) => !featureVisible(feature, selection),
+          (feature) => !visibleInSelection(feature, selection),
         ).sort(byBytes),
       }
     : undefined;

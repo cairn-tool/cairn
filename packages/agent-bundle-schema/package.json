@@ -1,0 +1,52 @@
+{
+  "name": "@cairn-tool/agent-bundle-schema",
+  "version": "0.0.0-development",
+  "type": "module",
+  "description": "JSON Schemas for the agent bundle documentation artifacts cairn produces",
+  "license": "MIT",
+  "author": "Bryan Stockus",
+  "keywords": [
+    "cairn",
+    "agent-bundle",
+    "json-schema",
+    "documentation",
+    "plugins"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cairn-tool/cairn.git",
+    "directory": "packages/agent-bundle-schema"
+  },
+  "bugs": {
+    "url": "https://github.com/cairn-tool/cairn/issues"
+  },
+  "homepage": "https://github.com/cairn-tool/cairn#readme",
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp schemas/*.json dist/",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
+  }
+}

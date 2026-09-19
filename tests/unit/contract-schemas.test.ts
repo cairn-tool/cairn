@@ -11,6 +11,14 @@ import {
   schemaUriFor,
 } from "../../src/contract/schemas/index.js";
 import { describeSchema } from "../../src/contract/schemas/meta.js";
+import {
+  inlineAgentBundleSchema as inlineAgentBundleRef,
+  installableAgentBundlesSchema as installableAgentBundlesRef,
+} from "../../src/contract/schemas/agent-docs.js";
+import {
+  inlineAgentBundleSchema,
+  installableAgentBundlesSchema,
+} from "@cairn-tool/agent-bundle-schema";
 import { COMMAND_CONTRACTS } from "../../src/contract/registry.js";
 import {
   CLI_SCHEMA_URI,
@@ -96,13 +104,48 @@ describe("published schemas", () => {
 });
 
 describe("external schemas", () => {
-  // `describe` is a cli-schema document, owned by that project. It is the one
-  // published id whose `$id` is not under SCHEMA_BASE, and the one whose body
-  // is loaded on demand — the library index compiles a validator at import.
-  it("is exactly the describe schema", () => {
-    expect(EXTERNAL_SCHEMAS.map((entry) => entry.id)).toEqual(["describe"]);
-    expect(SCHEMAS.some((entry) => entry.id === "describe")).toBe(false);
-    expect(SCHEMA_REFS.some((entry) => entry.id === "describe")).toBe(true);
+  // Three documents another project owns. `describe` is a cli-schema document;
+  // the two artifact schemas are published as `@cairn-tool/agent-bundle-schema`
+  // so a documentation pipeline can validate an artifact without depending on
+  // this CLI. All three load on demand, because each library's index does work
+  // at import and this module sits on every command's path.
+  it("is describe and the two artifact schemas", () => {
+    expect(EXTERNAL_SCHEMAS.map((entry) => entry.id)).toEqual([
+      "describe",
+      "inline-agent-bundle",
+      "installable-agent-bundles",
+    ]);
+    for (const id of ["describe", "inline-agent-bundle", "installable-agent-bundles"]) {
+      expect(SCHEMAS.some((entry) => entry.id === id)).toBe(false);
+      expect(SCHEMA_REFS.some((entry) => entry.id === id)).toBe(true);
+    }
+  });
+
+  it("serves the artifact documents under the ids the commands declare", async () => {
+    // The uri a command's envelope reports has to be the `$id` a consumer will
+    // find inside the document, or validation by retrieval breaks.
+    expect(inlineAgentBundleRef.uri).toBe(inlineAgentBundleSchema.$id);
+    expect(installableAgentBundlesRef.uri).toBe(installableAgentBundlesSchema.$id);
+    expect(await loadSchema("inline-agent-bundle")).toBe(inlineAgentBundleSchema);
+    expect(await loadSchema("installable-agent-bundles")).toBe(installableAgentBundlesSchema);
+  });
+
+  it("composes each artifact schema into a self-contained document", () => {
+    const ajv = addFormats(new Ajv2020({ allErrors: true, strict: false }));
+    for (const schema of [inlineAgentBundleSchema, installableAgentBundlesSchema]) {
+      // Compiled one at a time and with nothing else registered: that is the
+      // whole point of inlining the shared definitions, and a stray external
+      // `$ref` would only show up here.
+      expect(() => new Ajv2020({ strict: false }).compile(schema)).not.toThrow();
+      expect(() => ajv.compile(schema)).not.toThrow();
+      const defs = Object.keys((schema.$defs as Record<string, unknown>) ?? {});
+      walk(schema, (node) => {
+        expect(node.additionalProperties, "an artifact schema closes a payload").not.toBe(false);
+        if (typeof node.$ref !== "string") return;
+        expect(node.$ref.startsWith("#/"), `external $ref ${node.$ref}`).toBe(true);
+        expect(defs).toContain(node.$ref.replace("#/$defs/", ""));
+      });
+    }
   });
 
   it("serves the library's own document under the library's own id", async () => {

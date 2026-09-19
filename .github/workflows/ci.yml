@@ -47,6 +47,12 @@ jobs:
       - name: TypeScript
         run: npm run typecheck
 
+      # The generated types are what `src/agent/docs/` is written against, so a
+      # spec edit that was not regenerated is a compile error waiting for the
+      # next person rather than a diff anyone reviewed.
+      - name: Generated sources
+        run: npm run codegen:check
+
       # Blocks a PR that introduces a dependency with a known high-severity
       # advisory. Needs a base and a head to diff, so it is a no-op on push.
       - name: Dependency review

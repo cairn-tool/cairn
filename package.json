@@ -39,9 +39,9 @@
     "provenance": true
   },
   "scripts": {
-    "build": "tsc && chmod +x dist/cli.js",
-    "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit",
+    "build": "npm run build -w @cairn-tool/agent-bundle-schema && tsc && chmod +x dist/cli.js",
+    "clean": "rm -rf dist && npm run clean -w @cairn-tool/agent-bundle-schema",
+    "typecheck": "npm run build -w @cairn-tool/agent-bundle-schema && tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -50,9 +50,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm run clean && npm run build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "codegen": "node scripts/codegen.mjs",
+    "codegen:check": "node scripts/codegen.mjs --check"
   },
   "dependencies": {
+    "@cairn-tool/agent-bundle-schema": "*",
     "@cairn-tool/cli-schema": "^1.0.0",
     "@cairn-tool/cli-schema-commander": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
@@ -81,6 +84,7 @@
     "@commitlint/config-conventional": "^21.2.0",
     "@eslint/js": "^10.0.1",
     "@semantic-release/changelog": "^7.0.0",
+    "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^11.0.1",
     "@types/jsdom": "^30.0.0",
     "@types/katex": "^0.16.0",
@@ -91,10 +95,14 @@
     "eslint": "^10.9.1",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
+    "json-schema-to-typescript": "^16.0.0",
     "prettier": "^3.4.0",
     "semantic-release": "^25.0.9",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.68.0",
     "vitest": "^5.0.0"
-  }
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }

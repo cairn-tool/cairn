@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cairn-tool/cairn/schema/v1/_common.json",
+  "title": "Shared agent bundle documentation definitions",
+  "description": "Definitions shared by the agent bundle documentation artifacts. This document is never published on its own and is not a valid artifact schema: `npm run codegen` inlines these `$defs` into each artifact schema so every published document is self-contained and a consumer validates against exactly one file. Specified by docs/formats/inline-agent-bundle.md. This $id is an identifier, not a fetchable URL. No schema here sets additionalProperties: false -- adding a property is a non-breaking change.",
+  "$defs": {
+    "generator": {
+      "title": "ArtifactGenerator",
+      "type": "object",
+      "description": "The tool that produced the artifact.",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "description": "npm package name of the generating tool." },
+        "version": { "type": "string", "description": "Version of the generating tool." }
+      }
+    },
+    "publisher": {
+      "title": "BundlePublisher",
+      "type": "object",
+      "description": "Who publishes a bundle or a collection.",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    },
+    "starterPrompt": {
+      "title": "StarterPrompt",
+      "type": "object",
+      "description": "A suggested opening prompt a host may offer for the bundle.",
+      "required": ["title", "prompt"],
+      "properties": {
+        "title": { "type": "string" },
+        "prompt": { "type": "string" }
+      }
+    },
+    "marketplaceListing": {
+      "title": "MarketplaceListing",
+      "type": "object",
+      "description": "Listing metadata from the bundle manifest's `marketplace:` block. Structure is validated by the parser; whether it is complete enough to publish is `agent package`'s question, so a half-filled block still appears here.",
+      "required": ["categories", "keywords", "screenshots", "starterPrompts"],
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "Human label, preferred over the bundle name in a listing."
+        },
+        "summary": { "type": "string", "description": "One-line description for a catalog row." },
+        "description": {
+          "type": "string",
+          "description": "Long-form description for a listing page."
+        },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "publisher": { "$ref": "#/$defs/publisher" },
+        "homepage": { "type": "string" },
+        "repository": { "type": "string" },
+        "license": {
+          "type": "string",
+          "description": "SPDX identifier, as the manifest spells it."
+        },
+        "icon": {
+          "type": "string",
+          "description": "Bundle-relative POSIX path to the icon asset."
+        },
+        "screenshots": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Bundle-relative POSIX paths."
+        },
+        "starterPrompts": { "type": "array", "items": { "$ref": "#/$defs/starterPrompt" } },
+        "legal": {
+          "title": "MarketplaceLegal",
+          "type": "object",
+          "properties": {
+            "privacyPolicy": { "type": "string" },
+            "termsOfService": { "type": "string" }
+          }
+        }
+      }
+    },
+    "component": {
+      "title": "DocumentedComponent",
+      "type": "object",
+      "description": "A skill or subagent, as authored. `body` is the Markdown beneath the frontmatter, carried verbatim so a documentation site can render the component without reading the bundle.",
+      "required": ["name", "description", "source", "metadata", "body"],
+      "properties": {
+        "name": { "type": "string", "description": "Component name: lowercase kebab-case." },
+        "description": {
+          "type": "string",
+          "description": "The `description` frontmatter field, which is what a host matches a request against."
+        },
+        "source": {
+          "type": "string",
+          "description": "Bundle-relative POSIX path to the source file."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Frontmatter fields other than `name` and `description`, exactly as parsed.",
+          "additionalProperties": true
+        },
+        "body": {
+          "type": "string",
+          "description": "Markdown body beneath the frontmatter, verbatim and unrendered."
+        },
+        "files": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Bundle-relative POSIX paths of files bundled alongside the component, such as a skill's references or scripts."
+        }
+      }
+    },
+    "rule": {
+      "title": "DocumentedRule",
+      "type": "object",
+      "description": "A rule: a component plus how a host decides to apply it.",
+      "required": ["name", "description", "source", "metadata", "body", "activation", "globs"],
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "source": { "type": "string" },
+        "metadata": { "type": "object", "additionalProperties": true },
+        "body": { "type": "string" },
+        "files": { "type": "array", "items": { "type": "string" } },
+        "activation": {
+          "enum": ["always", "files", "model", "manual"],
+          "description": "When the rule applies: unconditionally, on a path match against `globs`, at the model's discretion, or only when named."
+        },
+        "globs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Path patterns the rule applies to. Meaningful only when `activation` is `files`."
+        }
+      }
+    },
+    "jsonDocument": {
+      "title": "BundleJsonDocument",
+      "type": "object",
+      "description": "A JSON configuration document carried by the bundle, with the path it was read from.",
+      "required": ["path", "value"],
+      "properties": {
+        "path": { "type": "string", "description": "Bundle-relative POSIX path." },
+        "value": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "The document, parsed."
+        }
+      }
+    },
+    "dependency": {
+      "title": "DocumentedDependency",
+      "type": "object",
+      "description": "A bundle this one may name components in, through a `bundle/name` reference. Resolution is one level deep and never transitive.",
+      "required": ["name", "skills", "agents"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The dependency's bundle name, which is also the reference prefix."
+        },
+        "skills": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Skill names the dependency defines."
+        },
+        "agents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Subagent names the dependency defines."
+        }
+      }
+    },
+    "renderedArtifact": {
+      "title": "RenderedArtifact",
+      "type": "object",
+      "description": "One file the bundle renders into, described but not carried. Content is deliberately omitted: the artifact documents the shape of an installation, not a copy of it.",
+      "required": ["path", "bytes", "mode"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "POSIX path relative to the target and profile root."
+        },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "mode": { "type": "string", "description": "Octal file mode, e.g. '0644'." },
+        "origin": {
+          "enum": ["portable", "native"],
+          "description": "Emitted only for artifacts contributed by a target-native overlay. Absent means portable."
+        }
+      }
+    },
+    "targetRender": {
+      "title": "TargetRender",
+      "type": "object",
+      "description": "What the bundle produces for one host, in one output profile. `profile: \"project\"` is the inline form, merged into a repository's own dot-directories; `profile: \"plugin\"` is the installable form, a self-contained directory with its own manifest.",
+      "required": ["target", "profile", "artifacts"],
+      "properties": {
+        "target": {
+          "enum": ["claude-code", "codex", "cursor", "antigravity", "opencode"],
+          "description": "The host this render is for."
+        },
+        "profile": {
+          "enum": ["plugin", "project"],
+          "description": "The output profile. `project` is inline; `plugin` is installable."
+        },
+        "artifacts": { "type": "array", "items": { "$ref": "#/$defs/renderedArtifact" } }
+      }
+    },
+    "diagnostic": {
+      "title": "BundleDiagnostic",
+      "type": "object",
+      "description": "A finding raised while parsing or rendering the bundle. Codes are documented in docs/formats/diagnostic-codes.md.",
+      "required": ["code", "severity", "message", "quality"],
+      "properties": {
+        "code": { "type": "string", "description": "An `AB###` diagnostic code." },
+        "severity": { "enum": ["notice", "warning", "error"] },
+        "message": { "type": "string" },
+        "component": {
+          "type": "string",
+          "description": "The component the finding is about, when it is about one."
+        },
+        "path": { "type": "string" },
+        "target": { "enum": ["claude-code", "codex", "cursor", "antigravity", "opencode"] },
+        "profile": { "enum": ["plugin", "project"] },
+        "quality": {
+          "enum": ["exact", "approximate", "unsupported"],
+          "description": "How faithfully the source maps to the host: an `approximate` mapping reaches the host in a changed form, an `unsupported` one does not reach it at all."
+        },
+        "remediation": { "type": "string", "description": "What an author can do about it." }
+      }
+    },
+    "components": {
+      "title": "DocumentedComponents",
+      "type": "object",
+      "description": "Everything the bundle carries, by component kind. `hooks` is the hook configuration document and `mcp` the MCP server configuration document. A kind no selected target emits into a selected profile is omitted rather than shown empty -- which is why `hooks` is absent from a project-profile render: hooks are plugin-profile only on every target.",
+      "properties": {
+        "skills": { "type": "array", "items": { "$ref": "#/$defs/component" } },
+        "agents": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/component" },
+          "description": "Subagents."
+        },
+        "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
+        "hooks": { "$ref": "#/$defs/jsonDocument" },
+        "hookFiles": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Bundle-relative POSIX paths of executables the hook configuration invokes."
+        },
+        "policies": { "type": "array", "items": { "$ref": "#/$defs/jsonDocument" } },
+        "mcp": { "$ref": "#/$defs/jsonDocument" },
+        "assets": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Bundle-relative POSIX paths."
+        }
+      }
+    },
+    "bundle": {
+      "title": "DocumentedBundle",
+      "type": "object",
+      "description": "One agent bundle, normalized from its `agent-bundle.yaml` and rendered for every host it supports.",
+      "required": [
+        "name",
+        "version",
+        "description",
+        "manifestSchemaVersion",
+        "legacy",
+        "components",
+        "graph",
+        "dependencies",
+        "targets",
+        "diagnostics"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Bundle name: lowercase kebab-case, and the prefix another bundle references it by."
+        },
+        "version": {
+          "type": "string",
+          "description": "Bundle version, as the manifest spells it."
+        },
+        "description": { "type": "string" },
+        "manifestSchemaVersion": {
+          "type": "string",
+          "description": "The `schemaVersion` of the source `agent-bundle.yaml`, which versions the format authors write and is unrelated to this artifact's `schemaVersion`."
+        },
+        "legacy": {
+          "type": "boolean",
+          "description": "True when the source is a native plugin read through `.claude-plugin/plugin.json` rather than an `agent-bundle.yaml`."
+        },
+        "source": {
+          "type": "string",
+          "description": "Path to the bundle root, relative to the repository or collection root."
+        },
+        "marketplace": { "$ref": "#/$defs/marketplaceListing" },
+        "components": { "$ref": "#/$defs/components" },
+        "graph": {
+          "type": "object",
+          "description": "Which components reference which skills, keyed by referencing component name.",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        },
+        "dependencies": { "type": "array", "items": { "$ref": "#/$defs/dependency" } },
+        "targets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/targetRender" },
+          "description": "One entry per host and output profile the bundle renders into."
+        },
+        "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
+      }
+    }
+  }
+}

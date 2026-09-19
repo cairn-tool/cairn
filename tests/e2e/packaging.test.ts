@@ -140,3 +140,58 @@ describe("published package contents", () => {
     expect(packedFiles.some((f) => f.startsWith("tests/"))).toBe(false);
   });
 });
+
+describe("the agent-bundle-schema package", () => {
+  let schemaFiles: string[];
+
+  beforeAll(async () => {
+    await exec(
+      "npm",
+      [
+        "pack",
+        "--ignore-scripts",
+        "--pack-destination",
+        tmpDir,
+        "-w",
+        "@cairn-tool/agent-bundle-schema",
+      ],
+      { cwd: repoRoot },
+    );
+    const tarball = fs
+      .readdirSync(tmpDir)
+      .find((file) => file.startsWith("cairn-tool-agent-bundle-schema") && file.endsWith(".tgz"));
+    if (!tarball) throw new Error(`npm pack produced no schema .tgz in ${tmpDir}`);
+    const { stdout } = await exec("tar", ["-tzf", path.join(tmpDir, tarball)], {
+      maxBuffer: 32 * 1024 * 1024,
+    });
+    schemaFiles = stdout
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => line.trim().replace(/^package\//, ""));
+  }, 120_000);
+
+  // `schemas.ts` reads these at runtime, so the `cp` in the package's build
+  // script is load-bearing. Dropping it would typecheck, build, and pass every
+  // other test -- and then throw ENOENT on the consumer's first import.
+  it("ships the composed schema documents beside the compiled modules", () => {
+    for (const file of [
+      "dist/index.js",
+      "dist/index.d.ts",
+      "dist/schemas.js",
+      "dist/validate.js",
+      "dist/generated/types.d.ts",
+      "dist/inline-agent-bundle.json",
+      "dist/installable-agent-bundles.json",
+    ])
+      expect(schemaFiles).toContain(file);
+  });
+
+  it("ships its own README and LICENSE, and neither the spec nor the sources", () => {
+    expect(schemaFiles).toContain("README.md");
+    expect(schemaFiles).toContain("LICENSE");
+    expect(schemaFiles.some((file) => file.startsWith("src/"))).toBe(false);
+    // `_common.json` is a build input, not a published document: every artifact
+    // schema is composed to stand alone.
+    expect(schemaFiles.some((file) => file.includes("_common"))).toBe(false);
+  });
+});
