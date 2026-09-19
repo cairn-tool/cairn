@@ -3,10 +3,10 @@
   "marketplace": "cairn",
   "version": "1.2.0",
   "description": "Cairn's own toolsets, as plugins.",
-  "sourceCommit": "c4244d345be7bce7c6fd539e8f44efb20ffae764",
+  "sourceCommit": "ab43d682a1463177f80b9568ea761cf00700fed6",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "6.1.0"
+    "version": "6.2.0"
   },
   "targets": {
     "claude-code": {
