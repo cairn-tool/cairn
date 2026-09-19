@@ -46,8 +46,9 @@ them is the package version. They version different things and move independentl
 | Marketplace spec `schemaVersion` | The `agent-marketplace.yaml` format authors write      | `agent marketplace`                            |
 | Release manifest `schemaVersion` | The `release-manifest.json` a release branch carries   | `agent marketplace --layout release`           |
 | Usage store version              | The SQLite schema of `usage.db`                        | `usage index`, `usage migrate`, `usage import` |
+| Artifact payload `schemaVersion` | The documentation artifact payload format              | `agent docs`, `agent collection-docs`          |
 
-An eighth version appears in output but is not this project's to bump: the cli-schema
+A ninth version appears in output but is not this project's to bump: the cli-schema
 `schemaVersion` that `describe` carries.
 
 A normal release bumps none of them.
@@ -209,29 +210,31 @@ are unaffected.
 
 ## Published schemas
 
-| Id                  | Covers                                                                       |
-| ------------------- | ---------------------------------------------------------------------------- |
-| `issue`             | A single finding record.                                                     |
-| `issue-list`        | `md lint`, `md lint-dir`, `md validate-frontmatter`, `md refs`, `md links`   |
-| `diagnostic-record` | One line of `--format jsonl` output.                                         |
-| `lint-dir-summary`  | `md lint-dir --summary --format json`                                        |
-| `md-graph`          | `md graph --output report`                                                   |
-| `md-audit`          | `md audit`                                                                   |
-| `md-query`          | `md query`                                                                   |
-| `md-check-urls`     | `md check-urls`                                                              |
-| `md-orphans`        | `md orphans`                                                                 |
-| `md-index`          | `md index`                                                                   |
-| `md-context`        | `md context`                                                                 |
-| `md-diff`           | `md diff`                                                                    |
-| `md-fix`            | `md fix`                                                                     |
-| `agent-result`      | Every `agent` subcommand, including the failure form.                        |
-| `adf-result`        | Every `jira adf` subcommand, including the failure form.                     |
-| `pdf-result`        | Every `pdf` subcommand, including the failure form.                          |
-| `qa-result`         | Every `qa` subcommand.                                                       |
-| `check-update`      | `check-update`                                                               |
-| `describe`          | `describe --format json` — the cli-schema v1 document, owned by that project |
-| `schema-list`       | `schema --format json` with no id                                            |
-| `envelope`          | The `--envelope` wrapper                                                     |
+| Id                          | Covers                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `issue`                     | A single finding record.                                                        |
+| `issue-list`                | `md lint`, `md lint-dir`, `md validate-frontmatter`, `md refs`, `md links`      |
+| `diagnostic-record`         | One line of `--format jsonl` output.                                            |
+| `lint-dir-summary`          | `md lint-dir --summary --format json`                                           |
+| `md-graph`                  | `md graph --output report`                                                      |
+| `md-audit`                  | `md audit`                                                                      |
+| `md-query`                  | `md query`                                                                      |
+| `md-check-urls`             | `md check-urls`                                                                 |
+| `md-orphans`                | `md orphans`                                                                    |
+| `md-index`                  | `md index`                                                                      |
+| `md-context`                | `md context`                                                                    |
+| `md-diff`                   | `md diff`                                                                       |
+| `md-fix`                    | `md fix`                                                                        |
+| `agent-result`              | Every `agent` subcommand, including the failure form.                           |
+| `adf-result`                | Every `jira adf` subcommand, including the failure form.                        |
+| `pdf-result`                | Every `pdf` subcommand, including the failure form.                             |
+| `qa-result`                 | Every `qa` subcommand.                                                          |
+| `check-update`              | `check-update`                                                                  |
+| `describe`                  | `describe --format json` — the cli-schema v1 document, owned by that project    |
+| `schema-list`               | `schema --format json` with no id                                               |
+| `envelope`                  | The `--envelope` wrapper                                                        |
+| `inline-agent-bundle`       | `agent docs` — the artifact payload, owned by `@cairn-tool/agent-bundle-schema` |
+| `installable-agent-bundles` | `agent collection-docs` — the artifact payload, same owner                      |
 
 SARIF output follows the external
 [SARIF 2.1.0 schema](https://json.schemastore.org/sarif-2.1.0.json); it is referenced, not

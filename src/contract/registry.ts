@@ -730,6 +730,24 @@ const CONTRACTS: ContractRow[] = [
     stream: { success: "stdout" },
     notes: "All output goes to stdout. Prints static data, so it never reports findings.",
   }),
+  agentCommand("docs", {
+    writes: true,
+    stability: "experimental",
+    exitCodes: [OK("Artifact emitted"), USAGE, FINDINGS("Bundle errors, or a strict warning")],
+    notes:
+      "Emits the documentation artifact for the bundle a repository installs into itself. stdout is an agent result carrying the payload under `docs`; --out additionally writes the standalone artifact -- the versioned envelope around the bare payload, which is the form a documentation pipeline publishes. --profile defaults to project, because that is what inline means; --target defaults to every target. Unlike the rest of the agent toolset an approximate mapping is not a finding here: documenting one is the point, so only an error severity, or a warning under --strict, exits 2.",
+  }),
+  agentCommand("collection-docs", {
+    writes: true,
+    stability: "experimental",
+    exitCodes: [
+      OK("Artifact emitted"),
+      USAGE,
+      FINDINGS("Spec or bundle errors, or a strict warning"),
+    ],
+    notes:
+      "Emits one artifact covering every bundle a collection spec names, rather than one artifact per bundle, because they are installed from one marketplace and a reader chooses between them. The spec path defaults to agent-marketplace.yaml in the working directory. Each bundle is narrowed to the targets its own spec entry includes. --profile defaults to plugin, the installable form. Exit codes follow agent docs.",
+  }),
 
   // Markdown: validation
   diagnostic("lint", "One or more issues found", {

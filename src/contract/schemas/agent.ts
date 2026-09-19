@@ -29,6 +29,8 @@ export const agentResultSchema: SchemaEntry = {
     "agent marketplace",
     "agent verify",
     "agent guard",
+    "agent docs",
+    "agent collection-docs",
   ],
   schema: {
     $schema: DRAFT,
@@ -60,6 +62,8 @@ export const agentResultSchema: SchemaEntry = {
           "marketplace",
           "verify",
           "guard",
+          "docs",
+          "collection-docs",
         ],
       },
       ok: { type: "boolean" },
@@ -84,7 +88,69 @@ export const agentResultSchema: SchemaEntry = {
         },
       },
       diagnostics: { type: "array", items: { $ref: "#/$defs/diagnostic" } },
-      bundle: { description: "The normalized bundle, emitted by `agent inspect`." },
+      bundle: {
+        description:
+          "The normalized bundle, emitted by `agent inspect`. A reading of the source for a caller on the machine that produced it: paths are as the parser resolved them, and component bodies are left out. The specified, portable form of the same bundle is the `inline-agent-bundle` artifact `agent docs` emits.",
+        type: "object",
+        required: ["schemaVersion", "name", "version", "description", "legacy", "components"],
+        properties: {
+          schemaVersion: {
+            type: "string",
+            description: "The source manifest's schema version, not this payload's.",
+          },
+          name: { type: "string" },
+          version: { type: "string" },
+          description: { type: "string" },
+          legacy: { type: "boolean" },
+          components: { type: "object" },
+          graph: { type: "object" },
+          marketplace: { type: "object" },
+          filter: {
+            type: "object",
+            description: "Present only when --target or --profile narrowed the reading.",
+          },
+        },
+      },
+      docs: {
+        description:
+          "The inline bundle documentation artifact, emitted by `agent docs`. Only its envelope is constrained here: the payload is specified by the `inline-agent-bundle` schema, which is published separately as `@cairn-tool/agent-bundle-schema` and printed by `cairn schema inline-agent-bundle`. Keeping it separate is the point -- a consumer validates an artifact file without needing this document.",
+        type: "object",
+        required: ["kind", "schemaVersion", "id", "title", "generatedAt", "generator", "bundle"],
+        properties: {
+          kind: { const: "inline-agent-bundle" },
+          schemaVersion: { type: "string" },
+          id: { type: "string" },
+          title: { type: "string" },
+          generatedAt: { type: "string" },
+          generator: { type: "object" },
+          bundle: { type: "object" },
+        },
+      },
+      collectionDocs: {
+        description:
+          "The installable bundles documentation artifact, emitted by `agent collection-docs`, covering every bundle the collection publishes. Specified by the `installable-agent-bundles` schema, on the same terms as `docs`.",
+        type: "object",
+        required: [
+          "kind",
+          "schemaVersion",
+          "id",
+          "title",
+          "generatedAt",
+          "generator",
+          "marketplace",
+          "bundles",
+        ],
+        properties: {
+          kind: { const: "installable-agent-bundles" },
+          schemaVersion: { type: "string" },
+          id: { type: "string" },
+          title: { type: "string" },
+          generatedAt: { type: "string" },
+          generator: { type: "object" },
+          marketplace: { type: "object" },
+          bundles: { type: "array", items: { type: "object" } },
+        },
+      },
       compatibility: {
         description: "Per-component summary keyed by target, emitted by `agent compat`.",
         type: "object",

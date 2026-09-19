@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cairn-tool/cairn/schema/v1/installable-agent-bundles.json",
+  "title": "Installable agent bundles documentation artifact",
+  "description": "Every agent bundle a repository publishes for others to install, in one document. \"Installable\" is the `plugin` output profile, a self-contained directory with its own manifest that a host discovers through a marketplace or plugin directory rather than by merging files into a project. The set of bundles and the hosts they are built for come from the repository's `agent-marketplace.yaml`. Produced by `cairn agent collection-docs`. Specified by docs/formats/installable-agent-bundles.md. This $id is an identifier, not a fetchable URL. No schema here sets additionalProperties: false -- adding a property is a non-breaking change.",
+  "type": "object",
+  "required": [
+    "kind",
+    "schemaVersion",
+    "id",
+    "title",
+    "generatedAt",
+    "generator",
+    "marketplace",
+    "bundles"
+  ],
+  "properties": {
+    "kind": { "const": "installable-agent-bundles" },
+    "schemaVersion": {
+      "type": "string",
+      "description": "Semantic version of this payload format. A consumer accepts a higher patch or minor and rejects a higher major."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The slug this artifact publishes under. Defaults to the collection name."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The human label used in navigation."
+    },
+    "generatedAt": { "type": "string", "description": "RFC 3339, UTC." },
+    "generator": {
+      "$ref": "https://github.com/cairn-tool/cairn/schema/v1/_common.json#/$defs/generator"
+    },
+    "marketplace": {
+      "title": "DocumentedCollection",
+      "type": "object",
+      "description": "The collection the bundles are offered through, from `agent-marketplace.yaml`.",
+      "required": ["name", "version", "owner", "targets"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Collection name, which is also the marketplace key a host registers it under."
+        },
+        "version": { "type": "string" },
+        "description": { "type": "string" },
+        "owner": {
+          "$ref": "https://github.com/cairn-tool/cairn/schema/v1/_common.json#/$defs/publisher"
+        },
+        "targets": {
+          "type": "array",
+          "items": { "enum": ["claude-code", "codex", "cursor", "antigravity", "opencode"] },
+          "description": "Hosts the collection is built for. A bundle may narrow this further with its own include or exclude list."
+        }
+      }
+    },
+    "bundles": {
+      "type": "array",
+      "description": "Every bundle the collection publishes, in the order the spec lists them.",
+      "items": {
+        "$ref": "https://github.com/cairn-tool/cairn/schema/v1/_common.json#/$defs/bundle"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "https://github.com/cairn-tool/cairn/schema/v1/_common.json#/$defs/diagnostic"
+      },
+      "description": "Findings raised against the collection spec itself, as distinct from those raised against an individual bundle."
+    }
+  }
+}

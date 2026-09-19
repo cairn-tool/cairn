@@ -30,6 +30,7 @@ import type { AgentMarketplaceOptions } from "./commands/agent-marketplace.js";
 import type { AgentPackageOptions } from "./commands/agent-package.js";
 import type { AgentAddOptions, AgentInitOptions } from "./commands/agent-scaffold.js";
 import type { AgentSpecsOptions } from "./commands/agent-specs.js";
+import type { AgentDocsOptions } from "./commands/agent-docs.js";
 import type { AgentTestOptions } from "./commands/agent-test.js";
 import type { AgentUninstallOptions } from "./commands/agent-uninstall.js";
 import type { AgentUpgradeOptions } from "./commands/agent-upgrade.js";
@@ -560,6 +561,55 @@ agent
       import("./commands/agent-specs.js"),
     ]);
     return agentActionBoundary("specs", opts, () => agentSpecsAction(opts));
+  });
+
+agent
+  .command("docs")
+  .description("Emit the documentation artifact for an inline agent bundle")
+  .argument("<source>", "Bundle root")
+  .option("--target <target>", "Target (repeatable, or all)", collect)
+  .option("--profile <profile>", "Profile: plugin, project, both (default: project)")
+  .option("--out <file>", "Also write the standalone documentation artifact here")
+  .option("--id <id>", "Artifact id (default: the bundle name)")
+  .option("--title <title>", "Artifact title (default: the bundle's display name)")
+  .option("--strict", "Treat warnings as findings")
+  .option("--format <fmt>", "Output format: llm, human, json", "llm")
+  .option("--envelope", "Wrap --format json output in the versioned result envelope")
+  .addHelpText(
+    "after",
+    "\nInline is the project profile: the files merged into a repository's own\ndot-directories. stdout is an agent result carrying the payload under `docs`;\n--out writes the standalone artifact a documentation pipeline publishes.\n\nExit codes:\n  0  Artifact emitted\n  1  Invocation error\n  2  Bundle errors, or a warning under --strict",
+  )
+  .action(async (source: string, opts: AgentDocsOptions) => {
+    const [{ agentActionBoundary }, { agentDocsAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-docs.js"),
+    ]);
+    return agentActionBoundary("docs", opts, () => agentDocsAction(source, opts));
+  });
+
+agent
+  .command("collection-docs")
+  .description("Emit one documentation artifact for every installable bundle in a collection")
+  .argument("[spec]", "Collection spec (default: agent-marketplace.yaml)")
+  .option("--profile <profile>", "Profile: plugin, project, both (default: plugin)")
+  .option("--out <file>", "Also write the standalone documentation artifact here")
+  .option("--id <id>", "Artifact id (default: the collection name)")
+  .option("--title <title>", "Artifact title (default: the collection name)")
+  .option("--strict", "Treat warnings as findings")
+  .option("--format <fmt>", "Output format: llm, human, json", "llm")
+  .option("--envelope", "Wrap --format json output in the versioned result envelope")
+  .addHelpText(
+    "after",
+    "\nInstallable is the plugin profile: the self-contained form a host installs from\na marketplace. Every bundle the spec names lands in one artifact, each narrowed\nto the targets its own spec entry includes.\n\nExit codes:\n  0  Artifact emitted\n  1  Invocation error\n  2  Spec or bundle errors, or a warning under --strict",
+  )
+  .action(async (spec: string | undefined, opts: AgentDocsOptions) => {
+    const [{ agentActionBoundary }, { agentCollectionDocsAction }] = await Promise.all([
+      import("./commands/agent.js"),
+      import("./commands/agent-collection-docs.js"),
+    ]);
+    return agentActionBoundary("collection-docs", opts, () =>
+      agentCollectionDocsAction(spec, opts),
+    );
   });
 
 program

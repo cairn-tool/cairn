@@ -48,6 +48,8 @@ change without breaking a consumer.
 - [Agent bundle format and syntax](formats/agent-bundle.md)
 - [Bundle contract tests](formats/agent-tests.md)
 - [Marketplace spec](formats/agent-marketplace.md)
+- [Inline agent bundle artifact](formats/inline-agent-bundle.md)
+- [Installable agent bundles artifact](formats/installable-agent-bundles.md)
 - [Target profile](formats/target-profile.md)
 - [Conversion output](formats/conversion-output.md)
 - [Package](formats/package.md)
@@ -149,6 +151,8 @@ subagent, hook, MCP server, asset, and contract test.
 - [`agent verify`](commands/agent/verify.md)
 - [`agent guard`](commands/agent/guard.md)
 - [`agent specs`](commands/agent/specs.md)
+- [`agent docs`](commands/agent/docs.md)
+- [`agent collection-docs`](commands/agent/collection-docs.md)
 
 ## Script commands
 

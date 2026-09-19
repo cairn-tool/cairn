@@ -1,5 +1,6 @@
 import type { ExternalSchemaEntry, JsonSchema, SchemaEntry, SchemaRef } from "../types.js";
 import { agentResultSchema } from "./agent.js";
+import { inlineAgentBundleSchema, installableAgentBundlesSchema } from "./agent-docs.js";
 import {
   diagnosticRecordSchema,
   issueListSchema,
@@ -71,8 +72,16 @@ export const SCHEMAS: readonly SchemaEntry[] = [
   envelopeSchema,
 ];
 
-/** Schemas another project owns; `describe` is the cli-schema document. */
-export const EXTERNAL_SCHEMAS: readonly ExternalSchemaEntry[] = [describeSchema];
+/**
+ * Schemas another project owns. `describe` is the cli-schema document; the two
+ * artifact schemas are published as `@cairn-tool/agent-bundle-schema` so a
+ * consumer can validate an artifact without depending on this CLI.
+ */
+export const EXTERNAL_SCHEMAS: readonly ExternalSchemaEntry[] = [
+  describeSchema,
+  inlineAgentBundleSchema,
+  installableAgentBundlesSchema,
+];
 
 export const SCHEMA_BY_ID: ReadonlyMap<string, SchemaEntry> = new Map(
   SCHEMAS.map((entry) => [entry.id, entry]),
@@ -89,6 +98,11 @@ export const SCHEMA_REFS: readonly SchemaRef[] = [
   ...SCHEMAS.slice(0, SCHEMAS.indexOf(schemaListSchema)).map(ref),
   ref(describeSchema),
   ...SCHEMAS.slice(SCHEMAS.indexOf(schemaListSchema)).map(ref),
+  // Appended rather than spliced in: these were authored after the listing
+  // order was fixed, and moving an existing entry would change `schema
+  // --format json` for every consumer that reads it positionally.
+  ref(inlineAgentBundleSchema),
+  ref(installableAgentBundlesSchema),
 ];
 
 export const SCHEMA_REF_BY_ID: ReadonlyMap<string, SchemaRef> = new Map(

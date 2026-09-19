@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/cairn-tool/cairn/schema/v1/inline-agent-bundle.json",
+  "title": "Inline agent bundle documentation artifact",
+  "description": "The agent bundle a repository installs into itself: the components it carries and what they render to on every supported host. \"Inline\" is the `project` output profile, whose files are merged into the repository's own dot-directories rather than installed as a self-contained plugin. A repository has at most one, so this artifact documents exactly one bundle; the bundles a repository publishes for others are documented by installable-agent-bundles.json instead. Produced by `cairn agent docs`. Specified by docs/formats/inline-agent-bundle.md. This $id is an identifier, not a fetchable URL. No schema here sets additionalProperties: false -- adding a property is a non-breaking change.",
+  "type": "object",
+  "required": ["kind", "schemaVersion", "id", "title", "generatedAt", "generator", "bundle"],
+  "properties": {
+    "kind": { "const": "inline-agent-bundle" },
+    "schemaVersion": {
+      "type": "string",
+      "description": "Semantic version of this payload format. A consumer accepts a higher patch or minor and rejects a higher major."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The slug this artifact publishes under. Defaults to the bundle name."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The human label used in navigation."
+    },
+    "generatedAt": { "type": "string", "description": "RFC 3339, UTC." },
+    "generator": {
+      "$ref": "https://github.com/cairn-tool/cairn/schema/v1/_common.json#/$defs/generator"
+    },
+    "bundle": { "$ref": "https://github.com/cairn-tool/cairn/schema/v1/_common.json#/$defs/bundle" }
+  }
+}

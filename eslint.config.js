@@ -42,5 +42,16 @@ export default tseslint.config(
       globals: { process: "readonly", Buffer: "readonly", console: "readonly" },
     },
   },
+  {
+    // Build scripts. Same story as the hook handlers above: Node modules that
+    // `no-undef` has no globals for. `URL` is here because `scripts/codegen.mjs`
+    // resolves its own location through `import.meta.url`.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: "module",
+      globals: { process: "readonly", console: "readonly", URL: "readonly" },
+    },
+  },
   prettier,
 );

@@ -1,4 +1,9 @@
-# Local install scripts
+# Scripts
+
+Build and install scripts. [Code generation](#code-generation) is at the bottom; everything
+before it is about installing this repository's bundles.
+
+## Local install scripts
 
 One script per host, for putting the bundles under [`plugins/`](../plugins) onto your own
 machine without publishing anything. Each is a thin wrapper over
@@ -138,3 +143,22 @@ CI installs from [`cairn-verify.yml`](../cairn-verify.yml) — the declared bloc
 this repository installs into itself — with `cairn agent install --config cairn-verify.yml`.
 These scripts are for a developer's machine, where the destination is a host directory rather
 than the repository.
+
+## Code generation
+
+`codegen.mjs` is the only script here that is not about installing anything. It builds the
+published schemas and model types for the bundle documentation artifacts out of
+[`spec/v1/`](../spec/v1):
+
+```bash
+npm run codegen        # rewrite the composed schemas and generated types
+npm run codegen:check  # exit 1 if either is out of date -- what CI runs
+```
+
+It does two things. It inlines the definitions in `spec/v1/_common.json` into each artifact
+schema, so every published document stands alone and validating an artifact needs exactly one
+file. Then it generates the TypeScript models from those composed schemas, which is what
+`src/agent/docs/` is written against — so a payload that drifts from its schema is a compile
+error rather than something a test has to notice.
+
+Output is committed, under `packages/agent-bundle-schema/`. Do not hand-edit it.

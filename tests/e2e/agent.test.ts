@@ -61,6 +61,8 @@ describe("agent CLI", () => {
       "install",
       "uninstall",
       "installed",
+      "docs",
+      "collection-docs",
     ])
       expect(result.stdout).toContain(command);
   });

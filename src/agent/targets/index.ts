@@ -1,4 +1,4 @@
-import type { AgentTarget } from "../types.js";
+import type { AgentProfile, AgentTarget } from "../types.js";
 import { TARGETS } from "../types.js";
 import { packageName, packageVersion } from "../../version.js";
 import { antigravityProfile } from "./antigravity.js";
@@ -6,7 +6,7 @@ import { claudeCodeProfile } from "./claude-code.js";
 import { codexProfile } from "./codex.js";
 import { cursorProfile } from "./cursor.js";
 import { opencodeProfile } from "./opencode.js";
-import type { PortableHookEvent, TargetProfile } from "./schema.js";
+import type { FeatureKey, PortableHookEvent, TargetProfile } from "./schema.js";
 import { FEATURE_KEYS, PORTABLE_HOOK_EVENTS, PROFILE_SCHEMA_VERSION } from "./schema.js";
 
 export * from "./schema.js";
@@ -81,4 +81,28 @@ export function specsPayload(targets: readonly AgentTarget[]): SpecsPayload {
     generator: { name: packageName, version: packageVersion },
     targets: Object.fromEntries(targets.map((target) => [target, TARGET_PROFILES[target]])),
   };
+}
+
+/**
+ * Whether any of `targets` emits `feature` into any of `profiles`.
+ *
+ * Read from the target profiles rather than branched on the target name, so a
+ * new target needs no change here. Shared by `agent inspect` and the
+ * documentation artifacts so the two cannot disagree about whether a component
+ * kind reaches a host: hooks, for instance, are plugin-profile only everywhere,
+ * which is what makes a project-profile view drop the section rather than show
+ * something that is never emitted.
+ */
+export function featureVisible(
+  feature: FeatureKey,
+  targets: readonly AgentTarget[],
+  profiles: readonly AgentProfile[],
+): boolean {
+  return targets.some((target) => {
+    const profile = TARGET_PROFILES[target].features[feature];
+    return (
+      profile.support !== "unsupported" &&
+      profile.profiles.some((value) => profiles.includes(value))
+    );
+  });
 }

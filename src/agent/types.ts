@@ -8,6 +8,10 @@ import type { InstallReport } from "./install/index.js";
 import type { MarketplaceReport } from "./marketplace/index.js";
 import type { VerifyReport } from "./verify/index.js";
 import type { GuardReport } from "./guard/index.js";
+import type {
+  InlineAgentBundleArtifact,
+  InstallableAgentBundlesArtifact,
+} from "@cairn-tool/agent-bundle-schema";
 
 export const TARGETS = ["claude-code", "codex", "cursor", "antigravity", "opencode"] as const;
 export type AgentTarget = (typeof TARGETS)[number];
@@ -240,7 +244,9 @@ export interface AgentResult {
     | "installed"
     | "marketplace"
     | "verify"
-    | "guard";
+    | "guard"
+    | "docs"
+    | "collection-docs";
   ok: boolean;
   source?: string;
   targets: AgentTarget[];
@@ -273,6 +279,13 @@ export interface AgentResult {
   verify?: VerifyReport;
   /** Edit-guard verdict, emitted by `agent guard`. */
   guard?: GuardReport;
+  /** The inline bundle documentation artifact, emitted by `agent docs`. */
+  docs?: InlineAgentBundleArtifact;
+  /**
+   * The installable bundles documentation artifact, emitted by
+   * `agent collection-docs`.
+   */
+  collectionDocs?: InstallableAgentBundlesArtifact;
   dryRun?: boolean;
   check?: boolean;
   stale?: boolean;
