@@ -1,6 +1,6 @@
 {
   "name": "@cairn-tool/cairn",
-  "version": "6.1.0",
+  "version": "6.2.0",
   "type": "module",
   "description": "An agent-agnostic CLI toolkit for working with markdown files and related assets",
   "license": "MIT",
@@ -55,7 +55,7 @@
     "codegen:check": "node scripts/codegen.mjs --check"
   },
   "dependencies": {
-    "@cairn-tool/agent-bundle-schema": "*",
+    "@cairn-tool/agent-bundle-schema": "6.2.0",
     "@cairn-tool/cli-schema": "^1.0.0",
     "@cairn-tool/cli-schema-commander": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
