@@ -96,8 +96,10 @@ Each branch is force-pushed on every release. Nothing on one names an owner or a
 entry sources are relative, so a tree works however it was fetched.
 
 **The `cairn` binary is a separate install.** These plugins document and invoke it; they do not
-carry it. See [the README](https://github.com/cairn-tool/cairn#install). A plugin whose hook
-cannot find `cairn` on `PATH` exits quietly rather than failing an edit.
+carry it. See [the README](https://github.com/cairn-tool/cairn#install). None of them ships
+a hook that runs on every edit: the edit guard is a script
+[`agent install`](commands/agent/install.md#the-edit-guard) generates per repository, and a
+machine that never installed a bundle into a project runs nothing.
 
 ## The plugins
 

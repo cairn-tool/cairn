@@ -63,9 +63,11 @@ Each record:
 
 | Field          | Required | Meaning                                                        |
 | -------------- | -------- | -------------------------------------------------------------- |
-| `kind`         | no       | `bundle` (the default when absent) or `collection`             |
+| `kind`         | no       | `bundle` (the default when absent), `collection`, or `guard`   |
 | `bundle`       | yes      | name and version of the installed **unit**                     |
 | `collection`   | no       | the plugins a collection placed; absent for a single bundle    |
+| `source`       | no       | the bundle root, POSIX, relative to `destination`              |
+| `hookDocument` | no       | guard records only: `{ "created": bool }`; see below           |
 | `target`       | yes      | `claude-code`, `codex`, `cursor`, `antigravity`, or `opencode` |
 | `profile`      | yes      | `plugin` or `project`                                          |
 | `scope`        | yes      | `user` or `project`                                            |
@@ -160,7 +162,46 @@ field, so a collection reuses it rather than adding a parallel field they would 
 learn about. `collection.plugins` is additive detail.
 
 `kind` is absent on every manifest written before collections existed, which is why absent means
-`bundle` rather than being an error.
+`bundle` rather than being an error. A `kind` the reader does not know makes the document
+`malformed`: a record it cannot classify is one it must not uninstall as though it were a
+bundle.
+
+## The edit guard
+
+A project-scope destination also records the [edit guard](../commands/agent/install.md#the-edit-guard)
+`agent install` generates: one record per target with a project hook surface, `kind: "guard"`,
+named `.cairn-guard` — a name no bundle can have, since a bundle name may not begin with a dot.
+
+```json
+{
+  "kind": "guard",
+  "bundle": { "name": ".cairn-guard", "version": "6.3.0" },
+  "target": "claude-code",
+  "profile": "project",
+  "scope": "project",
+  "layout": "merge",
+  "mode": "copy",
+  "destination": "/home/me/repo",
+  "files": [
+    { "path": ".cairn-guard.sh", "mode": "0755", "sha256": "…" },
+    { "path": ".claude/settings.json", "mode": "0644", "sha256": "…" }
+  ],
+  "hookDocument": { "created": true }
+}
+```
+
+Guard records are rebuilt by every run at the destination; they never persist as siblings
+outside a run's batch, which is what lets the script's bytes change with every install
+without tripping the sibling-conflict check. `hookDocument.created` records whether the hook
+document existed before cairn registered the guard in it, and is carried forward run to run;
+it decides whether retiring the guard strips its handler from the file or deletes the file.
+
+`source` is written on bundle records so a later run can point an editor at the source of a
+file whose bundle is not in that run's batch. A record written before it produces a guarded
+entry with no source pointer.
+
+An older cairn does not validate `kind` and would read a guard record as a bundle named
+`.cairn-guard`. Do not uninstall it with one: its inventory includes the settings document.
 
 ## The inventory
 

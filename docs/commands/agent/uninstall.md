@@ -56,6 +56,14 @@ tree available for a retry.
 | ------- | -------- | --------------------------------------------------------------- |
 | `AB800` | error    | No recorded install location for this target and scope.         |
 | `AB806` | error    | Install manifest missing or malformed, or nothing to uninstall. |
+| `AB813` | error    | `.cairn-guard` is the edit guard, not a bundle; see below.      |
+
+The [edit guard](install.md#the-edit-guard) a project-scope destination carries is rebuilt
+from the bundles that remain after an uninstall, and retired with the last of them: the
+script goes, and the host's hook document is stripped of the guard's handler — or deleted,
+when cairn created it and nothing else is in it. Its own records cannot be uninstalled by
+name, because their files include a settings document the repository owns; set
+`agent.guard.mode: off` and run `agent install` again instead.
 
 ## Examples
 

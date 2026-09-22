@@ -68,6 +68,8 @@ export const antigravityProfile: TargetProfile = {
       policies: null,
       mcp: ".agents/mcp_config.json",
       assets: "assets",
+      // No workspace-level hook document is documented.
+      hooksFile: null,
     },
   },
   naming: {

@@ -12,13 +12,16 @@ cases:
           - skills/{name}/SKILL.md
           - assets/cli-basics.md
           - agents/bundle-reviewer.md
-          - hooks/hooks.json
-          - hooks/guard-generated.mjs
         absent:
           # Rules are project-profile only, and a command here is a skill --
           # there is no `commands` component kind.
           - .claude/rules/**
           - commands/**
+          # No hooks. The edit guard used to ship here as a global pre-tool-use
+          # hook that spawned `cairn agent guard` on every write in every
+          # repository; it is now a script `cairn agent install` generates per
+          # repository, with nothing to run on machines that never opted in.
+          - hooks/**
           # No MCP server here; cairn serve mcp is registered by cairn-markdown
           # and by no other plugin, or a host installing both gets every tool
           # twice.
@@ -27,58 +30,7 @@ cases:
         - path: .claude-plugin/plugin.json
           contains:
             name: cairn-agent
-            version: 1.3.0
-
-  # The edit guard is a pre-tool-use hook whose command is the script beside the
-  # document, and the script has to be executable or the host cannot run it --
-  # `agent package` enforces the mode, but only this pins that the *rendered*
-  # document points at the file that carries it. Both bundle-root placeholder
-  # forms are asserted absent: an unrewritten `${BUNDLE_ROOT}` renders, ships,
-  # and resolves to nothing.
-  - name: the-edit-guard-hook-renders-for-every-host-that-has-hooks
-    targets: [claude-code, codex, cursor]
-    profiles: [plugin]
-    expect:
-      files:
-        - path: hooks/guard-generated.mjs
-          mode: "0755"
-          includes: ["agent", "guard"]
-        - path: hooks/hooks.json
-          includes: ["guard-generated.mjs"]
-          excludes: ["${BUNDLE_ROOT}", "{{bundleRoot}}"]
-
-  # Claude Code nests each handler under its matcher; Cursor emits the same
-  # handler flat under a camel-cased event inside a versioned envelope. The two
-  # shapes are the renderer's, so a profile edit that broke either would
-  # otherwise only show up on a host.
-  - name: the-guard-hook-takes-each-hosts-own-shape
-    targets: [claude-code]
-    profiles: [plugin]
-    expect:
-      json:
-        - path: hooks/hooks.json
-          contains:
-            hooks:
-              PreToolUse:
-                - matcher: Edit|Write|MultiEdit|NotebookEdit
-                  hooks:
-                    - type: command
-                      command: ${CLAUDE_PLUGIN_ROOT}/hooks/guard-generated.mjs
-                      timeout: 10
-
-  - name: the-guard-hook-takes-cursors-flat-versioned-shape
-    targets: [cursor]
-    profiles: [plugin]
-    expect:
-      json:
-        - path: hooks/hooks.json
-          contains:
-            version: 1
-            hooks:
-              preToolUse:
-                - matcher: Edit|Write|MultiEdit|NotebookEdit
-                  command: ./hooks/guard-generated.mjs
-                  timeout: 10
+            version: 1.4.0
 
   # `agents` and `hooks` are implied manifest fields. Declaring `agents` fails
   # the whole manifest; declaring `hooks` drops the plugin's hooks. Neither is

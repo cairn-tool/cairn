@@ -45,6 +45,9 @@ export const claudeCodeProfile: TargetProfile = {
       policies: ".claude/settings.json",
       mcp: ".mcp.json",
       assets: "assets",
+      // Project hooks live in the same settings document as permissions. The
+      // install's edit guard is merged into it, never written over it.
+      hooksFile: ".claude/settings.json",
     },
   },
   naming: {

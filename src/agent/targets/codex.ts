@@ -44,6 +44,9 @@ export const codexProfile: TargetProfile = {
       policies: ".codex/rules",
       mcp: ".codex/config.toml",
       assets: "assets",
+      // Only the user-level ~/.codex/hooks.json is documented; no project hook
+      // surface is declared, so the install's edit guard is not registered here.
+      hooksFile: null,
     },
   },
   naming: {

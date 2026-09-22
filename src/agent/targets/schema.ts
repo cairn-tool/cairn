@@ -6,7 +6,7 @@ import type { AgentProfile, AgentTarget, BundleRule, MappingQuality } from "../t
  * semantic-release-managed package version. Bump only when the profile
  * structure changes in a way consumers must react to.
  */
-export const PROFILE_SCHEMA_VERSION = "4";
+export const PROFILE_SCHEMA_VERSION = "5";
 
 export const PORTABLE_HOOK_EVENTS = [
   "session-start",
@@ -131,6 +131,18 @@ export interface ProjectRoots {
   policies: string | null;
   mcp: string | null;
   assets: string;
+  /**
+   * The document a *project* registers hooks in, or `null` when the host has
+   * no project-level hook surface.
+   *
+   * Bundles never render hooks here -- `features.hooks.profiles` is plugin-only
+   * on every target -- so this is not a render root. It is where `agent install`
+   * registers the edit guard it generates for a project-scope destination, and
+   * it is merged into rather than written: Claude Code's is `.claude/settings.json`,
+   * which the user owns, and Cursor's is the same `.cursor/hooks.json` the
+   * `policies` writer emits.
+   */
+  hooksFile: string | null;
 }
 
 export interface PathProfile {
@@ -594,6 +606,8 @@ export function validateProfile(profile: TargetProfile): string[] {
         problems.push(`output pattern '${entry.pattern}' escapes the target root`);
     }
   }
+  if (profile.paths.project.hooksFile !== null && !profile.hooks.events["pre-tool-use"])
+    problems.push("paths.project.hooksFile is set but hooks.events['pre-tool-use'] is null");
   const naming = profile.naming;
   if (!naming) problems.push("missing naming declaration");
   else {

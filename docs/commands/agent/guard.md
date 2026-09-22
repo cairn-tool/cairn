@@ -133,22 +133,28 @@ Then regenerate:
 
 ## The hook
 
-The `cairn-agent` bundle declares a `pre-tool-use` hook whose handler reads the host's event,
-pulls out the path, and calls this command. One declaration serves every host: event casing,
-envelope and handler nesting are the renderer's job, and the handler absorbs the two
-differences that reach it — Cursor's flat handler shape, which is why the script filters on
-the tool name itself, and the refusal form, which is exit `2` with the reason on stderr for
-Claude Code and Codex and a JSON decision on stdout for Cursor.
+The hook that runs before every write is **not** this command. It is `.cairn-guard.sh`, a
+POSIX `sh` script [`agent install`](install.md#the-edit-guard) generates at each project-scope
+destination and registers in the host's project hook document, with the install inventory
+baked in. It forks nothing on the allow path and never starts Node.
 
-Hooks are a **plugin-profile** feature on every target, so the hook arrives with a plugin
-install and the tree it protects is the project-profile one in whatever repository the
-assistant is working in. The hook is global; the opt-in is per repository. OpenCode declares
-no hook events at all, so no guard is installed there.
+It used to be this command: the `cairn-agent` plugin shipped a global `pre-tool-use` hook
+that spawned `cairn agent guard` on every edit in every repository, and the two Node startups
+that cost — in every session, on every machine with the plugin, mostly to learn that the
+repository declared nothing — pinned machines under parallel agents. The plugin ships no hook
+now; the guard exists only where an install put it.
+
+The two answer from different oracles and must agree. This command judges a path against the
+target profile's declared output patterns and confirms ownership against the bundle; the
+script judges it against the manifest's exact file list. `tests/unit/agent-install-guard.test.ts`
+asserts that, for every file an install writes, the script names the same sources this command
+does. Use this command when there is no installed guard to ask — from CI, from a Git hook, or
+against a tree `agent convert` produced — and read its `--format json` verdict.
 
 ## Related surfaces
 
 - [`agent verify`](verify.md) is the CI-facing check that a committed tree still matches its bundle; this one is the interactive check that it stays that way.
-- [`agent install`](install.md) writes the trees this command protects.
+- [`agent install`](install.md) writes the trees this command protects, and the `.cairn-guard.sh` hook that protects them at edit time.
 - [Target profile](../../formats/target-profile.md) documents the `outputs` patterns the judgement is made against.
 - [Project configuration](../../configuration.md#agentguard) documents the `agent.guard` block.
 - [Diagnostic codes](../../formats/diagnostic-codes.md) lists every code with its meaning.

@@ -525,6 +525,11 @@ export const agentResultSchema: SchemaEntry = {
                 "files",
               ],
               properties: {
+                kind: {
+                  description:
+                    "Present for a collection, or for the edit guard's own record at a project-scope destination; absent means a bundle.",
+                  enum: ["collection", "guard"],
+                },
                 name: { type: "string" },
                 version: { type: "string" },
                 target: { enum: TARGETS },

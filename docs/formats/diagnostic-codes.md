@@ -287,6 +287,10 @@ Per-feature mapping losses. Severity depends on what the target profile declares
 | `AB807` | notice   | `agent install`, `agent uninstall`                 | `--link` in use; edits are live and the host may not follow symlinks.                           |
 | `AB808` | error    | `agent install`, `agent marketplace`               | A path is claimed by two installs at one destination.                                           |
 | `AB809` | error    | `agent install`, `agent marketplace`               | A `--link` install cannot share a destination with another install.                             |
+| `AB810` | notice   | `agent install`                                    | The target declares no project hook surface, so the edit guard is not registered for it.        |
+| `AB811` | error    | `agent install`, `agent verify`                    | The host's project hook document is not a JSON object; the edit guard cannot be merged into it. |
+| `AB812` | warning  | `agent install`, `agent verify`                    | A generated path carries a control character and is left out of the edit guard.                 |
+| `AB813` | error    | `agent uninstall`                                  | `.cairn-guard` is the edit guard, not a bundle; it goes through `agent.guard.mode: off`.        |
 
 ## Collections
 

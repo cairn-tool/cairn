@@ -50,6 +50,11 @@ build on one. A hardcoded path in the renderer therefore cannot ship.
 | `project` | `mcp`      | `.mcp.json`                  |
 | `project` | `assets`   | `assets/**`                  |
 
+The project hook document (`paths.project.hooksFile`) is `.claude/settings.json` — the same file
+`policies` renders `permissions` into. Bundles do not render hooks there; it is where
+[`agent install`](../../commands/agent/install.md#the-edit-guard) registers the edit guard, by
+merging one `PreToolUse` handler into whatever the file already holds.
+
 In a pattern, `{name}` matches exactly one path segment, `*` matches part of a segment, and a
 trailing `**` matches any remaining suffix including nothing.
 

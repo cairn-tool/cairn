@@ -42,6 +42,10 @@ example uses) and `.opencode/agent` (the one its documentation lists first).
 | `project` | mcp      | `opencode.json`                |
 | `project` | assets   | `assets/**`                    |
 
+There is no hook document at any level, so `paths.project.hooksFile` is `null` and the edit
+guard [`agent install`](../../commands/agent/install.md#the-edit-guard) generates is not
+registered for OpenCode.
+
 ## There are no hooks
 
 OpenCode 1.18.23 has **no lifecycle hook file at all**. Every portable event maps to `null`, and

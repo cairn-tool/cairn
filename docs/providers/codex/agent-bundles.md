@@ -44,6 +44,11 @@ Declared output patterns:
 | `project` | `mcp`      | `.codex/config.toml`        |
 | `project` | `assets`   | `assets/**`                 |
 
+No project hook document is declared (`paths.project.hooksFile` is `null`): only the user-level
+`~/.codex/hooks.json` is documented. A project-scope install therefore reports `AB810` and
+registers the edit guard for no Codex surface; the guard still lists Codex's generated files,
+and another host in the repository refuses edits to them.
+
 Note there is **no `agents` pattern in the plugin profile**. That is not an omission; see
 below.
 

@@ -48,6 +48,11 @@ Declared output patterns:
 | `project` | `mcp`      | `.cursor/mcp.json`           |
 | `project` | `assets`   | `assets/**`                  |
 
+The project hook document (`paths.project.hooksFile`) is `.cursor/hooks.json`, the same
+versioned document a `policies` override renders. [`agent install`](../../commands/agent/install.md#the-edit-guard)
+merges the edit guard's `preToolUse` handler into it, in the flat shape, with the command
+`./.cairn-guard.sh` resolved from the project root.
+
 Cursor is the only target with a `rules` pattern in the **plugin** profile. Claude Code and
 Codex both render rules at project scope only.
 

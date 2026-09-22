@@ -7,7 +7,7 @@ import {
 import type { InstallEntry } from "../agent/install/index.js";
 import type { AgentOptions } from "./agent.js";
 import { outputDecidedResult } from "./agent.js";
-import { installHasFindings, requireInstallTarget } from "./agent-install.js";
+import { installHasFindings, requireInstallTarget, resolveGuardSettings } from "./agent-install.js";
 
 export interface AgentUninstallOptions extends AgentOptions {
   scope?: string;
@@ -25,10 +25,16 @@ export async function agentUninstallAction(
     plan.diagnostics.push(missingInstallDiagnostic(name, target, plan.destination));
   const blocked = installHasFindings(plan.diagnostics, Boolean(opts.strict));
   const stale = Boolean(opts.check && plan.manifest);
-  if (!opts.dryRun && !opts.check && !blocked) commitUninstall(plan);
+  if (!opts.dryRun && !opts.check && !blocked)
+    // The guard is rebuilt from the surviving bundles, under the settings the
+    // destination's configuration declares.
+    commitUninstall(plan, { guard: resolveGuardSettings({ cwd: plan.destination }) });
 
   const entry: InstallEntry | null = plan.manifest
     ? {
+        ...(plan.manifest.kind === "collection" || plan.manifest.kind === "guard"
+          ? { kind: plan.manifest.kind }
+          : {}),
         name: plan.manifest.bundle.name,
         version: plan.manifest.bundle.version,
         target: plan.manifest.target,

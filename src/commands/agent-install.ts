@@ -1,6 +1,11 @@
 import path from "node:path";
 import type { AgentDiagnostic, AgentProfile, AgentResult, AgentTarget } from "../agent/types.js";
+import { diagnostic } from "../agent/types.js";
 import { loadBundle } from "../agent/parser.js";
+import { profileFor } from "../agent/targets/index.js";
+import { resolveGuardConfig } from "../agent/guard/resolve.js";
+import { guardSettingsFrom } from "../agent/install/guard.js";
+import type { GuardSettings } from "../agent/install/guard.js";
 import type { InstallPlan, InstallReport, InstallRequest } from "../agent/install/index.js";
 import {
   commitInstall,
@@ -47,6 +52,53 @@ export function installHasFindings(diagnostics: AgentDiagnostic[], strict: boole
  * hard fail writes nothing at all. An explicitly named target with no location
  * still reports AB800, because there the user asked for something specific.
  */
+/**
+ * The edit guard's settings for a run: the `agent.guard` block of the config
+ * document when one was named, otherwise whatever declares one above the
+ * destination, otherwise the defaults. Resolved once and handed to every plan,
+ * so a destination shared by several targets gets one script.
+ */
+export function resolveGuardSettings(selection: {
+  explicitPath?: string;
+  cwd?: string;
+}): GuardSettings {
+  return guardSettingsFrom(resolveGuardConfig(selection));
+}
+
+/**
+ * `AB810`, once per target the guard could not be registered for. Emitted by
+ * the command rather than the planner: `agent verify` plans the same
+ * destination once per entry and would report it once per entry.
+ */
+export function guardSurfaceDiagnostics(
+  plans: readonly InstallPlan[],
+  settings: GuardSettings,
+): AgentDiagnostic[] {
+  if (settings.mode === "off") return [];
+  const seen = new Set<AgentTarget>();
+  const diagnostics: AgentDiagnostic[] = [];
+  for (const plan of plans) {
+    if (plan.scope !== "project" || plan.layout !== "merge" || seen.has(plan.target)) continue;
+    seen.add(plan.target);
+    if (profileFor(plan.target).paths.project.hooksFile !== null) continue;
+    diagnostics.push(
+      diagnostic(
+        "AB810",
+        `${plan.target} declares no project hook surface; the edit guard is not registered for it`,
+        "exact",
+        {
+          target: plan.target,
+          profile: plan.profile,
+          path: plan.destination,
+          remediation:
+            "The guard still lists this target's files; another host in the repository invokes it.",
+        },
+      ),
+    );
+  }
+  return diagnostics;
+}
+
 export function resolveInstallTargets(
   values: string[] | undefined,
   scope: string | undefined,
@@ -162,6 +214,9 @@ export async function agentInstallAction(
   const requests: InstallRequest[] =
     declared?.requests ?? targets.map((target) => ({ bundle: loaded!, target }));
 
+  const guard = resolveGuardSettings(
+    opts.config ? { explicitPath: opts.config } : { cwd: path.resolve(opts.into ?? ".") },
+  );
   const batch = planInstalls(requests, {
     ...(declared?.options ?? {
       ...(opts.scope ? { scope: opts.scope } : {}),
@@ -171,9 +226,14 @@ export async function agentInstallAction(
     }),
     ...(opts.profile ? { profile: opts.profile } : {}),
     ...(opts.force ? { force: true } : {}),
+    guard,
   });
 
-  const diagnostics = [...batch.diagnostics, ...batch.plans.flatMap((plan) => plan.diagnostics)];
+  const diagnostics = [
+    ...batch.diagnostics,
+    ...batch.plans.flatMap((plan) => plan.diagnostics),
+    ...guardSurfaceDiagnostics(batch.plans, guard),
+  ];
   const blocked = installHasFindings(diagnostics, Boolean(opts.strict));
   const stale = Boolean(
     opts.check && batch.plans.some((plan) => plan.destination && !installIsCurrent(plan)),

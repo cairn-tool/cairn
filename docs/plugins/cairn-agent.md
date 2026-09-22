@@ -1,6 +1,6 @@
 # `cairn-agent`
 
-Source: `plugins/cairn-agent/`. Bundle `schemaVersion: "2"`, version `1.3.0`.
+Source: `plugins/cairn-agent/`. Bundle `schemaVersion: "2"`, version `1.4.0`.
 
 Wraps the `agent` toolset: authoring a portable bundle, migrating a repository onto one, checking it against every host's conformance profile, and publishing it. This plugin is a worked example of what it documents — its own source is a bundle, built by the collection spec at the repository root.
 
@@ -13,10 +13,10 @@ See [the `agent` command listing](../commands.md) for the commands these skills 
 | ------------------- | ------------------------------------- |
 | Skills              | 8 (5 model-invoked, 3 slash commands) |
 | Subagents           | 1                                     |
-| Hooks               | 1                                     |
+| Hooks               | 0                                     |
 | MCP servers         | 0                                     |
 | Assets              | 1                                     |
-| Contract test cases | 11                                    |
+| Contract test cases | 8                                     |
 
 ## Skills
 
@@ -105,30 +105,17 @@ Runs the audit and conformance checks and returns a publish or no-publish call, 
 
 ## Hooks
 
-| Event          | Matcher                                | Command                                    | Timeout |
-| -------------- | -------------------------------------- | ------------------------------------------ | ------- |
-| `pre-tool-use` | `Edit\|Write\|MultiEdit\|NotebookEdit` | `${BUNDLE_ROOT}/hooks/guard-generated.mjs` | 10s     |
+None, deliberately. Through bundle 1.3.0 this plugin shipped a `pre-tool-use` hook,
+`guard-generated.mjs`, that called `cairn agent guard` before every write to refuse edits to
+cairn-generated files. It ran in every repository on every machine with the plugin, starting
+two Node processes per edit to discover, almost always, that the repository had opted into
+nothing — and under parallel agents that pinned CPUs.
 
-Refuses an edit to a file cairn generated, and names the bundle source to edit instead. The
-decision is [`agent guard`](../commands/agent/guard.md)'s; the script is plumbing — it reads the
-host's event, pulls out the path, asks, and writes the answer back in the shape that host reads.
-
-**A repository opts in.** `cairn agent guard` exits `0` on any repository that declares no
-[`agent.guard`](../configuration.md#agentguard) block, which is what makes this hook safe to
-install once for everything. It resolves `cairn` from `PATH` and allows the edit when the binary
-is absent, times out, or reports an invocation error: a guard that failed closed would block
-editing on any machine without the CLI, which is a worse failure than the edit it prevents.
-
-One declaration serves every host. Event casing, envelope and handler nesting are the renderer's
-job; the two differences that reach the handler are Cursor's `flat` handler shape — which is why
-the script filters on the tool name itself rather than trusting the matcher — and the refusal
-form, which is exit `2` with the reason on stderr for Claude Code and Codex and a JSON `deny`
-decision on stdout for Cursor.
-
-Hooks render in the **plugin** profile only, on every target. So the hook arrives with a plugin
-install while the tree it protects is the project-profile one in whatever repository the
-assistant is working in: the hook is global, the opt-in is per repository. OpenCode declares no
-hook events at all, so no guard is installed there.
+The guard is now generated where it is needed: a project-scope
+[`agent install`](../commands/agent/install.md#the-edit-guard) writes `.cairn-guard.sh`, a
+POSIX `sh` script with that repository's generated files baked in, and registers it in the
+host's project hook document. It forks nothing on the allow path. A repository that never
+installed a bundle has no hook at all.
 
 ## MCP servers
 
@@ -147,18 +134,16 @@ target.
 
 `plugins/cairn-agent/tests/render.test.yaml`, run by [`agent test`](../commands/agent/test.md).
 
-| Case                                                        |
-| ----------------------------------------------------------- |
-| `renders-a-complete-claude-code-plugin`                     |
-| `the-edit-guard-hook-renders-for-every-host-that-has-hooks` |
-| `the-guard-hook-takes-each-hosts-own-shape`                 |
-| `the-guard-hook-takes-cursors-flat-versioned-shape`         |
-| `manifest-omits-the-implied-fields`                         |
-| `explicit-skills-are-user-invocable-only`                   |
-| `auto-skills-stay-model-invocable`                          |
-| `the-shared-reference-asset-ships`                          |
-| `skill-reference-sidecars-ship`                             |
-| `the-migration-skill-drives-import-convert-and-verify`      |
+| Case                                                              |
+| ----------------------------------------------------------------- |
+| `renders-a-complete-claude-code-plugin`                           |
+| `manifest-omits-the-implied-fields`                               |
+| `explicit-skills-are-user-invocable-only`                         |
+| `auto-skills-stay-model-invocable`                                |
+| `the-shared-reference-asset-ships`                                |
+| `skill-reference-sidecars-ship`                                   |
+| `the-migration-skill-drives-import-convert-and-verify`            |
+| `the-cursor-plugin-namespaces-components-and-resolves-references` |
 
 These are model-free: every expectation is evaluated against the same in-memory render
 `agent convert` would write.
