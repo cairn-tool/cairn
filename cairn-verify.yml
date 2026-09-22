@@ -8,7 +8,8 @@
 #   cairn agent verify  --config cairn-verify.yml
 #
 # The install writes `.claude/`, `.codex/`, `.agents/`, `.mcp.json` and `assets/`
-# at the repository root; all five are gitignored. Undo it with
+# at the repository root, plus the edit guard `.cairn-guard.sh` and its
+# registration in `.claude/settings.json`; all of it is gitignored. Undo it with
 # `cairn agent uninstall <name> --target <target> --scope project --into .`.
 agent:
   install:
@@ -24,15 +25,16 @@ agent:
       - path: plugins/cairn-jira
       - path: plugins/cairn-pdf
       - path: plugins/cairn-qa
-  # What `cairn agent guard` refuses a direct edit to. Entries are derived from
-  # the install block above, so nothing here restates them.
+  # The edit guard the install above generates: `.cairn-guard.sh` at the
+  # repository root, registered as a PreToolUse hook in `.claude/settings.json`
+  # (Codex declares no project hook surface, so the install reports AB810 for
+  # it and the Claude Code registration covers both targets' files). The block
+  # is read from this document because the install is; `agent verify` reads the
+  # same block and regenerates the same bytes.
   #
-  # Two things keep this from acting on its own, both deliberate. The guard's
-  # hook ships in the `cairn-agent` *plugin* profile, and the install above is
-  # `profile: project`, so this repository does not install the hook into
-  # itself. And the hook discovers configuration the ordinary way, which finds
-  # `.cairn.yml` and not this file -- see the note above on why there is no
-  # `.cairn.yml` here. So the guard runs here only when asked:
+  # `regenerate` is spelled out because the default is the bare
+  # `cairn agent install`, which would not find this file. The same block also
+  # steers the standalone check, which has to be pointed here explicitly:
   #
   #   cairn agent guard <path> --config cairn-verify.yml
   guard:

@@ -262,12 +262,15 @@ read.
 
 ## `agent.guard`
 
-Which generated files [`agent guard`](commands/agent/guard.md) refuses direct edits to, and
-what to tell the editor instead. The `cairn-agent` bundle's `pre-tool-use` hook calls that
-command before every write, so this block is what turns the hook on for a repository.
+How the [edit guard](commands/agent/install.md#the-edit-guard) a project-scope
+[`agent install`](commands/agent/install.md) writes behaves, and what
+[`agent guard`](commands/agent/guard.md) refuses direct edits to when asked by hand.
 
-**A repository that declares no `agent.guard` block is not guarded.** That is the point: the
-hook installs once, globally, and each repository opts in.
+**The guard is on by default wherever an install put it.** A repository that declares no
+`agent.guard` block gets the defaults below: `mode: block`, nothing allow-listed, and
+`cairn agent install` as the command quoted back. `mode: off` is the opt-out. The block is
+read from the document named by `--config`, or discovered by walking up from the destination
+like the `agent.install` block.
 
 ```yaml
 agent:
@@ -289,6 +292,12 @@ agent:
 
 There is no `enabled:` key. `mode: off` is the switch, and a second spelling of the same state
 is a way for the two to disagree.
+
+`mode`, `allow` and `regenerate` steer both the installed guard and the command. `unowned` and
+`entries` steer the command alone: the installed script lists exactly what the install wrote,
+so it has no unowned paths to decide about and no entries to declare. `regenerate` defaults to
+the fixed string `cairn agent install` rather than to the invocation that ran, because
+`agent verify` regenerates the script from the manifest and must arrive at the same bytes.
 
 `entries` takes the same `bundle`, `target`, `profile` and `destination` keys `agent.verify`
 does, and is only needed by a repository that has no `agent.install` block or that generates

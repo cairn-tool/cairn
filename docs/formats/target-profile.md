@@ -27,8 +27,10 @@ reach `dist` and the published package would silently lack it.
 
 `PROFILE_SCHEMA_VERSION` is a **hand-owned** version of the profile structure itself,
 independent of the package version, the contract version, the bundle version, and the test-file
-version. It is currently `"4"`. A profile whose `schemaVersion` does not match is reported as
+version. It is currently `"5"`. A profile whose `schemaVersion` does not match is reported as
 invalid.
+
+Version `"5"` added `paths.project.hooksFile`.
 
 ## Structure
 
@@ -105,7 +107,7 @@ Omitting them is what makes `agents/` and `hooks/hooks.json` load.
 ```ts
 interface PathProfile {
   plugin: { skills; hooks; hooksFile; agents: string | null; assets; mcp: string | null };
-  project: { skills; agents; rules; policies; mcp; assets };
+  project: { skills; agents; rules; policies; mcp; assets; hooksFile: string | null };
 }
 ```
 
@@ -116,6 +118,13 @@ rather than written somewhere the host will never look.
 `plugin.hooks` is the directory hook _scripts_ are written into; `plugin.hooksFile` is the hook
 _declaration_ document, relative to the plugin root. They are separate because a host may put
 the document at the plugin root while its scripts live in a subdirectory.
+
+`project.hooksFile` is the document a _project_ registers hooks in, or `null` when the host
+has none — Claude Code's `.claude/settings.json`, Cursor's `.cursor/hooks.json`. Bundles never
+render hooks there (`features.hooks.profiles` is plugin-only on every target); it is where
+[`agent install`](../commands/agent/install.md#the-edit-guard) registers the edit guard, and
+it is merged into rather than written. A profile that sets it must map `pre-tool-use` to a
+native event.
 
 `plugin.mcp` and `project.mcp` are the MCP destinations, and the renderer reads them. It used to
 hardcode `.mcp.json` with one special case for Cursor, which meant any new target emitted a path

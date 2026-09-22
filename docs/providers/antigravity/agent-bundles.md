@@ -45,6 +45,10 @@ in a workspace, or `~/.gemini/config/plugins/` globally. The project profile wri
 | `project` | mcp      | `.agents/mcp_config.json`  |
 | `project` | assets   | `assets/**`                |
 
+No workspace-level hook document is documented, so `paths.project.hooksFile` is `null` and a
+project-scope [`agent install`](../../commands/agent/install.md#the-edit-guard) registers the
+edit guard for no Antigravity surface (`AB810`).
+
 ## The manifest sits at the plugin root
 
 `manifest.directory` is `null`. Antigravity's `plugin.json` is at the plugin root rather than in

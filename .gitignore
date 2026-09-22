@@ -25,6 +25,7 @@ plugins/*/.install/
 
 # In-repo dogfood install: `cairn agent install --config cairn-verify.yml`
 .cairn-install.json
+.cairn-guard.sh
 .claude/
 .codex/
 .agents/

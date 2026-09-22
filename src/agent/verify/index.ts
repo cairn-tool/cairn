@@ -4,12 +4,15 @@ import { loadBundle } from "../parser.js";
 import { renderBundle } from "../render.js";
 import { installKey, readInstallDocument, planInstall } from "../install/index.js";
 import type { InstallDocument, InstallRecord } from "../install/index.js";
+import { guardSettingsFrom } from "../install/guard.js";
+import type { GuardSettings } from "../install/guard.js";
+import { resolveGuardConfig } from "../guard/resolve.js";
 import { CONVERSION_REPORT, diffOutput } from "../output.js";
 import type { ConversionProvenance } from "../output.js";
 import { PROFILE_SCHEMA_VERSION, compareSemver } from "../targets/schema.js";
 import { profileFor } from "../targets/index.js";
 import { packageName, packageVersion } from "../../version.js";
-import type { AgentDiagnostic, AgentProfile, AgentTarget } from "../types.js";
+import type { AgentDiagnostic, AgentProfile, AgentTarget, Artifact } from "../types.js";
 import type { VerifyConfig, VerifyEntry, VersionBound } from "./config.js";
 import { diffTree, treeMatches, walkRootsFor } from "./compare.js";
 
@@ -245,9 +248,19 @@ function gradeProvenance(provenance: VerifyProvenance): VerifyProvenance {
   return { ...provenance, status: isNewer(recorded) ? "newer" : "older" };
 }
 
-function verifyEntry(entry: VerifyEntry): {
+/** The edit guard's artifacts at one destination, to compare once for all entries there. */
+interface GuardCheck {
+  destination: string;
+  artifacts: Artifact[];
+}
+
+function verifyEntry(
+  entry: VerifyEntry,
+  guard: GuardSettings,
+): {
   report: VerifyEntryReport;
   diagnostics: AgentDiagnostic[];
+  guard?: GuardCheck;
 } {
   const diagnostics: AgentDiagnostic[] = [];
   const base = {
@@ -313,8 +326,23 @@ function verifyEntry(entry: VerifyEntry): {
     // The destination is expected to be occupied — that is the whole point —
     // so the occupancy check must not turn into an AB801 error here.
     force: true,
+    guard,
   });
   diagnostics.push(...plan.diagnostics.filter((item) => item.code !== "AB802"));
+
+  // The guard is the destination's, not this bundle's: sixteen entries sharing
+  // one root would otherwise report one drifted script sixteen times. It is
+  // set aside here and compared once per destination by `runVerify`. A hook
+  // document this bundle itself renders stays in the entry's own comparison.
+  const ownPaths = new Set(plan.record.files.map((file) => file.path));
+  const guardPaths = new Set((plan.guard?.paths ?? []).filter((file) => !ownPaths.has(file)));
+  const artifacts = plan.artifacts.filter((artifact) => !guardPaths.has(artifact.path));
+  const guardCheck: GuardCheck | undefined = plan.guard
+    ? {
+        destination: plan.destination,
+        artifacts: plan.artifacts.filter((artifact) => plan.guard!.paths.includes(artifact.path)),
+      }
+    : undefined;
 
   const prior = readInstallDocument(plan.destination || entry.destination);
   if (prior === "malformed")
@@ -359,8 +387,8 @@ function verifyEntry(entry: VerifyEntry): {
       ),
     );
 
-  const expectedPaths = plan.artifacts.map((artifact) => artifact.path);
-  const diff = diffTree(plan.destination || entry.destination, plan.artifacts, {
+  const expectedPaths = artifacts.map((artifact) => artifact.path);
+  const diff = diffTree(plan.destination || entry.destination, artifacts, {
     unmanaged: entry.unmanaged,
     priorInventory: inventory,
     ...(managedPaths ? { managedPaths } : {}),
@@ -377,7 +405,7 @@ function verifyEntry(entry: VerifyEntry): {
     ...base,
     profile: plan.profile,
     layout: entry.layout,
-    expected: plan.artifacts.length,
+    expected: artifacts.length,
     missing: diff.missing,
     changed: diff.changed,
     orphaned: diff.orphaned,
@@ -385,7 +413,49 @@ function verifyEntry(entry: VerifyEntry): {
     ...(provenance ? { provenance } : {}),
     ok: false,
   };
-  return { report: finish(report, diagnostics, entry), diagnostics };
+  return {
+    report: finish(report, diagnostics, entry),
+    diagnostics,
+    ...(guardCheck ? { guard: guardCheck } : {}),
+  };
+}
+
+/**
+ * Compares the edit guard at one destination and folds any drift into the
+ * first entry that reported that destination, so the counts and the verdict
+ * see it without every entry repeating it.
+ */
+function verifyGuard(
+  check: GuardCheck,
+  entry: VerifyEntryReport,
+  diagnostics: AgentDiagnostic[],
+): VerifyEntryReport {
+  const diff = diffTree(check.destination, check.artifacts, { unmanaged: "off" });
+  const where = { target: entry.target, profile: entry.profile };
+  for (const missing of diff.missing)
+    diagnostics.push(
+      error("AB402", `The edit guard is missing '${missing}'`, {
+        ...where,
+        path: missing,
+        remediation: "Run agent install again to regenerate the guard.",
+      }),
+    );
+  for (const changed of diff.changed)
+    diagnostics.push(
+      error("AB402", `The edit guard at '${changed}' is not what this install generates`, {
+        ...where,
+        path: changed,
+        remediation: "Run agent install again to regenerate the guard.",
+      }),
+    );
+  if (!diff.missing.length && !diff.changed.length) return entry;
+  return {
+    ...entry,
+    expected: entry.expected + check.artifacts.length,
+    missing: [...entry.missing, ...diff.missing],
+    changed: [...entry.changed, ...diff.changed],
+    ok: false,
+  };
 }
 
 /** Maps a comparison into findings and decides the entry's own verdict. */
@@ -457,12 +527,23 @@ export function runVerify(config: VerifyConfig): {
   const pins = evaluatePins(config, targets);
   diagnostics.push(...pins.diagnostics);
 
+  // The same settings the install used, from the same document, or the guard's
+  // bytes could not be reproduced.
+  const guard = guardSettingsFrom(resolveGuardConfig({ explicitPath: config.file }));
   const entries: VerifyEntryReport[] = [];
+  const guardChecks = new Map<string, { check: GuardCheck; index: number }>();
   for (const entry of config.entries) {
-    const result = verifyEntry(entry);
+    const result = verifyEntry(entry, guard);
     entries.push(result.report);
     diagnostics.push(...result.diagnostics);
+    if (result.guard && !guardChecks.has(result.guard.destination))
+      guardChecks.set(result.guard.destination, {
+        check: result.guard,
+        index: entries.length - 1,
+      });
   }
+  for (const { check, index } of guardChecks.values())
+    entries[index] = verifyGuard(check, entries[index], diagnostics);
 
   const counts = {
     entries: entries.length,

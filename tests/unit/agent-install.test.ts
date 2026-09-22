@@ -365,13 +365,16 @@ describe("a destination holding several installs", () => {
     const document = readInstallDocument(project);
     expect(document).not.toBe("malformed");
     if (document === "missing" || document === "malformed") return;
-    expect(document.installs).toHaveLength(2);
-    expect(document.installs.map((record) => record.target).sort()).toEqual([
-      "claude-code",
-      "codex",
-    ]);
+    // Two bundle records, plus the edit guard's record for the one target here
+    // with a project hook surface. Codex declares none.
+    const bundles = document.installs.filter((record) => record.kind !== "guard");
+    expect(bundles).toHaveLength(2);
+    expect(bundles.map((record) => record.target).sort()).toEqual(["claude-code", "codex"]);
+    expect(document.installs.filter((record) => record.kind === "guard")).toHaveLength(1);
     expect(
-      listInstalled(["claude-code", "codex"], { scope: "project", into: project }),
+      listInstalled(["claude-code", "codex"], { scope: "project", into: project }).filter(
+        (entry) => entry.kind !== "guard",
+      ),
     ).toHaveLength(2);
   });
 
@@ -393,7 +396,12 @@ describe("a destination holding several installs", () => {
       expect(fs.existsSync(path.join(project, file.path)), file.path).toBe(true);
     const document = readInstallDocument(project);
     if (document === "missing" || document === "malformed") throw new Error("no document");
-    expect(document.installs.map((record) => record.bundle.name)).toEqual(["alpha", "beta"]);
+    // The guard's record sorts first: a leading dot is not a legal bundle name.
+    expect(document.installs.map((record) => record.bundle.name)).toEqual([
+      ".cairn-guard",
+      "alpha",
+      "beta",
+    ]);
   });
 
   it("prunes only its own stale files when reinstalled beside a sibling", () => {
@@ -449,8 +457,12 @@ describe("a destination holding several installs", () => {
       expect(fs.existsSync(path.join(project, file.path)), file.path).toBe(true);
     const document = readInstallDocument(project);
     if (document === "missing" || document === "malformed") throw new Error("no document");
-    expect(document.installs).toHaveLength(1);
-    expect(document.installs[0].target).toBe("claude-code");
+    const bundles = document.installs.filter((record) => record.kind !== "guard");
+    expect(bundles).toHaveLength(1);
+    expect(bundles[0].target).toBe("claude-code");
+    // The guard is rebuilt from the survivor rather than left describing both.
+    expect(document.installs.filter((record) => record.kind === "guard")).toHaveLength(1);
+    expect(fs.existsSync(path.join(project, ".cairn-guard.sh"))).toBe(true);
   });
 
   it("deletes the manifest when the last record is removed", () => {
@@ -485,8 +497,14 @@ describe("a destination holding several installs", () => {
   it("writes the legacy shape at one record and the installs shape at two", () => {
     const project = workspace();
     const source = bundle();
+    // A project-scope destination always carries the guard's record beside the
+    // bundle's, so the single-record shape is reached with the guard off.
     commitInstall(
-      planInstall(loadBundle(source), "claude-code", { scope: "project", into: project }),
+      planInstall(loadBundle(source), "claude-code", {
+        scope: "project",
+        into: project,
+        guard: { mode: "off", allow: [], regenerate: "cairn agent install" },
+      }),
     );
     const single = JSON.parse(
       fs.readFileSync(path.join(project, INSTALL_MANIFEST), "utf8"),

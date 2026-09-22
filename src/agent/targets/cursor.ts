@@ -43,6 +43,9 @@ export const cursorProfile: TargetProfile = {
       policies: ".cursor/hooks.json",
       mcp: ".cursor/mcp.json",
       assets: "assets",
+      // The same document `policies` renders into; the edit guard's handler is
+      // merged in beside whatever a bundle's override put there.
+      hooksFile: ".cursor/hooks.json",
     },
   },
   naming: {

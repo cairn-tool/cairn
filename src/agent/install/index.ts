@@ -24,6 +24,9 @@ import {
 } from "../package/index.js";
 import { placeSymlink, writeArtifactsAtomically } from "../writer.js";
 import { packageName, packageVersion } from "../../version.js";
+import { DEFAULT_GUARD_SETTINGS, isGuardRecord, planGuard, retireGuard } from "./guard.js";
+import type { GuardDraft, GuardSettings } from "./guard.js";
+import { GUARD_RECORD_NAME } from "./hook-document.js";
 
 export const INSTALL_MANIFEST = ".cairn-install.json";
 
@@ -54,6 +57,8 @@ export type InstallMode = "copy" | "link";
 export interface InstallEntry {
   name: string;
   version: string;
+  /** Present for a collection or the edit guard's own record; absent means a bundle. */
+  kind?: "collection" | "guard";
   target: AgentTarget;
   profile: AgentProfile;
   scope: InstallScope;
@@ -115,10 +120,14 @@ export function registeredPluginKeys(registration: InstallRegistration): string[
  */
 export interface InstallRecord {
   /**
-   * What was installed here: a single bundle, or a collection of them. Absent
-   * means `"bundle"`, so every manifest written before collections still parses.
+   * What was installed here: a single bundle, a collection of them, or the edit
+   * guard a project-scope destination carries. Absent means `"bundle"`, so every
+   * manifest written before collections still parses. An unknown kind makes the
+   * document `malformed`: a reader that cannot tell what a record is must not
+   * uninstall it as if it were a bundle -- a guard record's files include the
+   * user's own `.claude/settings.json`.
    */
-  kind?: "bundle" | "collection";
+  kind?: "bundle" | "collection" | "guard";
   /**
    * The installed unit's identity — a bundle's, or a collection's. Uninstall,
    * the occupied-destination check, and `agent installed` all key off this, so
@@ -135,8 +144,20 @@ export interface InstallRecord {
   mode: InstallMode;
   destination: string;
   files: InstallInventoryEntry[];
+  /**
+   * The bundle root, POSIX, relative to `destination`. Written for bundle
+   * records so a later run can point an editor at the source of a file whose
+   * bundle is not in that run's batch. Absent in manifests written before it.
+   */
+  source?: string;
   materialized?: string;
   registration?: InstallRegistration;
+  /**
+   * Guard records only: whether the hook document existed before the guard was
+   * registered in it. Carried forward run to run, and what decides between
+   * stripping the handler and deleting the file when the guard goes.
+   */
+  hookDocument?: { created: boolean };
 }
 
 /**
@@ -232,6 +253,13 @@ export interface InstallPlan {
   diagnostics: AgentDiagnostic[];
   register: boolean;
   settings?: InstallRegistration;
+  /**
+   * The edit guard's own artifacts within `artifacts`, when the destination
+   * carries one. They are written and checked with everything else; this names
+   * them for the callers that must tell them apart -- `--link` copies rather
+   * than symlinks them, and `agent verify` compares them once per destination.
+   */
+  guard?: { paths: string[] };
 }
 
 function sha256(content: Buffer): string {
@@ -269,6 +297,7 @@ function isResolved(value: ResolvedInstall | AgentDiagnostic): value is Resolved
 
 function toEntry(manifest: InstallRecord): InstallEntry {
   return {
+    ...(manifest.kind === "collection" || manifest.kind === "guard" ? { kind: manifest.kind } : {}),
     name: manifest.bundle.name,
     version: manifest.bundle.version,
     target: manifest.target,
@@ -421,6 +450,13 @@ function parseRecord(value: unknown): InstallRecord | null {
   const bundle = doc.bundle as Record<string, unknown> | undefined;
   const files = doc.files;
   if (
+    doc.kind !== undefined &&
+    doc.kind !== "bundle" &&
+    doc.kind !== "collection" &&
+    doc.kind !== "guard"
+  )
+    return null;
+  if (
     !bundle ||
     typeof bundle.name !== "string" ||
     typeof bundle.version !== "string" ||
@@ -490,8 +526,9 @@ function parseRecord(value: unknown): InstallRecord | null {
             : [];
         })
       : undefined;
+  const hookDocument = doc.hookDocument as Record<string, unknown> | undefined;
   return {
-    ...(doc.kind === "collection" ? { kind: "collection" as const } : {}),
+    ...(doc.kind === "collection" || doc.kind === "guard" ? { kind: doc.kind } : {}),
     bundle: { name: bundle.name, version: bundle.version },
     ...(plugins ? { collection: { plugins } } : {}),
     target: doc.target as AgentTarget,
@@ -501,8 +538,12 @@ function parseRecord(value: unknown): InstallRecord | null {
     mode: doc.mode as InstallMode,
     destination: doc.destination,
     files: inventory,
+    ...(typeof doc.source === "string" ? { source: doc.source } : {}),
     ...(typeof doc.materialized === "string" ? { materialized: doc.materialized } : {}),
     ...(parsedRegistration ? { registration: parsedRegistration } : {}),
+    ...(typeof hookDocument?.created === "boolean"
+      ? { hookDocument: { created: hookDocument.created } }
+      : {}),
   };
 }
 
@@ -547,6 +588,8 @@ function parseDocument(value: unknown): InstallDocument | null {
  * mis-remove — but makes `agent install --force` overwrite the file and orphan
  * every sibling's inventory. Keeping the old shape for the single-record case
  * confines that hazard to destinations that could not have existed before.
+ * A project-scope destination always has at least two records now -- a bundle
+ * and its guard -- so the single-record shape is in practice a user-scope one.
  */
 function serializeDocument(document: InstallDocument): unknown {
   const [only] = document.installs;
@@ -646,6 +689,10 @@ function assessDestination(
   const owners = new Map<string, { record: InstallRecord; sha256: string }>();
   for (const record of records) {
     if (installKey(record) === key) continue;
+    // A guard record's hook document is composed from whatever a bundle renders
+    // there, so its recorded sha describes bytes a bundle never produces. It is
+    // rebuilt by every run, so it never owns anything against a sibling.
+    if (isGuardRecord(record)) continue;
     for (const file of record.files) owners.set(file.path, { record, sha256: file.sha256 });
   }
   const result: Occupancy = { conflicts: [], ...(mine ? { mine } : {}) };
@@ -1095,6 +1142,11 @@ export interface PlanInstallOptions extends InstallContext {
   link?: boolean;
   register?: boolean;
   force?: boolean;
+  /**
+   * The edit guard a project-scope destination receives. Absent means the
+   * defaults -- the guard is on unless `agent.guard.mode: off` says otherwise.
+   */
+  guard?: GuardSettings;
 }
 
 /**
@@ -1281,6 +1333,7 @@ function draftInstall(
       mode,
       destination,
       files: inventoryOf(built.artifacts),
+      source: path.relative(destination, bundle.root).split(path.sep).join("/") || ".",
       ...(materialized ? { materialized } : {}),
       ...(register && settings ? { registration: settings } : {}),
     },
@@ -1303,7 +1356,7 @@ function draftInstall(
 function finishGroup(
   destination: string,
   drafts: DraftInstall[],
-  options: { force?: boolean },
+  options: { force?: boolean; guard?: GuardSettings },
 ): { plans: InstallPlan[]; diagnostics: AgentDiagnostic[] } {
   // Read once per group: every plan must carry the identical snapshot.
   const prior = existsAt(destination) ? readInstallDocument(destination) : "missing";
@@ -1314,15 +1367,76 @@ function finishGroup(
     return left < right ? -1 : left > right ? 1 : 0;
   });
   const batchKeys = new Set(ordered.map((draft) => installKey(draft.record)));
+  // Prior guard records are dropped here and rebuilt below: they describe the
+  // destination as it was, and the guard must describe it as it will be.
+  const bundleRecords = [
+    ...priorRecords.filter(
+      (record) => !isGuardRecord(record) && !batchKeys.has(installKey(record)),
+    ),
+    ...ordered.map((draft) => draft.record),
+  ];
+
+  const diagnostics: AgentDiagnostic[] = [];
+  const settings = options.guard ?? DEFAULT_GUARD_SETTINGS;
+  const guarded =
+    settings.mode !== "off" &&
+    ordered.some((draft) => draft.scope === "project" && draft.layout === "merge");
+  const guard = guarded
+    ? planGuard({
+        destination,
+        records: bundleRecords,
+        drafts: ordered.flatMap((draft): GuardDraft[] =>
+          draft.bundle
+            ? [
+                {
+                  target: draft.target,
+                  bundleName: draft.record.bundle.name,
+                  bundleRoot: draft.bundle.root,
+                  payload: draft.payload,
+                },
+              ]
+            : [],
+        ),
+        priorGuards: priorRecords.filter(isGuardRecord),
+        settings,
+        version: packageVersion,
+      })
+    : undefined;
+  if (guard) {
+    diagnostics.push(...guard.diagnostics);
+    // A bundle that rendered the hook document now renders it with the guard's
+    // handler in it. Its inventory was taken from the bare bytes and must follow,
+    // or the record describes a sha that never lands.
+    for (const draft of ordered) {
+      if (!draft.payload.some((artifact) => guard.composed.has(artifact.path))) continue;
+      draft.payload = draft.payload.map((artifact) => {
+        const content = guard.composed.get(artifact.path);
+        return content ? { ...artifact, content } : artifact;
+      });
+      draft.record = { ...draft.record, files: inventoryOf(draft.payload) };
+    }
+  }
+  // A prior bundle outside the batch that claims the hook document now has the
+  // composed bytes on disk; its recorded sha follows so the manifest stays true.
+  // A copy, not a mutation: `prior` is the snapshot the plans carry.
+  const carried = bundleRecords
+    .filter((record) => !batchKeys.has(installKey(record)))
+    .map((record) => ({
+      ...record,
+      files: record.files.map((file) => {
+        const content = guard?.composed.get(file.path);
+        return content ? { ...file, sha256: sha256(content) } : file;
+      }),
+    }));
   const document: InstallDocument = {
     generator: currentGenerator(),
     installs: sortRecords([
-      ...priorRecords.filter((record) => !batchKeys.has(installKey(record))),
+      ...carried,
       ...ordered.map((draft) => draft.record),
+      ...(guard?.records ?? []),
     ]),
   };
-
-  const diagnostics: AgentDiagnostic[] = [];
+  const guardArtifacts = guard?.artifacts ?? [];
   const claimed = new Map<string, { draft: DraftInstall; content: Buffer }>();
   const plans: InstallPlan[] = [];
   for (const draft of ordered) {
@@ -1389,6 +1503,11 @@ function finishGroup(
       else if (!other) claimed.set(artifact.path, { draft, content: artifact.content });
     }
 
+    // The guard's artifacts ride along with every plan at the destination, the
+    // way the manifest does: byte-identical, and deduplicated against a payload
+    // that already renders the hook document.
+    const own = new Set(draft.payload.map((artifact) => artifact.path));
+    const extra = guardArtifacts.filter((artifact) => !own.has(artifact.path));
     plans.push({
       ...(draft.bundle ? { bundle: draft.bundle } : {}),
       target: draft.target,
@@ -1397,13 +1516,16 @@ function finishGroup(
       layout: draft.layout,
       mode: draft.mode,
       destination,
-      artifacts: [...draft.payload, manifestArtifact(document)].sort(byPath),
+      artifacts: [...draft.payload, ...extra, manifestArtifact(document)].sort(byPath),
       record: draft.record,
       document,
       prior,
       diagnostics: [...draft.diagnostics, ...findings],
       register: draft.register,
       ...(draft.settings ? { settings: draft.settings } : {}),
+      ...(guardArtifacts.length
+        ? { guard: { paths: guardArtifacts.map((artifact) => artifact.path) } }
+        : {}),
     });
   }
   return { plans, diagnostics };
@@ -1659,18 +1781,21 @@ function writeLink(plan: InstallPlan): void {
   if (!materialized) throw new Error("Link install is missing a materialized tree");
   writeArtifactsAtomically(materialized, plan.artifacts, { managedRoots: ["."], force: true });
   if (plan.layout === "merge") {
+    // The manifest and the guard are the destination's, not this bundle's: a
+    // symlink into one bundle's cache would be replaced by the next bundle's.
+    const loose = new Set([INSTALL_MANIFEST, ...(plan.guard?.paths ?? [])]);
     for (const artifact of plan.artifacts) {
-      if (artifact.path === INSTALL_MANIFEST) continue;
+      if (loose.has(artifact.path)) continue;
       placeSymlink(
         path.join(plan.destination, artifact.path),
         path.join(materialized, artifact.path),
       );
     }
-    const manifest = plan.artifacts.find((artifact) => artifact.path === INSTALL_MANIFEST);
-    if (manifest)
-      writeArtifactsAtomically(plan.destination, [manifest], {
+    const copies = plan.artifacts.filter((artifact) => loose.has(artifact.path));
+    if (copies.length)
+      writeArtifactsAtomically(plan.destination, copies, {
         managedRoots: [],
-        looseFiles: [INSTALL_MANIFEST],
+        looseFiles: copies.map((artifact) => artifact.path),
         force: true,
       });
   } else placeSymlink(plan.destination, materialized);
@@ -1719,8 +1844,26 @@ function restoreRegistrationRecordAfterFailure(plan: InstallPlan): void {
 }
 
 /** Writes a planned install. Caller must have already decided the run is not blocked. */
+/** The paths every bundle or collection record in `document` claims. */
+function bundleClaims(document: InstallDocument): Set<string> {
+  return new Set(
+    document.installs
+      .filter((record) => !isGuardRecord(record))
+      .flatMap((record) => record.files.map((file) => file.path)),
+  );
+}
+
 export function commitInstall(plan: InstallPlan): void {
   retirePrior(plan);
+  // Idempotent, so every plan at the destination may run it against the same
+  // snapshot; only the first has anything to do.
+  if (plan.prior !== "missing" && plan.prior !== "malformed")
+    retireGuard(
+      plan.destination,
+      plan.prior.installs.filter(isGuardRecord),
+      plan.document.installs.filter(isGuardRecord),
+      bundleClaims(plan.document),
+    );
   if (plan.mode === "link") writeLink(plan);
   else writeCopy(plan);
   if (plan.register && plan.settings)
@@ -1795,8 +1938,25 @@ export function planUninstall(
       // destination records several installs: matching on the name alone would
       // remove a different target's inventory from the same document.
       for (const record of read.installs)
-        if (record.bundle.name === name && record.target === target)
-          matches.push({ ...candidate, manifest: record });
+        if (record.bundle.name === name && record.target === target) {
+          // The guard's files include a hook document the user owns. Removing
+          // the record wholesale would delete it; the guard goes through
+          // agent.guard.mode instead, and an older cairn would not refuse this.
+          if (isGuardRecord(record))
+            diagnostics.push(
+              error(
+                "AB813",
+                `'${GUARD_RECORD_NAME}' is the edit guard, not a bundle, and cannot be uninstalled by name`,
+                {
+                  path: candidate.destination,
+                  target,
+                  remediation:
+                    "Set agent.guard.mode: off and run agent install again to remove it.",
+                },
+              ),
+            );
+          else matches.push({ ...candidate, manifest: record });
+        }
   }
   if (diagnostics.length)
     return { name, target, destination: "", manifest: null, diagnostics, missing: false };
@@ -1868,7 +2028,10 @@ function removePath(file: string): void {
   if (existsAt(file)) fs.rmSync(file, { recursive: true, force: true });
 }
 
-export function commitUninstall(plan: UninstallPlan): void {
+export function commitUninstall(
+  plan: UninstallPlan,
+  options: { guard?: GuardSettings } = {},
+): void {
   const record = plan.manifest;
   if (!record) return;
   const destination = plan.destination;
@@ -1877,12 +2040,19 @@ export function commitUninstall(plan: UninstallPlan): void {
   if (record.registration) revertRegistration(record.registration, destination);
   const document = readInstallDocument(destination);
   const key = installKey(record);
-  const remaining =
+  const survivors =
     document === "missing" || document === "malformed"
       ? []
       : document.installs.filter((entry) => installKey(entry) !== key);
-  // A path a sibling still owns is not this install's to remove.
-  const claimed = new Set(remaining.flatMap((entry) => entry.files.map((file) => file.path)));
+  // The guard describes the destination's bundles, so it is rebuilt from the
+  // survivors -- or retired with the last of them. It never counts as a
+  // survivor itself, or a destination emptied of bundles would keep a guard
+  // that guards nothing and a manifest that records only it.
+  const remaining = survivors.filter((entry) => !isGuardRecord(entry));
+  const priorGuards = survivors.filter(isGuardRecord);
+  // A path a sibling still owns is not this install's to remove. The guard's
+  // claim counts here: a hook document it registered in stays for it to recompose.
+  const claimed = new Set(survivors.flatMap((entry) => entry.files.map((file) => file.path)));
   const listing = fs.lstatSync(destination, { throwIfNoEntry: false });
   if (listing?.isSymbolicLink() && !remaining.length) removePath(destination);
   else {
@@ -1891,11 +2061,36 @@ export function commitUninstall(plan: UninstallPlan): void {
       removePath(path.join(destination, file.path));
       pruneEmptyAncestors(destination, file.path);
     }
+    const settings = options.guard ?? DEFAULT_GUARD_SETTINGS;
+    const guard =
+      remaining.length && settings.mode !== "off" && record.layout === "merge"
+        ? planGuard({
+            destination,
+            records: remaining,
+            drafts: [],
+            priorGuards,
+            settings,
+            version: packageVersion,
+          })
+        : undefined;
+    const bundleClaimed = new Set(
+      remaining.flatMap((entry) => entry.files.map((file) => file.path)),
+    );
+    retireGuard(destination, priorGuards, guard?.records ?? [], bundleClaimed);
+    if (guard?.artifacts.length)
+      writeArtifactsAtomically(destination, guard.artifacts, {
+        managedRoots: [],
+        looseFiles: guard.artifacts.map((artifact) => artifact.path),
+        force: true,
+      });
     const manifestFile = installManifestIn(destination);
     if (remaining.length) {
       writeJsonAtomically(
         path.join(destination, INSTALL_MANIFEST),
-        serializeDocument({ generator: currentGenerator(), installs: sortRecords(remaining) }),
+        serializeDocument({
+          generator: currentGenerator(),
+          installs: sortRecords([...remaining, ...(guard?.records ?? [])]),
+        }),
       );
       // The survivors are rewritten under the current name, so a legacy-named
       // file left beside it would read as `malformed` from here on.

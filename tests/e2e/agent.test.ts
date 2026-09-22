@@ -310,7 +310,7 @@ describe("agent CLI", () => {
     const result = await run("agent", "specs", "--target", "all", "-fj");
     expect(result.exitCode).toBe(0);
     const specs = JSON.parse(result.stdout).specs;
-    expect(specs.schemaVersion).toBe("4");
+    expect(specs.schemaVersion).toBe("5");
     expect(Object.keys(specs.targets)).toEqual([
       "claude-code",
       "codex",
@@ -1562,8 +1562,14 @@ describe("agent install", () => {
       project,
       "-fj",
     );
-    const listing = JSON.parse(listed.stdout) as { install: { installs: unknown[] } };
-    expect(listing.install.installs).toHaveLength(2);
+    const listing = JSON.parse(listed.stdout) as {
+      install: { installs: Array<{ name: string; kind?: string }> };
+    };
+    // Two bundle records, plus the edit guard's record for claude-code -- the
+    // one target here with a project hook surface.
+    expect(
+      listing.install.installs.map((entry) => `${entry.kind ?? "bundle"}:${entry.name}`),
+    ).toEqual(["guard:.cairn-guard", "bundle:hello", "bundle:hello"]);
 
     // Removing one leaves the other's tree entirely alone.
     const removed = await run(

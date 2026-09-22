@@ -62,6 +62,8 @@ export const opencodeProfile: TargetProfile = {
       policies: null,
       mcp: "opencode.json",
       assets: "assets",
+      // Hooks are TypeScript plugin callbacks; there is no hook document at all.
+      hooksFile: null,
     },
   },
   naming: {

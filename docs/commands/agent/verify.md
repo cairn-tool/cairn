@@ -124,6 +124,15 @@ is drift. `AGENTS.md` is the one that catches people out: it is Codex's and Open
 surface at project scope. **A repository that hand-maintains its own `AGENTS.md` must not
 declare an entry whose target claims it.**
 
+### The edit guard is compared once per destination
+
+`.cairn-guard.sh` and the hook documents it is registered in are regenerated from the
+manifest and the `agent.guard` block — the same document this command reads — and compared by
+bytes and mode. They belong to the destination rather than to any one entry, so a root that
+sixteen entries share reports a drifted guard once, folded into the first entry naming that
+destination, not sixteen times. A hook document a bundle's `policies` renders stays in that
+bundle's own comparison.
+
 ### The install manifest is bookkeeping
 
 `.cairn-install.json` is never compared by bytes — it embeds the generator version, so doing
