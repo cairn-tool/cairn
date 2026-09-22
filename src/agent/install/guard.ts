@@ -132,9 +132,14 @@ function inventoryOf(artifacts: Artifact[]): InstallInventoryEntry[] {
     .sort((a, b) => byBytes(a.path, b.path));
 }
 
+/**
+ * The file's bytes, or `undefined` when there is no regular file there. One
+ * read, no stat before it: a directory or a missing path throws, which is the
+ * answer, and a check-then-read would be a race.
+ */
 function readIfPresent(file: string): Buffer | undefined {
   try {
-    return fs.statSync(file).isFile() ? fs.readFileSync(file) : undefined;
+    return fs.readFileSync(file);
   } catch {
     return undefined;
   }

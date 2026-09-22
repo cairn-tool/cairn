@@ -193,8 +193,13 @@ describe("the installed edit guard", () => {
     const result = await run(root, "agent", "install", "--config", ".cairn.yml", "-fj");
     expect(result.exitCode).toBe(0);
     const script = path.join(root, ".cairn-guard.sh");
-    expect(fs.statSync(script).mode & 0o777).toBe(0o755);
-    expect(fs.readFileSync(script, "utf8").startsWith("#!/bin/sh\n")).toBe(true);
+    const handle = fs.openSync(script, "r");
+    try {
+      expect(fs.fstatSync(handle).mode & 0o777).toBe(0o755);
+      expect(fs.readFileSync(handle, "utf8").startsWith("#!/bin/sh\n")).toBe(true);
+    } finally {
+      fs.closeSync(handle);
+    }
 
     // Claude Code: one nested handler in settings.json.
     const claude = preToolUse(root) as Array<Record<string, unknown>>;
