@@ -111,7 +111,7 @@ machine that never installed a bundle into a project runs nothing.
 | [`cairn-archive`](plugins/cairn-archive.md)   | `archive run\|status\|list\|extract\|verify\|migrate`                    | [cairn-archive](plugins/cairn-archive.md)   |
 | [`cairn-agent`](plugins/cairn-agent.md)       | The 18 `agent` commands: authoring, migrating, testing, publishing       | [cairn-agent](plugins/cairn-agent.md)       |
 | [`cairn-jira`](plugins/cairn-jira.md)         | `jira adf` in both directions, and what each conversion costs            | [cairn-jira](plugins/cairn-jira.md)         |
-| [`cairn-pdf`](plugins/cairn-pdf.md)           | `pdf inspect\|text\|outline\|validate\|to-markdown`                      | [cairn-pdf](plugins/cairn-pdf.md)           |
+| [`cairn-pdf`](plugins/cairn-pdf.md)           | The 10 `pdf` commands: text, Markdown, images, renders, and OCR          | [cairn-pdf](plugins/cairn-pdf.md)           |
 | [`cairn-qa`](plugins/cairn-qa.md)             | `qa run\|list\|summary`, the case-file schema, and the run-record shapes | [cairn-qa](plugins/cairn-qa.md)             |
 
 Each carries model-invoked skills for the workflows and explicit skills that appear as slash

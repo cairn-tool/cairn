@@ -24,7 +24,7 @@ cases:
         - path: .claude-plugin/plugin.json
           contains:
             name: cairn-pdf
-            version: 1.0.0
+            version: 1.1.0
 
   # `agents` and `hooks` are implied manifest fields. Declaring `agents` fails
   # the whole manifest; declaring `hooks` drops the plugin's hooks. Neither is
@@ -50,9 +50,10 @@ cases:
           mode: "0644"
           excludes: ["\ndisable-model-invocation: true\n"]
 
-  # The five facts a caller gets wrong without reading the skill: the command
-  # path is two tokens, the streams are split, exit 0 is not lossless, there is
-  # no OCR, and nothing here writes a PDF.
+  # The facts a caller gets wrong without reading the skill: the command path is
+  # two tokens, the streams are split, exit 0 is not lossless, recognised text
+  # is marked as recognised, boxes are bottom-left user space, and nothing here
+  # writes a PDF.
   - name: the-skill-pins-the-load-bearing-facts
     targets: [claude-code]
     profiles: [plugin]
@@ -64,7 +65,9 @@ cases:
             - "cairn pdf to-markdown"
             - "Diagnostics are on stderr"
             - "does not mean lossless"
-            - "no OCR"
+            - "marked as recognised"
+            - "cairn pdf ocr"
+            - "origin at the **bottom left**"
             - "never writes a PDF"
             # The MCP tools are confined to the served root and none of them
             # write, so the skill must not imply either is otherwise.

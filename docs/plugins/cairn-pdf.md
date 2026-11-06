@@ -1,8 +1,8 @@
 # `cairn-pdf`
 
-Source: `plugins/cairn-pdf/`. Bundle `schemaVersion: "2"`, version `1.0.0`.
+Source: `plugins/cairn-pdf/`. Bundle `schemaVersion: "2"`, version `1.1.0`.
 
-Wraps the `pdf` toolset: extracting a PDF's text layer, reading its outline, checking its structural integrity, and converting its content to Markdown, reporting per construct what was inferred and what was lost.
+Wraps the `pdf` toolset: extracting a PDF's text layer, reading its outline, checking its structural integrity, converting its content to Markdown, pulling out its images, rendering pages and regions to PNG, and recognising scanned pages, reporting per construct what was inferred and what was lost.
 
 See [the `pdf` command listing](../commands.md#pdf-commands) for the commands this skill invokes,
 and [Cairn's own plugins](../plugins.md) for installing, building, and versioning all eight.
@@ -35,8 +35,9 @@ The body leads with `pdf inspect` because two fields decide what every other com
 whether the document has a text layer at all, and whether its structure is declared or inferred. The
 three failure modes it exists to prevent are an assistant reporting an inferred heading structure as
 the document's own, hand-rebuilding a table the tool deliberately refused to reconstruct, and
-casting about for another command when the real answer is "this page is an image and there is no
-OCR here".
+presenting recognised text as though the document carried it. A page with no text layer is answered
+by `pdf ocr` when Tesseract is installed, and the skill insists the result stays marked as
+recognised, with its confidence, wherever it goes.
 
 Reference sidecar: `reference/fidelity.md`, loaded only when the body points at it. It maps what
 survives each of the two conversion paths with the code that reports it, which is what turns "some
@@ -66,7 +67,8 @@ surface is confined to `--root`, while a PDF handed to the CLI has nothing to do
 and it is settled by accepting the confinement rather than adding a second boundary. A PDF must live
 under the served root to be readable there; anything outside it, and anything that writes, stays on
 the CLI. Extraction is deliberately unreachable over MCP: `list_pdf_attachments` inventories and
-there is no tool that writes a file.
+there is no tool that writes a file — which is also why `pdf images`, `pdf render`, and `pdf ocr`,
+all of which write, are CLI-only.
 
 ## Assets
 
@@ -85,9 +87,10 @@ rather than in a bundle-wide asset shared by nobody.
 | `the-skill-pins-the-load-bearing-facts` |
 | `the-fidelity-reference-ships`          |
 
-`the-skill-pins-the-load-bearing-facts` asserts the five things a caller gets wrong without reading
-the skill: that the command path is two tokens, that the streams are split, that exit `0` is not
-lossless, that there is no OCR, and that nothing here writes a PDF. Each is a sentence an edit could
+`the-skill-pins-the-load-bearing-facts` asserts the things a caller gets wrong without reading the
+skill: that the command path is two tokens, that the streams are split, that exit `0` is not
+lossless, that recognised text is marked as recognised, that every box has its origin at the bottom
+left, and that nothing here writes a PDF. Each is a sentence an edit could
 plausibly drop, and each would produce confidently wrong behavior if it did.
 
 These are model-free: every expectation is evaluated against the same in-memory render
