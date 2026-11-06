@@ -51,9 +51,11 @@ The same file and the same arguments give **the same PNG bytes**. Two things mak
   filter choices and a fixed zlib level, and no timestamp, gamma, or text chunk — rather than by
   the canvas's own encoder.
 
-That holds for a given installation. Byte identity across operating systems, CPU architectures, or
-zlib builds is not claimed: rasterization can differ in the last bit of an antialiased edge between
-Skia builds, and deflate output can differ between zlib versions. `render.sha256` is reported so a
+That holds for a given installation — the same Node version, canvas binary, and pdfjs-dist. Byte
+identity across operating systems, CPU architectures, Node major versions, or zlib builds is not
+claimed: antialiased edges can differ slightly between builds (measured: the same chart rendered
+under Node 22 and Node 26 differed in 0.14% of channel values, all on edges), and deflate output can
+differ between zlib versions. `render.sha256` is reported so a
 receipt can record what was produced.
 
 ## The renderer
@@ -63,7 +65,8 @@ Skia binding with **prebuilt binaries** for macOS, Linux (glibc and musl), and W
 arm64. It has no install script and compiles nothing. It is the canvas pdf.js itself names as its
 Node dependency, and cairn declares it as an **optional** dependency: about 125 KB of JavaScript plus
 one 26–34 MB platform binary. Only `pdf render` and `pdf ocr` load it, on demand, so no other command
-pays for it.
+pays for it. It is always loaded **through pdfjs-dist's own resolution**, so pdf.js and cairn share one
+copy even when npm installs two: two native canvas modules in one process crash it.
 
 When it is missing — installed with `--omit=optional`, or on a platform with no prebuilt binary —
 the command exits 1 with `AP450` and says how to install it.

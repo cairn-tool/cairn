@@ -39,10 +39,59 @@ export class RendererUnavailable extends Error {
 
 let canvasModule: any;
 
+/**
+ * Loads `@napi-rs/canvas` from the first anchor that can resolve it.
+ *
+ * Exported with its anchors as a parameter so the resolution order can be tested
+ * against a constructed tree; {@link loadCanvas} is the only production caller.
+ */
+export function resolveCanvas(anchors: string[]): any {
+  let first: unknown;
+  for (const anchor of anchors) {
+    try {
+      return createRequire(anchor)("@napi-rs/canvas");
+    } catch (error) {
+      first ??= error;
+    }
+  }
+  throw first ?? new Error("no anchor to resolve @napi-rs/canvas from");
+}
+
+/**
+ * Where the canvas is resolved from, in order: pdfjs-dist's package directory,
+ * then `from` (cairn's own module). `from` is a parameter only so a test can
+ * root the lookup in a constructed `node_modules` tree.
+ */
+export function canvasAnchors(from: string = import.meta.url): string[] {
+  const anchors: string[] = [];
+  try {
+    anchors.push(createRequire(from).resolve("pdfjs-dist/package.json"));
+  } catch {
+    // pdfjs-dist missing is reported by the document loader; fall through to cairn's copy.
+  }
+  anchors.push(from);
+  return anchors;
+}
+
+/**
+ * The canvas, resolved **from pdfjs-dist's own directory** first and from
+ * cairn's only as a fallback.
+ *
+ * pdf.js loads `@napi-rs/canvas` itself, at import, with a `createRequire` rooted
+ * in its own build file — for the `DOMMatrix` and `Path2D` polyfills and for
+ * every scratch canvas it makes while drawing. If cairn resolved its own copy
+ * and npm had installed a second one nested under pdfjs-dist (which a fresh
+ * install does whenever the two version ranges pick different releases), the
+ * process would hold two native Skia modules, and pdf.js would draw its `Path2D`
+ * from one into a context from the other. That is a segfault, not an error:
+ * cairn 6.4.0 exited 139 on every `pdf render` from a global install. Resolving
+ * through pdfjs-dist makes the two always the same module, whatever npm decided;
+ * `tests/unit/pdf-canvas.test.ts` holds that in place.
+ */
 export function loadCanvas(): any {
   if (canvasModule) return canvasModule;
   try {
-    canvasModule = createRequire(import.meta.url)("@napi-rs/canvas");
+    canvasModule = resolveCanvas(canvasAnchors());
   } catch (error) {
     throw new RendererUnavailable((error as Error).message.split("\n")[0]);
   }

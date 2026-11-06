@@ -799,6 +799,12 @@ outputTokens}` on a `bubbleId:` record is a real per-request figure with no dist
   exclusively owns because pdf.js transfers what it is given, and Node `Buffer`s under 8 KiB are
   views into a shared pool. pdf.js also **refuses a `Buffer` outright**, so `withDocument`
   normalizes.
+- **`pdfjs-dist` is a tilde range (`~6.3.289`), deliberately not a caret.** CI tests the locked
+  version, but a published install takes whatever the range allows, and pdf.js minors change things
+  cairn depends on — the canvas version it requires, and the English warning strings `pdf validate`
+  matches. A tilde keeps users on the minor CI tested; moving to a new minor is a deliberate bump
+  after running the suite against it (6.5.438 passed the full suite with the canvas fix, but was five
+  days old when this was decided).
 - **Import pdf.js as `pdfjs-dist/legacy/build/pdf.mjs`.** The package-root entry warns to use the
   legacy build in Node and then throws `hashOriginal.toHex is not a function`: it assumes a V8 with
   `Uint8Array.prototype.toHex`, which Node 22 and 23 lack.
@@ -856,9 +862,17 @@ outputTokens}` on a `bubbleId:` record is a real per-request figure with no dist
   `pdf ocr` reports word boxes in it, so a box from one feeds the next. `render` converts through
   pdf.js's own viewport (`convertToViewportPoint`/`convertToPdfPoint`) — never a hand-rolled
   rotation — and reports the box it actually drew after snapping outward to whole pixels.
-- **`@napi-rs/canvas` is an optional dependency, loaded only by `src/pdf/render.ts`.** pdf.js names
-  it as its own Node optional dependency, so it was already in the tree; cairn declares it (exact
-  version) rather than relying on hoisting. No other command may import it: the platform binary is
+- **`@napi-rs/canvas` is an optional dependency, loaded only by `src/pdf/render.ts`, and always the
+  copy pdfjs-dist resolves.** pdf.js `require`s it itself at import (from its own build file) for its
+  `DOMMatrix`/`Path2D` polyfills and scratch canvases, so cairn must draw with the _same_ module:
+  `loadCanvas()` resolves it from pdfjs-dist's package directory first and from cairn's only as a
+  fallback. 6.4.0 resolved its own copy, pinned exactly at `1.0.8`; a fresh global install (no
+  lockfile) took pdfjs-dist 6.5.438, which wants `^1.0.13`, so npm nested `1.1.0` under pdfjs-dist,
+  two native Skia modules met in one process, and every `pdf render`/`pdf ocr` exited 139. The
+  dependency is now a caret range (`^1.0.8`) so npm can dedupe, and `tests/unit/pdf-canvas.test.ts`
+  fails if cairn's canvas is not pdfjs-dist's. **The repo's lockfile is not what users install** —
+  `npm install -g` resolves fresh — so a packaging change is checked by `npm pack` plus a global
+  install into a temporary prefix, not by `npm test`. No other command may import it: the platform binary is
   26–34 MB, and its absence must be `AP450` on `render`/`ocr`, not a crash on `pdf text`. The PNG is
   encoded by `src/pdf/png.ts` from canvas pixels — never `canvas.toBuffer` — so the bytes depend on
   the pixels alone; determinism is claimed per install, not across platforms or zlib builds.
