@@ -3,10 +3,10 @@
   "marketplace": "cairn",
   "version": "1.2.0",
   "description": "Cairn's own toolsets, as plugins.",
-  "sourceCommit": "ef1377343541f49f9ba778d9b5ed0d9c8f6f7171",
+  "sourceCommit": "f6d50b43e948db7876a5583fffd54cad29fed59e",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "6.3.0"
+    "version": "6.4.0"
   },
   "targets": {
     "claude-code": {
@@ -183,26 +183,26 @@
     },
     {
       "name": "cairn-pdf",
-      "version": "1.0.0",
-      "description": "Read PDF documents — text, structure, and conversion to Markdown.",
+      "version": "1.1.0",
+      "description": "Read PDF documents — text, structure, images, page renders, OCR, and conversion to Markdown.",
       "source": "bundles/cairn-pdf",
-      "sourceSha256": "2dd40db8bfb5f37ef115c125b0938dbc9c3c2d6722e49f5f8bed9beedec40c82",
+      "sourceSha256": "0206288f8270565cde50a55c407314c6c61ff1b3fc61f709f17efd5f4961d1ed",
       "targets": {
         "claude-code": {
           "path": "claude-code/cairn-pdf",
-          "sha256": "5814cdebf2c3d71492fcfd973aaf872aa6fc6ca528c9865cb6b5d7b1b7e5150e"
+          "sha256": "583817791ff6b4a59b03e6fc6982f28d4362badc71b440de4bd008f1fea8ad26"
         },
         "codex": {
           "path": "codex/cairn-pdf",
-          "sha256": "137b5e3a32eb4180aac5dcf58ed748c74fe04229adb1e70df3a91db787305e9d"
+          "sha256": "f247b3f8429667dc2c2e66d21084a764558f36d80638269cf4c57bb482a04093"
         },
         "cursor": {
           "path": "cursor/cairn-pdf",
-          "sha256": "8e8632c6275a29d058317588dff53d5ab7a40f8f3a57725c22eacef9b1f228df"
+          "sha256": "424e4309403b208a4ed50d0c9074647d02006f140d443c5bbfa41f9b7b602479"
         },
         "antigravity": {
           "path": "antigravity/cairn-pdf",
-          "sha256": "cbe8f074c047963ec049b70f6a88813c05906993e854b52e2cab0c57878da5c9"
+          "sha256": "679804638ffdee4b180195a8b2b7d88f177e3c6dc9fcc49f51e5ac1800ddab56"
         }
       }
     },

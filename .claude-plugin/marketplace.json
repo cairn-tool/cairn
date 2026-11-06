@@ -80,8 +80,8 @@
     },
     {
       "name": "cairn-pdf",
-      "version": "1.0.0",
-      "description": "Read PDF documents — text, structure, and conversion to Markdown.",
+      "version": "1.1.0",
+      "description": "Read PDF documents — text, structure, images, page renders, OCR, and conversion to Markdown.",
       "source": "./claude-code/cairn-pdf",
       "author": {
         "name": "Bryan Stockus",

@@ -11,7 +11,7 @@ pushed here. See https://github.com/cairn-tool/cairn.
 | `cairn-archive` | claude-code, codex, cursor, antigravity | Archive assistant plans, artifacts, and transcripts into long-term storage. |
 | `cairn-agent` | claude-code, codex, cursor, antigravity | Author, convert, migrate, test, and publish portable agent bundles. |
 | `cairn-jira` | claude-code, codex, cursor, antigravity | Convert Jira and Confluence rich text between ADF and Markdown. |
-| `cairn-pdf` | claude-code, codex, cursor, antigravity | Read PDF documents — text, structure, and conversion to Markdown. |
+| `cairn-pdf` | claude-code, codex, cursor, antigravity | Read PDF documents — text, structure, images, page renders, OCR, and conversion to Markdown. |
 | `cairn-qa` | claude-code, codex, cursor, antigravity | Author and run TC-N test-case plans with the cairn qa toolset. |
 
 ## Claude Code

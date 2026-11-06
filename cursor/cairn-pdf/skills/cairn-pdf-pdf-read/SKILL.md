@@ -1,39 +1,44 @@
 ---
 name: cairn-pdf-pdf-read
-description: Read PDF documents with the cairn pdf toolset — extract the text layer, read the outline, check structural integrity, and convert content to Markdown, reporting what each conversion inferred or lost. Use when asked to read, summarize, quote, or convert a PDF, when a PDF needs to become Markdown for a docs tree, or when deciding whether a document carries usable text at all.
+description: Read PDF documents with the cairn pdf toolset — extract the text layer, read the outline, check structural integrity, convert content to Markdown, pull out embedded images, render pages or regions to PNG, and recognise scanned pages with OCR, reporting what each step inferred or lost. Use when asked to read, summarize, quote, or convert a PDF, to get a figure or page image out of one, when a PDF needs to become Markdown for a docs tree, or when deciding whether a document carries usable text at all.
 ---
 
 # Reading PDF documents
 
 A PDF is not a document in the sense the rest of a repository means it. There is no text file
 underneath, no structure to walk, and often no text at all. `cairn pdf` turns one into text,
-structure, or Markdown — deterministically and locally: no credentials, no network, no model call,
-and **no OCR**.
+structure, Markdown, images, or page renders — deterministically and locally: no credentials, no
+network, no model call. Scanned pages are recognised only by `pdf ocr`, with the installed Tesseract,
+and recognised text is always **marked as recognised**; nothing else in the toolset does OCR.
 
-Confirm the toolset exists before relying on it: `cairn describe pdf -fj` lists the five
-subcommands. If the group is absent, the installed cairn predates this feature — say so and stop
-rather than guessing at flags. All five are `stability: experimental`, so read payload shapes
-through `cairn describe` and `cairn schema pdf-result` rather than hardcoding them.
+Confirm the toolset exists before relying on it: `cairn describe pdf -fj` lists the subcommands.
+If the group is absent, or `images`, `render`, or `ocr` is missing from it, the installed cairn
+predates that feature — say so and stop rather than guessing at flags. All of them are
+`stability: experimental`, so read payload shapes through `cairn describe` and
+`cairn schema pdf-result` rather than hardcoding them.
 
 ## Commands
 
-| Command                  | When                                                              |
-| ------------------------ | ----------------------------------------------------------------- |
-| `pdf inspect <file>`     | **First, always.** What is this, and what will reading it cost?   |
-| `pdf text <file>`        | The characters are wanted, not the structure.                     |
-| `pdf to-markdown <file>` | The structure is wanted: headings, lists, tables.                 |
-| `pdf outline <file>`     | The bookmarks — a table of contents, or where a chapter starts.   |
-| `pdf validate <file>`    | Is this file structurally sound before trusting anything from it? |
-| `pdf attachments <file>` | What files are embedded inside it, and get them out.              |
-| `pdf forms <file>`       | The form's field names and the values already filled in.          |
+| Command                                  | When                                                              |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| `pdf inspect <file>`                     | **First, always.** What is this, and what will reading it cost?   |
+| `pdf text <file>`                        | The characters are wanted, not the structure.                     |
+| `pdf to-markdown <file>`                 | The structure is wanted: headings, lists, tables.                 |
+| `pdf outline <file>`                     | The bookmarks — a table of contents, or where a chapter starts.   |
+| `pdf validate <file>`                    | Is this file structurally sound before trusting anything from it? |
+| `pdf attachments <file>`                 | What files are embedded inside it, and get them out.              |
+| `pdf forms <file>`                       | The form's field names and the values already filled in.          |
+| `pdf images <file> --out <dir>`          | The pictures in it: each raster image, and where it sits.         |
+| `pdf render <file> --page N --out f.png` | A page, or a region of it (`--box`), as a PNG.                    |
+| `pdf ocr <file>`                         | The text of pages with no text layer, recognised and marked.      |
 
 `-` reads stdin for all of them. `text` and `to-markdown` take `--pages`, `--output`, and
-`--strict`.
+`--strict`; `images` and `ocr` take `--pages` too.
 
 If the `cairn` MCP server is available, `inspect_pdf`, `read_pdf_text`, `convert_pdf_to_markdown`,
 `get_pdf_outline`, `list_pdf_attachments`, and `list_pdf_form_fields` do the same work for a PDF
-**inside the served root**, and are cheaper than shelling out. For a PDF anywhere else, or to
-extract an embedded file, use the CLI: the MCP surface writes nothing.
+**inside the served root**, and are cheaper than shelling out. For a PDF anywhere else, to extract
+an embedded file, or for `images`, `render`, and `ocr`, use the CLI: the MCP surface writes nothing.
 
 ## It reads; it never writes a PDF
 
@@ -49,12 +54,30 @@ cairn pdf inspect report.pdf -fj | jq '{tagged: .document.tagged, measured: .doc
 
 **`document.textLayer`** says whether there is anything to extract. `absent` means the page is an
 image: `pdf text` will return nothing and `pdf to-markdown` will emit nothing for it. That is not a
-failure to work around — it is the answer. **This toolset has no OCR**, so say the document needs
-OCR and stop rather than trying another command in the hope of a different result.
+failure to work around. If the text is needed, run `pdf ocr`, which recognises exactly those pages
+when Tesseract is installed (`AP470` says it is not — report that and stop). There is no `--ocr` on
+`pdf text`: recognised text is a separate result with `source: "ocr"` and a confidence per page.
 
 **`document.tagged`** decides whether converted structure can be trusted, and
 `document.structured` is the measured version of that claim. Some producers declare tagging and ship
 an empty tree, which reports `tagged: true`, `structured: "none"`, and `AP114`.
+
+## Images, page renders, and recognition
+
+```bash
+cairn pdf images report.pdf --out ./figures --min-size 64   # each picture, plus figures/images.json
+cairn pdf render report.pdf --page 12 --box 72,400,540,700 --dpi 300 --out fig.png
+cairn pdf ocr scan.pdf --out scan.ocr.json                   # only the pages with no text layer
+```
+
+`pdf images` writes a JPEG as the JPEG it already is and everything else as PNG, and records for
+each placement the page, the object, the pixel size, the colour space, and `box`. `pdf render` is
+deterministic: the same file and arguments give the same PNG bytes, so a rendered figure can be
+committed and checked. Both need nothing beyond cairn itself, except that `render` and `ocr` use the
+optional `@napi-rs/canvas` (`AP450` when it is missing).
+
+`pdf ocr` output is always marked as recognised: `source: "ocr"` on every page in the payload, and a
+`[recognised text: …]` line before every page on stdout. Keep that marking when passing the text on.
 
 ## Tagged or untagged is the fact that decides everything
 
@@ -109,8 +132,10 @@ asks what will be lost, or when explaining a specific finding.
 4. **A flattened table is reported, never rebuilt.** `AP202` means tabular content became one
    paragraph per row. Do not hand-assemble a Markdown table from it and present it as the
    document's — you cannot see the merged cells that made the tool refuse.
-5. **A page with no text layer needs OCR, which this cannot do.** Say so. Do not fall back to
-   guessing content from the filename, the outline, or the metadata.
+5. **Recognised text is never the document's own text.** Quote OCR output as recognised, with its
+   page confidence, and check a page below the floor (`AP473`) against a `pdf render` of it before
+   relying on it. Without an engine, say the page needs OCR; do not guess its content from the
+   filename, the outline, or the metadata.
 6. **Quote page numbers from `pdf text --pages`, not from the converted Markdown.** Conversion drops
    running headers and rejoins paragraphs across pages, so the Markdown has no page boundaries.
 7. **Converted Markdown lands lint-clean.** The stringify options match cairn's own
@@ -118,3 +143,7 @@ asks what will be lost, or when explaining a specific finding.
    directly by `cairn md lint docs/spec.md --style`.
 8. **Do not hand-edit converted Markdown to fix a conversion loss silently.** Fix it and say what
    you fixed, or report the limitation.
+9. **To get a figure out, render it rather than reconstructing it.** `pdf images` gives each embedded
+   picture and its `box`; a chart drawn as vectors has no image at all, so `pdf render --box` cuts
+   the region out instead. Every box — from `images`, `ocr` words, or one you pass to `render` — is
+   PDF user space: points, origin at the **bottom left**, `/Rotate` not applied.

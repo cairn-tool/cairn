@@ -1,7 +1,7 @@
 {
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "6.3.0"
+    "version": "6.4.0"
   },
   "name": "cairn",
   "version": "1.2.0",
@@ -43,7 +43,7 @@
         },
         {
           "name": "cairn-pdf",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "source": "plugins/cairn-pdf"
         },
         {
@@ -89,7 +89,7 @@
         },
         {
           "name": "cairn-pdf",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "source": "plugins/cairn-pdf"
         },
         {
@@ -135,7 +135,7 @@
         },
         {
           "name": "cairn-pdf",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "source": "plugins/cairn-pdf"
         },
         {
@@ -181,7 +181,7 @@
         },
         {
           "name": "cairn-pdf",
-          "version": "1.0.0",
+          "version": "1.1.0",
           "source": "plugins/cairn-pdf"
         },
         {
@@ -226,7 +226,7 @@
     {
       "name": "cairn-pdf",
       "source": "bundles/cairn-pdf",
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "name": "cairn-qa",

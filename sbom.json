@@ -3,7 +3,7 @@
   "specVersion": "1",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "6.3.0"
+    "version": "6.4.0"
   },
   "subject": {
     "name": "cairn",
@@ -21,24 +21,24 @@
     {
       "path": ".claude-plugin/marketplace.json",
       "type": "config",
-      "sha256": "00ecb1e8d18141415d7c8c489c362def77b6285c3c43811db5c20bead1cf1ee4",
-      "bytes": 3118,
+      "sha256": "d83b6ec79bae690d003466215b08f8fa5586f35b9cce588d9d6b3687dfc12f2b",
+      "bytes": 3145,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": ".cursor-plugin/marketplace.json",
       "type": "config",
-      "sha256": "f8ccf52d5512ff73312af4ef314eb0a9d9214de4196904f4479da578897d4a8d",
-      "bytes": 3204,
+      "sha256": "f3be29d5f2bd3a6fb9140d74efa7ade73bb568f2830e69e0c7f069fabb6de5f8",
+      "bytes": 3231,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "README.md",
       "type": "document",
-      "sha256": "6877750082019cc302a0d91f75a368c1353d12f43daf65c110b18123ce29748d",
-      "bytes": 2827,
+      "sha256": "9ad76a60bb9051907316845959f28ad2e1064845e459e8cc85eaf06e981fb117",
+      "bytes": 2854,
       "mode": "0644",
       "origin": "portable"
     },
@@ -421,24 +421,24 @@
     {
       "path": "antigravity/cairn-pdf/plugin.json",
       "type": "config",
-      "sha256": "b0bd359d5d3d9c67914c2765630920177d99cbdb1686e09eb28e0fd8d04e8c41",
-      "bytes": 136,
+      "sha256": "bdab1e87502a00e55382149f2dfd3534c85f4b34acaae8cda7e8c22dd51b78a3",
+      "bytes": 163,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "antigravity/cairn-pdf/skills/pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "95d0ad93397799d0fe0000691e3f7fbad62ea6bb4ad47b143463d8c5ac2937a5",
-      "bytes": 7375,
+      "sha256": "1d5757d539193678dbd5fba560b4b1cddfe0bed948706ddf61dae3d81cc5d837",
+      "bytes": 9952,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "antigravity/cairn-pdf/skills/pdf-read/reference/fidelity.md",
       "type": "document",
-      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
-      "bytes": 6666,
+      "sha256": "88b3260f015c7ed0e5f60ada317e6dbea4497374b57065d0c2ef65c193071b97",
+      "bytes": 6841,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1069,8 +1069,8 @@
     {
       "path": "bundles/cairn-pdf/agent-bundle.yaml",
       "type": "config",
-      "sha256": "87d3cc6690b214c60226a1cfc89787e1d848a006a314ae6cdbf9c67b486900d1",
-      "bytes": 1134,
+      "sha256": "248eb1228ca6f2c4aa4030502918e0460a93fddf020cd04a1751a8ed95bb1fc3",
+      "bytes": 1326,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1085,24 +1085,24 @@
     {
       "path": "bundles/cairn-pdf/skills/pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "95d0ad93397799d0fe0000691e3f7fbad62ea6bb4ad47b143463d8c5ac2937a5",
-      "bytes": 7375,
+      "sha256": "1d5757d539193678dbd5fba560b4b1cddfe0bed948706ddf61dae3d81cc5d837",
+      "bytes": 9952,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "bundles/cairn-pdf/skills/pdf-read/reference/fidelity.md",
       "type": "document",
-      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
-      "bytes": 6666,
+      "sha256": "88b3260f015c7ed0e5f60ada317e6dbea4497374b57065d0c2ef65c193071b97",
+      "bytes": 6841,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "bundles/cairn-pdf/tests/render.test.yaml",
       "type": "config",
-      "sha256": "fd2ba43582f19ca2acaeb34622b27e0f275a921507a2fd7c7aa3588dc9d7c6d7",
-      "bytes": 2835,
+      "sha256": "223c6978d38978409a55f1f9637078289ec258d2727e60fd4e6a3ec70139cde7",
+      "bytes": 2982,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1733,8 +1733,8 @@
     {
       "path": "claude-code/cairn-pdf/.claude-plugin/plugin.json",
       "type": "config",
-      "sha256": "a3997f1241862f88b973ce51d2eb32cad630f12b1cfda3482d0e1f349b478cf7",
-      "bytes": 161,
+      "sha256": "e8d13ed8066055b2377ca26b7c25a18d006ced1bcffcbf78f135f9aaa075dc6f",
+      "bytes": 188,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1749,16 +1749,16 @@
     {
       "path": "claude-code/cairn-pdf/skills/pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "95d0ad93397799d0fe0000691e3f7fbad62ea6bb4ad47b143463d8c5ac2937a5",
-      "bytes": 7375,
+      "sha256": "1d5757d539193678dbd5fba560b4b1cddfe0bed948706ddf61dae3d81cc5d837",
+      "bytes": 9952,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "claude-code/cairn-pdf/skills/pdf-read/reference/fidelity.md",
       "type": "document",
-      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
-      "bytes": 6666,
+      "sha256": "88b3260f015c7ed0e5f60ada317e6dbea4497374b57065d0c2ef65c193071b97",
+      "bytes": 6841,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2405,8 +2405,8 @@
     {
       "path": "codex/cairn-pdf/.codex-plugin/plugin.json",
       "type": "config",
-      "sha256": "a3997f1241862f88b973ce51d2eb32cad630f12b1cfda3482d0e1f349b478cf7",
-      "bytes": 161,
+      "sha256": "e8d13ed8066055b2377ca26b7c25a18d006ced1bcffcbf78f135f9aaa075dc6f",
+      "bytes": 188,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2421,16 +2421,16 @@
     {
       "path": "codex/cairn-pdf/skills/pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "95d0ad93397799d0fe0000691e3f7fbad62ea6bb4ad47b143463d8c5ac2937a5",
-      "bytes": 7375,
+      "sha256": "1d5757d539193678dbd5fba560b4b1cddfe0bed948706ddf61dae3d81cc5d837",
+      "bytes": 9952,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "codex/cairn-pdf/skills/pdf-read/reference/fidelity.md",
       "type": "document",
-      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
-      "bytes": 6666,
+      "sha256": "88b3260f015c7ed0e5f60ada317e6dbea4497374b57065d0c2ef65c193071b97",
+      "bytes": 6841,
       "mode": "0644",
       "origin": "portable"
     },
@@ -3053,8 +3053,8 @@
     {
       "path": "cursor/cairn-pdf/.cursor-plugin/plugin.json",
       "type": "config",
-      "sha256": "a3997f1241862f88b973ce51d2eb32cad630f12b1cfda3482d0e1f349b478cf7",
-      "bytes": 161,
+      "sha256": "e8d13ed8066055b2377ca26b7c25a18d006ced1bcffcbf78f135f9aaa075dc6f",
+      "bytes": 188,
       "mode": "0644",
       "origin": "portable"
     },
@@ -3069,16 +3069,16 @@
     {
       "path": "cursor/cairn-pdf/skills/cairn-pdf-pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "c31bf9681e4731e594292872a8ce760579df575167bde2bf1730feec06679b56",
-      "bytes": 7385,
+      "sha256": "45b79c9e10a7324f4d4e3c679d1b4001d462da15e268264b91cab388ae584d43",
+      "bytes": 9962,
       "mode": "0644",
       "origin": "portable"
     },
     {
       "path": "cursor/cairn-pdf/skills/cairn-pdf-pdf-read/reference/fidelity.md",
       "type": "document",
-      "sha256": "4974f6db49da8e8e2ef619e16540b651fb4aeca161b745f5bb5808e9d06181ae",
-      "bytes": 6666,
+      "sha256": "88b3260f015c7ed0e5f60ada317e6dbea4497374b57065d0c2ef65c193071b97",
+      "bytes": 6841,
       "mode": "0644",
       "origin": "portable"
     },
@@ -3301,8 +3301,8 @@
     {
       "path": "release-manifest.json",
       "type": "config",
-      "sha256": "a29d6fab86899526ee3a9bb4866049297a5b2d4fb64440dae0c6ebcd1f026e8f",
-      "bytes": 8504,
+      "sha256": "e507f3d116ec362fd6045dc6762c7c228b86e408476d1d1fb0c39cb787a4bb1f",
+      "bytes": 8531,
       "mode": "0644",
       "origin": "portable"
     }

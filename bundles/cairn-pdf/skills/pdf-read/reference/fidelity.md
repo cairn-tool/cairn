@@ -28,8 +28,9 @@ A chapter opener, a title page, and a full-page figure with a caption all classi
 correctly. `characters` and `density` are published beside the label, so the threshold can be
 re-applied if a caller disagrees.
 
-**There is no OCR in this toolset.** `absent` is the final answer, not a prompt to try another
-command.
+`absent` is the final answer for the text layer, not a prompt to try another reading command.
+Recognising the page is a separate step — `pdf ocr`, which needs Tesseract installed — and its
+result is marked `source: "ocr"` with a confidence, never folded into the text layer.
 
 ## On the structure-tree path
 
