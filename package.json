@@ -104,5 +104,8 @@
   },
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "optionalDependencies": {
+    "@napi-rs/canvas": "1.0.8"
+  }
 }

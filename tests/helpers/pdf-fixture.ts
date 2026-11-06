@@ -18,6 +18,8 @@
  * which is what makes hand-rolling safe rather than merely cheap.
  */
 
+import zlib from "node:zlib";
+
 /** A PDF name, `/Type`. Distinguished from a string so it serializes unquoted. */
 export class PdfName {
   constructor(readonly name: string) {}
@@ -220,6 +222,8 @@ export interface PdfSpec {
   /** When present the document is tagged: /MarkInfo, /StructTreeRoot, /ParentTree. */
   tagged?: TagSpec[];
   mediaBox?: [number, number, number, number];
+  /** `/Rotate` on every page. */
+  rotate?: number;
   /** Make /Pages point at itself, for the page-tree cycle case. */
   cyclicPageTree?: boolean;
   /**
@@ -234,7 +238,12 @@ export interface PdfSpec {
     ref: (num: number) => PdfRef;
     name: (text: string) => PdfName;
     pageRef: (index: number) => PdfRef;
-  }) => { catalog?: PdfDict; annots?: Record<number, PdfValue[]> };
+  }) => {
+    catalog?: PdfDict;
+    annots?: Record<number, PdfValue[]>;
+    /** Extra resource categories per page index, e.g. `{ XObject: { Im1: ref(9) } }`. */
+    resources?: Record<number, PdfDict>;
+  };
   /** Annotations per page index, for widget annotations and links. */
   annots?: Record<number, PdfValue[]>;
 }
@@ -307,7 +316,9 @@ export function buildPdf(spec: PdfSpec): Buffer {
         Font: Object.fromEntries(
           Object.keys(fonts).map((key) => [key, ref(fontNums.get(key)!)]),
         ) as PdfDict,
+        ...extended.resources?.[index],
       },
+      ...(spec.rotate ? { Rotate: spec.rotate } : {}),
       Contents: ref(contentNums[index]),
       ...(annots[index]?.length ? { Annots: annots[index] } : {}),
       ...(spec.tagged ? { StructParents: index } : {}),
@@ -665,6 +676,332 @@ export const PDF_FIXTURES: Record<string, PdfSpec> = {
     },
   },
 };
+
+/**
+ * A 16x8 baseline JPEG: the left half red, the right half blue.
+ *
+ * Generated once with `@napi-rs/canvas` (`toBuffer("image/jpeg", 90)`) and kept
+ * as bytes, because `pdf images` must write a DCT image back out unchanged and
+ * the test asserts exactly that — a fixture re-encoded on every run could not
+ * be compared against.
+ */
+export const FIXTURE_JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAIABADASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAAAAcI/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/EABUBAQEAAAAAAAAAAAAAAAAAAAcI/8QAGBEAAgMAAAAAAAAAAAAAAAAAAAhFg8P/2gAMAwEAAhEDEQA/AM6IEBwWWYo2KNYaKuyP/9k=",
+  "base64",
+);
+
+/** A minimal LZW encoder (EarlyChange 1), so the decoder is tested against something other than itself. */
+export function lzwEncode(data: Uint8Array): Buffer {
+  const codes: number[] = [256];
+  let dictionary = new Map<string, number>();
+  let next = 258;
+  let width = 9;
+  const reset = (): void => {
+    dictionary = new Map();
+    for (let code = 0; code < 256; code += 1) dictionary.set(String.fromCharCode(code), code);
+    next = 258;
+    width = 9;
+  };
+  reset();
+  const widths: number[] = [9];
+  let current = "";
+  for (const byte of data) {
+    const candidate = current + String.fromCharCode(byte);
+    if (dictionary.has(candidate)) {
+      current = candidate;
+      continue;
+    }
+    codes.push(dictionary.get(current)!);
+    widths.push(width);
+    dictionary.set(candidate, next);
+    next += 1;
+    if (next + 1 > 511 && width === 9) width = 10;
+    else if (next + 1 > 1023 && width === 10) width = 11;
+    else if (next + 1 > 2047 && width === 11) width = 12;
+    current = String.fromCharCode(byte);
+  }
+  if (current) {
+    codes.push(dictionary.get(current)!);
+    widths.push(width);
+  }
+  codes.push(257);
+  widths.push(width);
+  let bits = "";
+  codes.forEach((code, index) => (bits += code.toString(2).padStart(widths[index], "0")));
+  while (bits.length % 8) bits += "0";
+  const out = Buffer.alloc(bits.length / 8);
+  for (let index = 0; index < out.length; index += 1)
+    out[index] = parseInt(bits.slice(index * 8, index * 8 + 8), 2);
+  return out;
+}
+
+/**
+ * One page painting every kind of raster image `pdf images` handles, plus a
+ * second page for the remaining filters. The placements are chosen so each box
+ * is a round number a test can assert.
+ *
+ * Page 1:
+ * - `Im1` the JPEG, at 72,600 160x80, and again at 300,600 80x40 (one file, two placements)
+ * - `Im2` 8x4 RGB, Flate, with an 8x4 soft mask: opaque top half, transparent bottom
+ * - `Im3` 4x4 Indexed, 1 bit, unfiltered: a red/green checkerboard
+ * - `Im4` 2x2 CMYK, Flate with a PNG Up predictor: cyan, black
+ * - `Im5` 8x8 stencil mask: top half painted
+ * - `Fm1` a form translated by 100, holding `Im6` (2x2 gray, ASCIIHex then Flate)
+ * - `Im7` 1x1, for `--min-size`
+ * - an unfiltered inline 4x4 gray image whose bytes include `EI`, and an AHx inline RGB one
+ * - `Im10` 2x1 Separation through a type 2 function: white, red
+ *
+ * Page 2:
+ * - `Im8` 4x1 gray, LZW
+ * - `Im9` 4x1 gray, RunLength
+ */
+function imagesSpec(): PdfSpec {
+  const gray = (bytes: number[]): Buffer => Buffer.from(bytes);
+  const deflate = (bytes: number[] | Buffer): Buffer => zlib.deflateSync(Buffer.from(bytes));
+  const inlineGray = String.fromCharCode(
+    0,
+    64,
+    128,
+    255,
+    0x45,
+    0x49,
+    0x20,
+    0x45,
+    0x49,
+    10,
+    32,
+    64,
+    255,
+    128,
+    64,
+    0,
+  );
+  return {
+    pages: [[], []],
+    extras: {
+      0: [
+        "q 160 0 0 80 72 600 cm /Im1 Do Q",
+        "q 80 0 0 40 300 600 cm /Im1 Do Q",
+        "q 80 0 0 40 72 500 cm /Im2 Do Q",
+        "q 40 0 0 40 200 500 cm /Im3 Do Q",
+        "q 40 0 0 40 260 500 cm /Im4 Do Q",
+        "0 0 1 rg q 40 0 0 40 320 500 cm /Im5 Do Q",
+        "q 1 0 0 1 72 400 cm /Fm1 Do Q",
+        "q 10 0 0 10 500 500 cm /Im7 Do Q",
+        `q 30 0 0 30 400 400 cm BI /W 4 /H 4 /CS /G /BPC 8 ID ${inlineGray} EI Q`,
+        "q 20 0 0 10 450 400 cm BI /W 2 /H 1 /CS /RGB /BPC 8 /F /AHx ID FF000000FF00> EI Q",
+        "q 40 0 0 20 72 300 cm /Im10 Do Q",
+      ],
+      1: ["q 40 0 0 10 72 700 cm /Im8 Do Q", "q 40 0 0 10 72 650 cm /Im9 Do Q"],
+    },
+    extend: ({ reserve, add, ref, name }) => {
+      const image = (dict: PdfDict, data: Buffer): PdfRef => {
+        const num = reserve();
+        add(num, { Type: name("XObject"), Subtype: name("Image"), ...dict }, data);
+        return ref(num);
+      };
+      const im1 = image(
+        {
+          Width: 16,
+          Height: 8,
+          ColorSpace: name("DeviceRGB"),
+          BitsPerComponent: 8,
+          Filter: name("DCTDecode"),
+        },
+        FIXTURE_JPEG,
+      );
+      const smask = image(
+        {
+          Width: 8,
+          Height: 4,
+          ColorSpace: name("DeviceGray"),
+          BitsPerComponent: 8,
+          Filter: name("FlateDecode"),
+        },
+        deflate([...Array(16).fill(255), ...Array(16).fill(0)]),
+      );
+      const rgb: number[] = [];
+      for (let row = 0; row < 4; row += 1)
+        for (let column = 0; column < 8; column += 1)
+          rgb.push(...(column < 4 ? [255, 0, 0] : [0, 255, 0]));
+      const im2 = image(
+        {
+          Width: 8,
+          Height: 4,
+          ColorSpace: name("DeviceRGB"),
+          BitsPerComponent: 8,
+          Filter: name("FlateDecode"),
+          SMask: smask,
+        },
+        deflate(rgb),
+      );
+      const im3 = image(
+        {
+          Width: 4,
+          Height: 4,
+          ColorSpace: [name("Indexed"), name("DeviceRGB"), 1, new PdfRaw("<FF000000FF00>")],
+          BitsPerComponent: 1,
+        },
+        gray([0b01010000, 0b10100000, 0b01010000, 0b10100000]),
+      );
+      const im4 = image(
+        {
+          Width: 2,
+          Height: 2,
+          ColorSpace: name("DeviceCMYK"),
+          BitsPerComponent: 8,
+          Filter: name("FlateDecode"),
+          DecodeParms: { Predictor: 12, Colors: 4, Columns: 2 },
+        },
+        deflate([0, 255, 0, 0, 0, 0, 0, 0, 255, 2, 0, 0, 0, 0, 0, 0, 0, 0]),
+      );
+      const im5 = image(
+        { Width: 8, Height: 8, ImageMask: true },
+        gray([0, 0, 0, 0, 255, 255, 255, 255]),
+      );
+      const im6 = image(
+        {
+          Width: 2,
+          Height: 2,
+          ColorSpace: name("DeviceGray"),
+          BitsPerComponent: 8,
+          Filter: [name("ASCIIHexDecode"), name("FlateDecode")],
+        },
+        Buffer.from(`${deflate([0, 85, 170, 255]).toString("hex")}>`, "latin1"),
+      );
+      const formNum = reserve();
+      add(
+        formNum,
+        {
+          Type: name("XObject"),
+          Subtype: name("Form"),
+          BBox: [0, 0, 200, 200],
+          Matrix: [1, 0, 0, 1, 100, 0],
+          Resources: { XObject: { Im6: im6 } },
+        },
+        Buffer.from("q 20 0 0 20 0 0 cm /Im6 Do Q\n", "latin1"),
+      );
+      const im7 = image(
+        { Width: 1, Height: 1, ColorSpace: name("DeviceGray"), BitsPerComponent: 8 },
+        gray([0]),
+      );
+      const im8 = image(
+        {
+          Width: 4,
+          Height: 1,
+          ColorSpace: name("DeviceGray"),
+          BitsPerComponent: 8,
+          Filter: name("LZWDecode"),
+        },
+        lzwEncode(Uint8Array.from([10, 20, 10, 20])),
+      );
+      // RunLength: a literal run of 2 (header 1), then 2 repeats of 200 (header 255).
+      const im9 = image(
+        {
+          Width: 4,
+          Height: 1,
+          ColorSpace: name("DeviceGray"),
+          BitsPerComponent: 8,
+          Filter: name("RunLengthDecode"),
+        },
+        gray([1, 7, 9, 255, 200, 128]),
+      );
+      const im10 = image(
+        {
+          Width: 2,
+          Height: 1,
+          ColorSpace: [
+            name("Separation"),
+            name("Spot"),
+            name("DeviceRGB"),
+            { FunctionType: 2, Domain: [0, 1], C0: [1, 1, 1], C1: [1, 0, 0], N: 1 },
+          ],
+          BitsPerComponent: 8,
+        },
+        gray([0, 255]),
+      );
+      return {
+        resources: {
+          0: {
+            XObject: {
+              Im1: im1,
+              Im2: im2,
+              Im3: im3,
+              Im4: im4,
+              Im5: im5,
+              Fm1: ref(formNum),
+              Im7: im7,
+              Im10: im10,
+            },
+          },
+          1: { XObject: { Im8: im8, Im9: im9 } },
+        },
+      };
+    },
+  };
+}
+
+/**
+ * Vector content only, for region rendering: a red square at 100,100–200,200,
+ * a blue one at 300,400–400,500, and a black rule at y=700. No text, no images.
+ */
+const VECTOR_EXTRAS = [
+  "1 0 0 rg 100 100 100 100 re f",
+  "0 0 1 rg 300 400 100 100 re f",
+  "0 G 4 w 50 700 m 550 700 l S",
+];
+
+/**
+ * The source `tests/helpers/pdf-qpdf-fixtures.ts` was made from: one page with a
+ * 2x1 Flate RGB image (red, blue) and a 2x1 Indexed image whose palette is a
+ * literal *string* — a string being what an encrypted file enciphers separately
+ * from the streams, so both cipher paths are exercised.
+ */
+export function encryptionSource(): PdfSpec {
+  return {
+    pages: [[{ x: 72, y: 700, size: 12, font: "F1", text: "Encrypted fixture." }]],
+    extras: { 0: ["q 40 0 0 20 72 600 cm /Im1 Do Q", "q 40 0 0 40 150 600 cm /Im2 Do Q"] },
+    extend: ({ reserve, add, ref, name }) => {
+      const a = reserve();
+      add(
+        a,
+        {
+          Type: name("XObject"),
+          Subtype: name("Image"),
+          Width: 2,
+          Height: 1,
+          ColorSpace: name("DeviceRGB"),
+          BitsPerComponent: 8,
+          Filter: name("FlateDecode"),
+        },
+        zlib.deflateSync(Buffer.from([255, 0, 0, 0, 0, 255])),
+      );
+      const b = reserve();
+      add(
+        b,
+        {
+          Type: name("XObject"),
+          Subtype: name("Image"),
+          Width: 2,
+          Height: 1,
+          ColorSpace: [
+            name("Indexed"),
+            name("DeviceRGB"),
+            1,
+            "\u0000\u00ff\u0000\u00ff\u00ff\u0000",
+          ],
+          BitsPerComponent: 8,
+        },
+        Buffer.from([0, 1]),
+      );
+      return { resources: { 0: { XObject: { Im1: ref(a), Im2: ref(b) } } } };
+    },
+  };
+}
+
+PDF_FIXTURES.images = imagesSpec();
+PDF_FIXTURES.vector = { pages: [[]], extras: { 0: VECTOR_EXTRAS } };
+PDF_FIXTURES.vectorRotated = { pages: [[]], extras: { 0: VECTOR_EXTRAS }, rotate: 90 };
 
 /** Every fixture, built. Damaged variants are mutations of `minimal`. */
 export function pdfFixture(key: string): Buffer {

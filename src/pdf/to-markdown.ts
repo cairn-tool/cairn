@@ -249,7 +249,7 @@ export async function toMarkdown(
           message: "The page carries no text layer; nothing was emitted for it",
           page,
           remediation:
-            "The page is an image. Recognizing its text needs OCR, which this toolset does not do.",
+            "The page is an image. Recognise it with OCR through `cairn pdf ocr`, which keeps the recognised text apart from the text layer.",
         });
       continue;
     }

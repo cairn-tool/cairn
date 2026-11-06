@@ -63,7 +63,7 @@ is broken".
 # What is this, and what will converting it cost?
 cairn pdf inspect report.pdf -fh
 
-# Does this document need OCR? (No PDF command can do OCR; this says whether it would be needed.)
+# Does this document need OCR? (`pdf ocr` does it, on exactly the pages this calls absent.)
 cairn pdf inspect scan.pdf -fj | jq '.document.textLayer'
 
 # Which pages are images?

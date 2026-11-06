@@ -239,6 +239,211 @@ const FORM = {
   },
 } as const;
 
+/**
+ * A box or transform in PDF default user space: points, origin at the bottom
+ * left of the page's coordinate system, `/Rotate` not applied. One space for
+ * `images`, `render`, and `ocr`, so a box from one can be handed to another.
+ */
+const USER_BOX = {
+  type: "array",
+  items: { type: "number" },
+  minItems: 4,
+  maxItems: 4,
+  description:
+    "[x0, y0, x1, y1] in PDF user space: points, 72 to the inch, origin at the bottom left, /Rotate not applied — the space pdf render --box takes.",
+} as const;
+
+/** One image placement. Emitted by `pdf images`. */
+const IMAGE = {
+  type: "object",
+  required: [
+    "page",
+    "index",
+    "object",
+    "inline",
+    "width",
+    "height",
+    "colorSpace",
+    "components",
+    "bitsPerComponent",
+    "filters",
+    "imageMask",
+    "transform",
+    "box",
+  ],
+  properties: {
+    page: { type: "integer", minimum: 1 },
+    index: {
+      type: "integer",
+      minimum: 1,
+      description: "Order of placement on the page, in content-stream order.",
+    },
+    object: {
+      type: ["string", "null"],
+      description:
+        "The image's object, as `12 0 R`. Null for an inline image, which is not an object.",
+    },
+    name: { type: "string", description: "The XObject resource name the page painted, e.g. Im1." },
+    inline: { type: "boolean" },
+    forms: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        "Form XObjects entered to reach the image, outermost first. Absent when painted directly.",
+    },
+    width: { type: "integer", minimum: 0, description: "Pixel width, as declared." },
+    height: { type: "integer", minimum: 0, description: "Pixel height, as declared." },
+    colorSpace: {
+      type: ["string", "null"],
+      description:
+        "DeviceGray, DeviceRGB, DeviceCMYK, CalGray, CalRGB, Lab, ICCBased(n), Indexed(base,hival), Separation(name), DeviceN(n), JPX when a JPEG 2000 image carries its own, or unsupported. Null for a stencil mask, which has none.",
+    },
+    components: { type: "integer", minimum: 0 },
+    bitsPerComponent: { type: "integer", minimum: 1 },
+    filters: {
+      type: "array",
+      items: { type: "string" },
+      description: "The filter chain, inline abbreviations expanded. Empty for unencoded samples.",
+    },
+    imageMask: {
+      type: "boolean",
+      description: "A stencil mask: 1-bit, painted in the fill colour.",
+    },
+    mask: {
+      type: "object",
+      required: ["type"],
+      properties: {
+        type: { enum: ["smask", "stencil", "color-key"] },
+        object: { type: "string" },
+        file: {
+          type: "string",
+          description:
+            "Present when the mask was written separately, which happens for a JPEG: the JPEG is kept as stored and its mask becomes <name>-mask.png. Otherwise the mask is the PNG's alpha channel.",
+        },
+      },
+    },
+    transform: {
+      type: "array",
+      items: { type: "number" },
+      minItems: 6,
+      maxItems: 6,
+      description: "[a, b, c, d, e, f]: the image's unit square mapped into PDF user space.",
+    },
+    box: {
+      ...USER_BOX,
+      description:
+        "The placement's bounds in PDF user space. The placement, not the visible area: a clipping path may show only part of the image.",
+    },
+    file: {
+      type: "string",
+      description:
+        "The file written, relative to the output directory. Shared by every placement of one image.",
+    },
+    format: { enum: ["png", "jpeg", "jp2"] },
+    bytes: { type: "integer", minimum: 0 },
+    sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+    skipped: {
+      enum: ["min-size", "undecodable"],
+      description: "Why no file was written. Absent when one was.",
+    },
+  },
+} as const;
+
+const RENDER = {
+  type: "object",
+  required: [
+    "page",
+    "dpi",
+    "width",
+    "height",
+    "box",
+    "pageBox",
+    "rotation",
+    "file",
+    "bytes",
+    "sha256",
+  ],
+  properties: {
+    page: { type: "integer", minimum: 1 },
+    dpi: { type: "number" },
+    width: { type: "integer", minimum: 1, description: "PNG width in pixels." },
+    height: { type: "integer", minimum: 1, description: "PNG height in pixels." },
+    box: {
+      ...USER_BOX,
+      description:
+        "The region drawn, in PDF user space, after snapping outward to whole pixels and clipping to the page. The PNG covers exactly this area.",
+    },
+    pageBox: {
+      ...USER_BOX,
+      description: "The page's visible area (its crop box) in PDF user space.",
+    },
+    rotation: { type: "integer", description: "The page's /Rotate, applied to the PNG." },
+    file: { type: "string", description: "Absolute path of the PNG written." },
+    bytes: { type: "integer", minimum: 0 },
+    sha256: { type: "string", pattern: "^[0-9a-f]{64}$" },
+  },
+} as const;
+
+const OCR = {
+  type: "object",
+  required: ["engine", "minConfidence", "pages"],
+  properties: {
+    engine: {
+      type: "object",
+      required: ["name", "version", "languages", "dpi", "psm"],
+      properties: {
+        name: { const: "tesseract" },
+        version: { type: "string" },
+        languages: { type: "array", items: { type: "string" } },
+        dpi: {
+          type: "number",
+          description: "The resolution pages were rendered at for recognition.",
+        },
+        psm: { type: "integer", description: "Tesseract page segmentation mode." },
+      },
+    },
+    minConfidence: { type: "number" },
+    pages: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["page", "source", "textLayer", "text", "confidence", "words"],
+        properties: {
+          page: { type: "integer", minimum: 1 },
+          source: {
+            const: "ocr",
+            description:
+              "Always ocr: recognised text is marked wherever it goes and never merged into a text layer.",
+          },
+          textLayer: {
+            enum: ["present", "absent"],
+            description:
+              "Whether the page carries its own text layer, measured before recognition.",
+          },
+          text: { type: "string" },
+          confidence: {
+            type: ["number", "null"],
+            description:
+              "Mean word confidence, 0 to 100, weighted by word length. Null when nothing was recognised.",
+          },
+          words: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["text", "confidence", "box"],
+              properties: {
+                text: { type: "string" },
+                confidence: { type: "number" },
+                box: USER_BOX,
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
 export const pdfResultSchema: SchemaEntry = {
   id: "pdf-result",
   uri: schemaUri("v1", "pdf-result"),
@@ -251,6 +456,9 @@ export const pdfResultSchema: SchemaEntry = {
     "pdf to-markdown",
     "pdf attachments",
     "pdf forms",
+    "pdf images",
+    "pdf render",
+    "pdf ocr",
   ],
   schema: {
     $schema: DRAFT,
@@ -262,7 +470,18 @@ export const pdfResultSchema: SchemaEntry = {
     required: ["command", "ok", "source", "diagnostics"],
     properties: {
       command: {
-        enum: ["inspect", "text", "outline", "validate", "to-markdown", "attachments", "forms"],
+        enum: [
+          "inspect",
+          "text",
+          "outline",
+          "validate",
+          "to-markdown",
+          "attachments",
+          "forms",
+          "images",
+          "render",
+          "ocr",
+        ],
       },
       ok: {
         type: "boolean",
@@ -303,13 +522,25 @@ export const pdfResultSchema: SchemaEntry = {
         description: "Emitted by forms.",
         allOf: [{ $ref: "#/$defs/form" }],
       },
+      images: {
+        type: "array",
+        description:
+          "Emitted by images: one entry per placement, in page order and then content-stream order. The same payload is written to images.json in the output directory.",
+        items: { $ref: "#/$defs/image" },
+      },
+      render: { description: "Emitted by render.", allOf: [{ $ref: "#/$defs/render" }] },
+      ocr: { description: "Emitted by ocr.", allOf: [{ $ref: "#/$defs/ocr" }] },
       selectedPages: {
         type: "array",
         items: { type: "integer", minimum: 1 },
         description:
           "1-based pages --pages selected, ascending and deduplicated. Absent when --pages was not given, which means every page.",
       },
-      output: { type: "string", description: "Absolute path written, when --output was given." },
+      output: {
+        type: "string",
+        description:
+          "Absolute path written: --output's file, render's PNG, ocr --out's JSON, or the directory images wrote into.",
+      },
       diagnostics: { type: "array", items: DIAGNOSTIC },
     },
     $defs: {
@@ -320,6 +551,9 @@ export const pdfResultSchema: SchemaEntry = {
       attachment: ATTACHMENT,
       form: FORM,
       formField: FORM_FIELD,
+      image: IMAGE,
+      render: RENDER,
+      ocr: OCR,
     },
   },
 };

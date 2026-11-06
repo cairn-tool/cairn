@@ -67,6 +67,30 @@ export interface PdfPageHandle {
 }
 
 /**
+ * A page as `pdf render` needs it: the drawing half of pdf.js's page proxy.
+ *
+ * Declared separately from {@link PdfPageHandle} rather than widening it, so the
+ * reading commands keep a handle that cannot draw.
+ */
+export interface PdfRenderViewport extends PdfViewport {
+  convertToPdfPoint(x: number, y: number): number[];
+}
+
+export interface PdfRenderablePage {
+  /** The visible area — crop box intersected with media box — in user space. */
+  view: number[];
+  rotate: number;
+  getViewport(params: { scale: number; offsetX?: number; offsetY?: number }): PdfRenderViewport;
+  render(params: {
+    canvasContext: unknown;
+    canvas: unknown;
+    viewport: PdfRenderViewport;
+    background?: string;
+  }): { promise: Promise<void> };
+  cleanup(): boolean;
+}
+
+/**
  * One embedded file, as `getAttachments()` describes it.
  *
  * `content` is declared optional because pdf.js does not populate it: the
@@ -119,6 +143,10 @@ export interface OpenDocument {
   encrypted: boolean;
   /** Races a pdfjs promise against the deadline. */
   within<T>(work: () => Promise<T>): Promise<T>;
+  /** Milliseconds left in the budget; for synchronous work that cannot be raced. */
+  remaining(): number;
+  /** Throws {@link DeadlineExceeded} once the budget is spent. */
+  check(): void;
 }
 
 export interface OpenOptions {
@@ -159,7 +187,7 @@ export class PdfjsUnavailableError extends Error {
  * cairn packs**. Nothing here belongs in `package.json` `files`; this looks like
  * the `.markdownlintrc` packaging trap and is not one.
  */
-function pdfjsRoot(): string {
+export function pdfjsRoot(): string {
   try {
     return path.dirname(createRequire(import.meta.url).resolve("pdfjs-dist/package.json"));
   } catch (error) {
@@ -301,6 +329,11 @@ export async function withDocument<T>(
       // Probing the host's installed fonts would make output machine-dependent.
       useSystemFonts: false,
       disableFontFace: true,
+      // Glyph outlines and PostScript calculator functions are interpreted, never
+      // compiled with `new Function`: a document's bytes must not become code,
+      // even arithmetic. Only drawing reaches either path, so text extraction is
+      // unaffected; `pdf render` is what this hardens.
+      isEvalSupported: false,
       // Always false, in every command. Enumerating every damaged page is worth
       // more than dying on the first, and `--strict` changes the exit rule
       // rather than the parse.
@@ -331,6 +364,10 @@ export async function withDocument<T>(
       // password, and its restrictions are advisory only.
       encrypted: permissions !== null,
       within,
+      remaining: () => deadline - Date.now(),
+      check: () => {
+        if (Date.now() >= deadline) throw new DeadlineExceeded(options.timeoutMs);
+      },
     };
     return await body(handle);
   } finally {

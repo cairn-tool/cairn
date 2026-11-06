@@ -203,6 +203,9 @@ subagent, hook, MCP server, asset, and contract test.
 - [`pdf to-markdown`](commands/pdf/to-markdown.md)
 - [`pdf attachments`](commands/pdf/attachments.md)
 - [`pdf forms`](commands/pdf/forms.md)
+- [`pdf images`](commands/pdf/images.md)
+- [`pdf render`](commands/pdf/render.md)
+- [`pdf ocr`](commands/pdf/ocr.md)
 
 ## QA commands
 

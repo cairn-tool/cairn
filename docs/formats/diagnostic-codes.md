@@ -397,19 +397,19 @@ exactly, which is what separates it from lifting.
 Emitted by the `pdf` input reader and by the single site that opens a document, so every `pdf`
 command can report them.
 
-| Code    | Severity | Emitted by                    | Meaning                                                                                   |
-| ------- | -------- | ----------------------------- | ----------------------------------------------------------------------------------------- |
-| `AP001` | error    | every `pdf` command           | An invocation, path, or filesystem error, reported as a payload under `--format json`.    |
-| `AP002` | error    | `pdf` input reader            | No `%PDF-` signature in the first 1024 bytes. The message names the leading bytes as hex. |
-| `AP003` | error    | `pdf` input reader            | The input is larger than `--max-bytes`.                                                   |
-| `AP004` | error    | `pdf` input reader            | The input is missing, unopenable, or not a regular file.                                  |
-| `AP005` | error    | document loader               | The `--timeout` wall-clock budget expired.                                                |
-| `AP006` | error    | `pdf` input reader            | The input is zero bytes.                                                                  |
-| `AP007` | notice   | `pdf` input reader            | `%PDF-` was found at a non-zero offset; the leading bytes were ignored, not stripped.     |
-| `AP010` | error    | document loader               | The document is encrypted and needs a password. This toolset accepts none.                |
-| `AP011` | error    | document loader               | A supplied password was rejected.                                                         |
-| `AP012` | error    | document loader               | The page count exceeds `--max-pages`, refused before any page was opened.                 |
-| `AP013` | error    | `pdf text`, `pdf to-markdown` | `--pages` is unparseable or names a page outside the document.                            |
+| Code    | Severity | Emitted by                                 | Meaning                                                                                   |
+| ------- | -------- | ------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `AP001` | error    | every `pdf` command                        | An invocation, path, or filesystem error, reported as a payload under `--format json`.    |
+| `AP002` | error    | `pdf` input reader                         | No `%PDF-` signature in the first 1024 bytes. The message names the leading bytes as hex. |
+| `AP003` | error    | `pdf` input reader                         | The input is larger than `--max-bytes`.                                                   |
+| `AP004` | error    | `pdf` input reader                         | The input is missing, unopenable, or not a regular file.                                  |
+| `AP005` | error    | document loader                            | The `--timeout` wall-clock budget expired.                                                |
+| `AP006` | error    | `pdf` input reader                         | The input is zero bytes.                                                                  |
+| `AP007` | notice   | `pdf` input reader                         | `%PDF-` was found at a non-zero offset; the leading bytes were ignored, not stripped.     |
+| `AP010` | error    | document loader                            | The document is encrypted and needs a password. This toolset accepts none.                |
+| `AP011` | error    | document loader                            | A supplied password was rejected.                                                         |
+| `AP012` | error    | document loader                            | The page count exceeds `--max-pages`, refused before any page was opened.                 |
+| `AP013` | error    | every command taking `--pages` or `--page` | `--pages` or `--page` is unparseable or names a page outside the document.                |
 
 `AP002` and `AP100` are deliberately distinct: `AP002` means the bytes never carried a header, decided
 before the parser ran, and `AP100` means it looked like a PDF and could not be parsed. That is the
@@ -417,15 +417,16 @@ difference between the wrong file and a damaged one.
 
 ## PDF pages and text
 
-| Code    | Severity | Emitted by                                | Meaning                                                                 |
-| ------- | -------- | ----------------------------------------- | ----------------------------------------------------------------------- |
-| `AP020` | error    | `pdf inspect`, `pdf validate`             | A page could not be fetched from the page tree, which includes a cycle. |
-| `AP021` | error    | `pdf text`, `pdf validate`, `to-markdown` | A page's content stream could not be decoded.                           |
-| `AP050` | warning  | `pdf inspect`, `pdf text`, `to-markdown`  | The page carries no text layer, so nothing could be extracted from it.  |
+| Code    | Severity | Emitted by                                              | Meaning                                                                 |
+| ------- | -------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `AP020` | error    | `pdf inspect`, `pdf validate`                           | A page could not be fetched from the page tree, which includes a cycle. |
+| `AP021` | error    | `pdf text`, `pdf validate`, `to-markdown`, `pdf images` | A page's content stream could not be decoded.                           |
+| `AP050` | warning  | `pdf inspect`, `pdf text`, `to-markdown`                | The page carries no text layer, so nothing could be extracted from it.  |
 
 `AP050` is the finding that makes "does this document need OCR" answerable. It is a warning rather
 than an error because a scanned page is a fact about the document rather than a defect in it; under
-`--strict` it blocks, which is how a caller refuses a scan in CI.
+`--strict` it blocks, which is how a caller refuses a scan in CI. [`pdf ocr`](../commands/pdf/ocr.md)
+recognises exactly the pages that report it.
 
 ## PDF outline
 
@@ -525,6 +526,48 @@ either would destroy something the user did not ask to lose.
 reporting an empty field list without saying why would be indistinguishable from a document that
 carries no form. There is deliberately no code for "declares a form with no fields": the parser
 reports that identically to "no form", so a separate code would be a claim this cannot support.
+
+## PDF images, rendering, and recognition
+
+`AP4xx` is detected by the object layer `pdf images` reads through, `AP45x` by the renderer
+`pdf render` and `pdf ocr` share, and `AP47x` by recognition. `pdf images` also emits `AP021` for a
+page whose content cannot be decoded and `AP101` when its own cross-reference reader had to rebuild
+from a scan, on the one-condition-one-code rule.
+
+| Code    | Severity | Emitted by              | Meaning                                                                                                |
+| ------- | -------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `AP400` | warning  | `pdf images`            | An image could not be decoded, or its colour space is unsupported; it is listed with `skipped`.        |
+| `AP401` | warning  | `pdf images`            | CMYK, Lab, Separation, or DeviceN samples were converted to RGB by formula, without colour management. |
+| `AP402` | notice   | `pdf images`            | A CMYK JPEG was written as stored, unconverted; some viewers show such a file inverted.                |
+| `AP403` | warning  | `pdf images`            | A JPEG 2000 image could not be decoded to PNG; its original stream was written as `.jp2`.              |
+| `AP404` | warning  | `pdf images`            | An image's data was shorter than its dimensions declare; the missing rows were filled.                 |
+| `AP405` | error    | `pdf images`            | A budget was reached: a stream would decode past 256 MiB, or the run passed 50,000 placements.         |
+| `AP406` | warning  | `pdf images`            | The object layer found a different page count from the parser; images come from the pages it found.    |
+| `AP407` | error    | `pdf images`            | The document uses a security handler other than the standard one, so its images cannot be read.        |
+| `AP450` | error    | `pdf render`, `pdf ocr` | The renderer, the optional dependency `@napi-rs/canvas`, is not installed or has no binary here.       |
+| `AP451` | error    | `pdf render`            | `--box` lies entirely outside the page's visible area; nothing was written.                            |
+| `AP452` | notice   | `pdf render`            | `--box` was clipped to the page's visible area; `render.box` is the area drawn.                        |
+| `AP453` | error    | `pdf render`            | The render would exceed 100 megapixels; it was refused before drawing.                                 |
+| `AP454` | error    | `pdf render`, `pdf ocr` | The page did not render completely; what was drawn was kept.                                           |
+| `AP470` | error    | `pdf ocr`               | The `tesseract` engine is not installed, not on `PATH`, or could not be run.                           |
+| `AP471` | error    | `pdf ocr`               | The engine has no language data for a requested `--lang`, or the code is malformed.                    |
+| `AP472` | warning  | `pdf ocr`               | The engine found no text on a page — or, as an error, failed on it.                                    |
+| `AP473` | warning  | `pdf ocr`               | A page's recognition confidence is below `--min-confidence`.                                           |
+| `AP474` | notice   | `pdf ocr`               | A page named with `--pages` already carries a text layer; the recognised text is reported beside it.   |
+| `AP475` | notice   | `pdf ocr`               | Every page carries a text layer, so nothing was recognised.                                            |
+
+`AP400` is a warning, not an error, because one undecodable image says nothing about the others:
+the run continues, and the entry stays in the index with `skipped: "undecodable"` rather than
+vanishing. `--strict` makes it blocking.
+
+`AP401` exists because a PNG cannot hold CMYK, and converting by formula is not what a
+colour-managed viewer shows. Grey and RGB samples are never reported: they are copied verbatim.
+
+`AP470` and `AP471` exit 1 rather than 2. They are facts about the machine, decided before any page
+is read, and the remediation names the install command for each platform.
+
+`AP473` is the confidence floor, not a judgement of the text. Recognised text is marked as
+recognised whatever its confidence; the finding tells a caller where to look before relying on it.
 
 ## Keeping this page honest
 

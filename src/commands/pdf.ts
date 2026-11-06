@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+import fs from "node:fs";
 import path from "node:path";
 import { writeAtomically } from "../atomic-write.js";
 import { CommandExit, terminate } from "../command-result.js";
@@ -15,7 +17,14 @@ import { MAX_INPUT_BYTES, MAX_INPUT_CEILING, parsePageRange, readInput } from ".
 import { extractPage, runsToText } from "../pdf/text.js";
 import { toMarkdown } from "../pdf/to-markdown.js";
 import { validateDocument } from "../pdf/validate.js";
-import type { PdfCommand, PdfDiagnostic, PdfResult, PdfTextPage } from "../pdf/types.js";
+import type {
+  PdfCommand,
+  PdfDiagnostic,
+  PdfImage,
+  PdfOcrPage,
+  PdfResult,
+  PdfTextPage,
+} from "../pdf/types.js";
 
 export interface PdfOptions {
   format?: string;
@@ -29,6 +38,24 @@ export interface PdfOptions {
   maxBytes?: string;
   maxPages?: string;
   timeout?: string;
+  /** `images` (a directory), `render` and `ocr` (a file). */
+  out?: string;
+  /** `images`: the smallest pixel dimension an image must have to be written. */
+  minSize?: string;
+  /** `render`: the 1-based page. */
+  page?: string;
+  /** `render`: `x0,y0,x1,y1` in user space. */
+  box?: string;
+  /** `render`, `ocr`: resolution. */
+  dpi?: string;
+  /** `ocr`: Tesseract language code(s). */
+  lang?: string;
+  /** `ocr`: an explicit engine executable. */
+  tesseract?: string;
+  /** `ocr`: an explicit language data directory. */
+  tessdata?: string;
+  /** `ocr`: the confidence floor below which a page is reported. */
+  minConfidence?: string;
 }
 
 /** Some malformed documents make the parser pathologically slow rather than failing. */
@@ -75,10 +102,29 @@ function bounded(
   return parsed;
 }
 
-function limitsFor(opts: PdfOptions): { maxBytes: number; timeoutMs: number; maxPages: number } {
+/**
+ * Recognition runs an engine over every page at 300 dpi, a second or more each,
+ * and `images` decodes and re-encodes every picture — a 6600x5100 scan is 100 MB
+ * of pixels — so both budget the whole run rather than a parse.
+ */
+const OCR_TIMEOUT_MS = 600_000;
+const IMAGES_TIMEOUT_MS = 300_000;
+
+function limitsFor(
+  opts: PdfOptions,
+  command?: PdfCommand,
+): { maxBytes: number; timeoutMs: number; maxPages: number } {
   return {
     maxBytes: bounded(opts.maxBytes, "--max-bytes", MAX_INPUT_BYTES, MAX_INPUT_CEILING),
-    timeoutMs: bounded(opts.timeout, "--timeout", DEFAULT_TIMEOUT_MS),
+    timeoutMs: bounded(
+      opts.timeout,
+      "--timeout",
+      command === "ocr"
+        ? OCR_TIMEOUT_MS
+        : command === "images"
+          ? IMAGES_TIMEOUT_MS
+          : DEFAULT_TIMEOUT_MS,
+    ),
     maxPages: bounded(opts.maxPages, "--max-pages", DEFAULT_MAX_PAGES),
   };
 }
@@ -182,13 +228,17 @@ async function open<T>(
   source: string,
   command: PdfCommand,
   opts: PdfOptions,
-  body: (handle: OpenDocument, notices: PdfDiagnostic[]) => Promise<T>,
+  body: (handle: OpenDocument, notices: PdfDiagnostic[], bytes: Uint8Array) => Promise<T>,
 ): Promise<T> {
-  const limits = limitsFor(opts);
+  const limits = limitsFor(opts, command);
   const read = await readInput(source, limits);
   if (!read.ok) return fail(command, source, opts, read.diagnostic);
+  // pdf.js detaches the buffer it is handed, so `images`, which reads the file
+  // through its own object layer as well, gets a private copy. Taken for that
+  // command only: the others never need the bytes twice.
+  const bytes = command === "images" ? read.bytes.slice() : new Uint8Array(0);
   try {
-    return await withDocument(read.bytes, limits, (handle) => body(handle, read.notices));
+    return await withDocument(read.bytes, limits, (handle) => body(handle, read.notices, bytes));
   } catch (error) {
     if (error instanceof CommandExit) throw error;
     return fail(command, source, opts, await classify(error));
@@ -273,7 +323,7 @@ export async function pdfTextAction(source: string, opts: PdfOptions): Promise<v
               message: "The page carries no text layer; nothing was extracted from it",
               page,
               remediation:
-                "The page is an image. Recognizing its text needs OCR, which this toolset does not do.",
+                "The page is an image. Recognise it with OCR through `cairn pdf ocr`, which keeps the recognised text apart from the text layer.",
             }),
           );
           continue;
@@ -401,5 +451,331 @@ export async function pdfFormsAction(source: string, opts: PdfOptions): Promise<
       diagnostics: [...notices, ...summary.diagnostics, ...read.diagnostics],
     };
     output(result, opts, formatForm(read.form));
+  });
+}
+
+/** A non-negative integer flag, or its default. */
+function count(value: string | undefined, flag: string, fallback: number): number {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0)
+    throw new Error(`Invalid ${flag} value: ${value} (expected a non-negative integer)`);
+  return parsed;
+}
+
+/** A number in a closed range, or its default. */
+function ranged(
+  value: string | undefined,
+  flag: string,
+  fallback: number,
+  low: number,
+  high: number,
+): number {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < low || parsed > high)
+    throw new Error(`Invalid ${flag} value: ${value} (expected a number from ${low} to ${high})`);
+  return parsed;
+}
+
+function refused(code: string, message: string, remediation?: string): PdfDiagnostic {
+  return diagnostic({
+    code,
+    severity: "error",
+    quality: "unsupported",
+    message,
+    ...(remediation ? { remediation } : {}),
+  });
+}
+
+/** Writes a result as a JSON file: the `images.json` index and `ocr --out`. Validates against `pdf-result`. */
+function writeRecord(file: string, result: PdfResult): void {
+  writeAtomically(file, `${JSON.stringify(result, null, 2)}\n`);
+}
+
+function imageLine(image: PdfImage): string {
+  const where = `p${image.page} #${image.index}`;
+  const size = `${image.width}x${image.height}`;
+  const space = image.colorSpace ?? "mask";
+  const filters = image.filters.length ? image.filters.join("+") : "raw";
+  const target = image.file ?? `(${image.skipped ?? "not written"})`;
+  return `${where.padEnd(10)} ${size.padEnd(11)} ${space.padEnd(24)} ${filters.padEnd(16)} box ${image.box.join(",")}  ${target}`;
+}
+
+export async function pdfImagesAction(source: string, opts: PdfOptions): Promise<void> {
+  if (!opts.out) throw new Error("--out <dir> is required");
+  const out = path.resolve(opts.out);
+  if (fs.existsSync(out) && !fs.statSync(out).isDirectory())
+    throw new Error(`--out is not a directory: ${opts.out}`);
+  const minSize = count(opts.minSize, "--min-size", 0);
+  checkFormat(opts);
+  await open(source, "images", opts, async (handle, notices, bytes) => {
+    const selected = selectPages(handle, source, "images", opts);
+    const wanted = selected ?? Array.from({ length: handle.doc.numPages }, (_, index) => index + 1);
+    const summary = await documentSummary(handle);
+    const { extractImages } = await import("../pdf/images.js");
+    const extracted = await extractImages(bytes, handle.doc.numPages, {
+      pages: wanted,
+      out,
+      minSize,
+      check: () => handle.check(),
+    });
+    const result: PdfResult = {
+      command: "images",
+      ok: true,
+      source,
+      document: summary.document,
+      images: extracted.images,
+      ...(selected ? { selectedPages: selected } : {}),
+      output: out,
+      diagnostics: [...notices, ...summary.diagnostics, ...extracted.diagnostics],
+    };
+    result.ok = !blocking(result.diagnostics, Boolean(opts.strict));
+    writeRecord(path.join(out, "images.json"), result);
+    const written = new Set(
+      extracted.images.filter((image) => image.file).map((image) => image.file),
+    );
+    const skipped = extracted.images.filter((image) => image.skipped).length;
+    const lines = extracted.images.map(imageLine);
+    lines.push(
+      `${extracted.images.length} placement(s), ${written.size} file(s) written, ${skipped} skipped -> ${out}`,
+    );
+    output(result, opts, `${lines.join("\n")}\n`);
+  });
+}
+
+export async function pdfRenderAction(source: string, opts: PdfOptions): Promise<void> {
+  if (!opts.out) throw new Error("--out <file.png> is required");
+  if (opts.page === undefined) throw new Error("--page <n> is required");
+  const {
+    DEFAULT_DPI,
+    MAX_DPI,
+    MIN_DPI,
+    RenderRefused,
+    RendererUnavailable,
+    parseBox,
+    renderRegion,
+  } = await import("../pdf/render.js");
+  const dpi = ranged(opts.dpi, "--dpi", DEFAULT_DPI, MIN_DPI, MAX_DPI);
+  const box = opts.box === undefined ? undefined : parseBox(opts.box);
+  if (box === null)
+    throw new Error(
+      `Invalid --box value: ${opts.box} (expected x0,y0,x1,y1 in points with x1>x0 and y1>y0)`,
+    );
+  checkFormat(opts);
+  const outFile = path.resolve(opts.out);
+  await open(source, "render", opts, async (handle, notices) => {
+    const page = Number(opts.page);
+    if (!Number.isInteger(page) || page < 1 || page > handle.doc.numPages)
+      return fail(
+        "render",
+        source,
+        opts,
+        refused(
+          CODES.pageRangeInvalid,
+          `Invalid --page value: ${opts.page}`,
+          `This document has ${handle.doc.numPages} page(s).`,
+        ),
+      );
+    const summary = await documentSummary(handle);
+    let rendered;
+    try {
+      rendered = await renderRegion(handle, { page, dpi, ...(box ? { box } : {}) });
+    } catch (error) {
+      if (error instanceof RendererUnavailable)
+        return fail("render", source, opts, refused(CODES.rendererUnavailable, error.message));
+      if (error instanceof RenderRefused)
+        return fail("render", source, opts, refused(error.code, error.message, error.remediation));
+      throw error;
+    }
+    writeAtomically(outFile, rendered.png);
+    const sha256 = crypto.createHash("sha256").update(rendered.png).digest("hex");
+    const result: PdfResult = {
+      command: "render",
+      ok: true,
+      source,
+      document: summary.document,
+      render: {
+        page,
+        dpi,
+        width: rendered.width,
+        height: rendered.height,
+        box: rendered.box,
+        pageBox: rendered.pageBox,
+        rotation: rendered.rotation,
+        file: outFile,
+        bytes: rendered.png.length,
+        sha256,
+      },
+      output: outFile,
+      diagnostics: [...notices, ...summary.diagnostics, ...rendered.diagnostics],
+    };
+    output(
+      result,
+      opts,
+      `page ${page} box ${rendered.box.join(",")} at ${dpi} dpi -> ${rendered.width}x${rendered.height} ${outFile}\n`,
+    );
+  });
+}
+
+/** Default and ceiling for OCR resolution: 300 dpi is what Tesseract is trained around. */
+const OCR_DPI = 300;
+const OCR_MAX_DPI = 600;
+const OCR_MIN_CONFIDENCE = 60;
+
+export async function pdfOcrAction(source: string, opts: PdfOptions): Promise<void> {
+  const language = opts.lang ?? "eng";
+  const dpi = ranged(opts.dpi, "--dpi", OCR_DPI, 70, OCR_MAX_DPI);
+  const minConfidence = ranged(opts.minConfidence, "--min-confidence", OCR_MIN_CONFIDENCE, 0, 100);
+  checkFormat(opts);
+  const { OcrUnavailable, assemble, locateEngine, recognise } = await import("../pdf/ocr.js");
+  const { RendererUnavailable, renderRegion } = await import("../pdf/render.js");
+  const settings = {
+    ...(opts.tesseract ? { binary: opts.tesseract } : {}),
+    ...(opts.tessdata ? { tessdata: opts.tessdata } : {}),
+  };
+  await open(source, "ocr", opts, async (handle, notices) => {
+    const selected = selectPages(handle, source, "ocr", opts);
+    let engine;
+    try {
+      engine = await locateEngine(settings, language, Math.max(1000, handle.remaining()));
+    } catch (error) {
+      if (error instanceof OcrUnavailable)
+        return fail(
+          "ocr",
+          source,
+          opts,
+          refused(
+            error.code === "engine" ? CODES.ocrEngineMissing : CODES.ocrLanguageMissing,
+            error.message,
+            error.remediation,
+          ),
+        );
+      throw error;
+    }
+    const summary = await documentSummary(handle);
+    const diagnostics: PdfDiagnostic[] = [...notices, ...summary.diagnostics];
+
+    // Which pages carry a text layer: measured, never assumed.
+    const candidates =
+      selected ?? Array.from({ length: handle.doc.numPages }, (_, index) => index + 1);
+    const layered = new Map<number, boolean>();
+    for (const page of candidates) {
+      try {
+        layered.set(page, (await extractPage(handle, page)).runs.length > 0);
+      } catch {
+        layered.set(page, false);
+      }
+    }
+    const targets = selected ?? candidates.filter((page) => !layered.get(page));
+    if (!targets.length)
+      diagnostics.push(
+        diagnostic({
+          code: CODES.ocrNothingToRecognise,
+          quality: "exact",
+          message:
+            "Every page carries a text layer, so nothing was recognised; name pages with --pages to recognise them anyway",
+        }),
+      );
+
+    const pages: PdfOcrPage[] = [];
+    for (const page of targets) {
+      const textLayer = layered.get(page) ? "present" : "absent";
+      if (textLayer === "present")
+        diagnostics.push(
+          diagnostic({
+            code: CODES.ocrPageHasTextLayer,
+            quality: "exact",
+            message:
+              "The page already carries a text layer; the recognised text is reported beside it, never merged into it",
+            page,
+          }),
+        );
+      let rendered;
+      try {
+        rendered = await renderRegion(handle, { page, dpi });
+      } catch (error) {
+        if (error instanceof RendererUnavailable)
+          return fail("ocr", source, opts, refused(CODES.rendererUnavailable, error.message));
+        throw error;
+      }
+      diagnostics.push(...rendered.diagnostics);
+      let lines;
+      try {
+        lines = await recognise(engine, settings, rendered.png, {
+          language,
+          dpi,
+          timeoutMs: handle.remaining(),
+        });
+      } catch (error) {
+        handle.check();
+        diagnostics.push(
+          diagnostic({
+            code: CODES.ocrPageUnreadable,
+            severity: "error",
+            quality: "unsupported",
+            message: `The OCR engine could not read the page: ${(error as Error).message}`,
+            page,
+          }),
+        );
+        continue;
+      }
+      const assembled = assemble(lines, rendered.toUser);
+      pages.push({ page, source: "ocr", textLayer, ...assembled });
+      if (!assembled.words.length)
+        diagnostics.push(
+          diagnostic({
+            code: CODES.ocrPageUnreadable,
+            quality: "unsupported",
+            message: "The OCR engine found no text on the page",
+            page,
+          }),
+        );
+      else if (assembled.confidence !== null && assembled.confidence < minConfidence)
+        diagnostics.push(
+          diagnostic({
+            code: CODES.ocrLowConfidence,
+            quality: "approximate",
+            message: `Recognition confidence ${assembled.confidence} is below the floor of ${minConfidence}`,
+            page,
+            remediation: "Check the recognised text against the page image before relying on it.",
+          }),
+        );
+    }
+
+    const result: PdfResult = {
+      command: "ocr",
+      ok: true,
+      source,
+      document: summary.document,
+      ocr: {
+        engine: {
+          name: "tesseract",
+          version: engine.version,
+          languages: language.split("+"),
+          dpi,
+          psm: 3,
+        },
+        minConfidence,
+        pages,
+      },
+      ...(selected ? { selectedPages: selected } : {}),
+      diagnostics,
+    };
+    if (opts.out) {
+      result.output = path.resolve(opts.out);
+      result.ok = !blocking(result.diagnostics, Boolean(opts.strict));
+      writeRecord(opts.out, result);
+    }
+    // Every page is introduced by a marker line, so recognised text cannot be
+    // mistaken for a text layer even after it has been piped somewhere else.
+    const body = pages
+      .map(
+        (entry) =>
+          `[recognised text: page ${entry.page}, tesseract ${engine.version} ${language}, ` +
+          `confidence ${entry.confidence ?? "n/a"}]\n${entry.text}`,
+      )
+      .join("\f");
+    output(result, opts, body ? `${body}\n` : "");
   });
 }

@@ -142,7 +142,7 @@ describe("pdf, across every subcommand", () => {
     expect(envelope.stderr).toMatch(/--envelope requires --format json/);
   });
 
-  it("is described with seven experimental subcommands on one schema", async () => {
+  it("is described with ten experimental subcommands on one schema", async () => {
     const described = JSON.parse((await run("describe", "-fj")).stdout) as {
       commands: { id: string; stability: string; outputSchema: string }[];
     };
@@ -150,8 +150,11 @@ describe("pdf, across every subcommand", () => {
     expect(rows.map((row) => row.id).sort()).toEqual([
       "pdf attachments",
       "pdf forms",
+      "pdf images",
       "pdf inspect",
+      "pdf ocr",
       "pdf outline",
+      "pdf render",
       "pdf text",
       "pdf to-markdown",
       "pdf validate",
@@ -229,6 +232,7 @@ describe("pdf inspect", () => {
     expect(payload.pages[0].characters).toBe(0);
     const finding = payload.diagnostics.find((item: { code: string }) => item.code === "AP050");
     expect(finding.remediation).toMatch(/OCR/);
+    expect(finding.remediation).toMatch(/cairn pdf ocr/);
   });
 
   it("distinguishes a tagging claim from a measured structure tree", async () => {

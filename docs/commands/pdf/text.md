@@ -30,7 +30,10 @@ A scanned page is an image and carries no text layer. This command reports `AP05
 than returning an empty string with no explanation, because an empty string is indistinguishable
 from a genuinely blank page. Run [`pdf inspect`](inspect.md) first to see which pages have one.
 
-There is no OCR in this toolset, and `pdf text` will not acquire one silently.
+`pdf text` never recognises text in an image, and has no `--ocr` flag: its output is a pure
+function of the document. [`pdf ocr`](ocr.md) recognises exactly the pages this command reports
+`AP050` for, and marks everything it returns as recognised; see
+[why the two stay separate](ocr.md#why-pdf-text-has-no---ocr).
 
 ## Output shape
 

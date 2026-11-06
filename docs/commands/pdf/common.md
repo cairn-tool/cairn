@@ -5,12 +5,15 @@ only what differs.
 
 ## This toolset reads; it never writes a PDF
 
-Input is a PDF. Output is Markdown, plain text, or JSON. There is no merge, split, page reorder,
+Input is a PDF. Output is Markdown, plain text, JSON, or images: PNGs this toolset encodes and
+the JPEGs a document already carries. There is no merge, split, page reorder,
 rotation, form fill, watermark, or redact, and there will not be: that is a different product with
 a different risk profile, and the boundary is what lets every command here be idempotent with
 respect to its input. A bug can produce wrong output; it cannot corrupt a document.
 
-`--output` writes Markdown or text, never a PDF.
+`--output` writes Markdown or text, never a PDF. [`pdf images`](images.md) writes images into
+`--out`, [`pdf render`](render.md) writes one PNG, and [`pdf ocr`](ocr.md) can write its result as
+JSON; none of them modifies the document.
 
 ## Input
 
@@ -44,7 +47,9 @@ abort with no diagnostic at all.
 
 **A zip bomb is bounded by time and memory, not by a per-stream byte budget.** The parser does the
 decoding and exposes no such hook, so this page does not claim one. What it does claim is the table
-above, plus a 32-megapixel cap on any single decoded image.
+above, plus a 32-megapixel cap on any single decoded image. `pdf images` is the exception: it
+decodes through cairn's own object layer, which does cap every stream at 256 MiB of output and
+reports a bomb as `AP405`.
 
 ## Nothing embedded is ever executed
 
@@ -71,9 +76,11 @@ result object.
 | `--envelope`      | off      | Wrap `--format json` output in the versioned result envelope. |
 | `--max-bytes <n>` | 67108864 | Maximum input size in bytes, up to 512 MiB.                   |
 | `--max-pages <n>` | 5000     | Refuse a document with more pages, before any page is opened. |
-| `--timeout <ms>`  | 30000    | Wall-clock budget for parsing.                                |
+| `--timeout <ms>`  | 30000    | Wall-clock budget for the run; see below for two exceptions.  |
 
 `--pages`, `--output`, and `--strict` are on the subcommands that can use them; each page says so.
+`--timeout` defaults to 300000 (5 minutes) for `pdf images` and 600000 (10 minutes) for `pdf ocr`,
+which decode every picture and recognise every page rather than only parsing.
 
 **There is no `--password`.** A password on a command line is readable by every process on the
 machine, and this toolset advertises that it needs no credentials. A document that genuinely
@@ -83,7 +90,7 @@ and the tool says so rather than pretending they were enforced.
 
 ## Every payload carries `document`
 
-`document` is present on all five subcommands whenever the document opened, not only on `inspect`.
+`document` is present on every subcommand whenever the document opened, not only on `inspect`.
 A conversion from a tagged document and one from a scan are not the same kind of artifact and must
 not look identical, so `jq .document.tagged` works on a `to-markdown` payload.
 
@@ -106,7 +113,7 @@ An `error` always blocks. An approximation blocks only under `--strict`. **`ok: 
 the conversion was lossless or the text complete** — read `diagnostics`, or run
 [`pdf inspect`](inspect.md) first.
 
-All five subcommands can exit 2, including the three that read as pure inventory, because **a PDF
+Every subcommand can exit 2, including the ones that read as pure inventory, because **a PDF
 fails per page rather than per document**. An undecodable content stream on page 47 of 300 leaves
 the other 299 pages perfectly good, and the command has to emit them _and_ say page 47 is missing.
 Reporting nothing would be the one degradation this project refuses.
@@ -133,6 +140,7 @@ See [contract](../../contract.md#experimental-commands).
 
 - [`pdf inspect`](inspect.md), [`pdf text`](text.md), [`pdf outline`](outline.md),
   [`pdf validate`](validate.md), [`pdf to-markdown`](to-markdown.md),
-  [`pdf attachments`](attachments.md), [`pdf forms`](forms.md)
+  [`pdf attachments`](attachments.md), [`pdf forms`](forms.md), [`pdf images`](images.md),
+  [`pdf render`](render.md), [`pdf ocr`](ocr.md)
 - [Reading PDF documents](../../guide/pdf.md)
 - [Diagnostic codes](../../formats/diagnostic-codes.md#pdf-invocation-and-input)

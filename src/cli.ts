@@ -768,10 +768,12 @@ adfCommon(adf.command("inspect"))
 
 const pdf = program
   .command("pdf")
-  .description("Read PDF documents: text, structure, embedded files, and conversion to Markdown")
+  .description(
+    "Read PDF documents: text, structure, embedded files, images, page renders, OCR, and conversion to Markdown",
+  )
   .addHelpText(
     "after",
-    "\nEvery subcommand is a local, deterministic read: no credentials, no network, and no model\ncall. Project configuration is not consulted.\n\nThis toolset never writes a PDF. There is no merge, split, page reorder, form fill, or\nredact: input is a PDF, output is Markdown, text, or JSON.\n\nInput is bounded before it is parsed, because a PDF is a container format that usually\narrives off a network. Symlinks are resolved, a non-regular file is refused on the open\ndescriptor, and --max-bytes, --timeout, and --max-pages cap the read, the parse, and the\npage count. Embedded JavaScript, launch, and submit actions are never executed.\n\nStart with `pdf inspect`: document.tagged and the per-page text layer decide what every\nother subcommand can tell you.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
+    "\nEvery subcommand is a local, deterministic read: no credentials, no network, and no model\ncall. Project configuration is not consulted.\n\nThis toolset never writes a PDF. There is no merge, split, page reorder, form fill, or\nredact: input is a PDF, output is Markdown, text, JSON, or images (PNG and the JPEGs a\ndocument already carries).\n\nInput is bounded before it is parsed, because a PDF is a container format that usually\narrives off a network. Symlinks are resolved, a non-regular file is refused on the open\ndescriptor, and --max-bytes, --timeout, and --max-pages cap the read, the parse, and the\npage count. Embedded JavaScript, launch, and submit actions are never executed.\n\nStart with `pdf inspect`: document.tagged and the per-page text layer decide what every\nother subcommand can tell you.\n\nFormat shorthands:\n  -fh             Shorthand for --format=human\n  -fj             Shorthand for --format=json",
   );
 
 const pdfCommon = (command: Command): Command =>
@@ -804,7 +806,7 @@ pdfDocument(pdf.command("text"))
   .description("Extract the text layer, page by page")
   .addHelpText(
     "after",
-    "\nExtracts the text a document already carries. It does not recognize text in an image: a\nscanned page has no text layer and reports AP050 rather than returning an empty string with\nno explanation. Run `pdf inspect` first to see which pages have one.\n\nPages are separated by a form feed on stdout, as pdftotext does. Under --format json they\nare a per-page array instead, and a page that could not be decoded is absent from it rather\nthan present and empty.\n\nExamples:\n  cairn pdf text report.pdf --pages 1,4-6\n  cairn pdf text scan.pdf --strict     # fail if any page is an image\n\nExit codes:\n  0  Text written to stdout\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A page could not be decoded, or a page has no text layer under --strict",
+    "\nExtracts the text a document already carries. It does not recognize text in an image: a\nscanned page has no text layer and reports AP050 rather than returning an empty string with\nno explanation. Run `pdf inspect` first to see which pages have one, and `pdf ocr` to\nrecognise the ones that do not: recognised text is kept apart and never appears here.\n\nPages are separated by a form feed on stdout, as pdftotext does. Under --format json they\nare a per-page array instead, and a page that could not be decoded is absent from it rather\nthan present and empty.\n\nExamples:\n  cairn pdf text report.pdf --pages 1,4-6\n  cairn pdf text scan.pdf --strict     # fail if any page is an image\n\nExit codes:\n  0  Text written to stdout\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A page could not be decoded, or a page has no text layer under --strict",
   )
   .action(async (file: string, opts: PdfOptions) => {
     const { pdfActionBoundary, pdfTextAction } = await import("./commands/pdf.js");
@@ -868,6 +870,67 @@ pdfCommon(pdf.command("forms"))
   .action(async (file: string, opts: PdfOptions) => {
     const { pdfActionBoundary, pdfFormsAction } = await import("./commands/pdf.js");
     return pdfActionBoundary("forms", file, opts, () => pdfFormsAction(file, opts));
+  });
+
+pdfCommon(pdf.command("images"))
+  .description("Write the raster images each page paints, with a JSON index of where they sit")
+  .requiredOption("--out <dir>", "Directory the images and images.json are written into")
+  .option("--pages <ranges>", "Pages to read, e.g. 1,3,5-8; every page by default")
+  .option(
+    "--min-size <px>",
+    "Index but do not write images whose smaller side is below this many pixels (default: 0)",
+  )
+  .option("--strict", "Treat approximations, such as a colour conversion, as blocking findings")
+  .addHelpText(
+    "after",
+    "\nReads every image a page paints — image XObjects, inline images, and images inside form\nXObjects — and writes each one to --out: a DCT-encoded image as the JPEG it already is,\nanything else decoded to PNG (stencil masks, soft masks, Indexed, CMYK, Lab, Separation,\nDeviceN, CCITT, JBIG2, and JPEG 2000 included). images.json beside them is the same\npayload --format json prints.\n\nEach entry records the page, the object it came from, its pixel size, colour space, bits\nper component, filters, and where it sits: `transform` maps the image's unit square into\nPDF user space and `box` bounds it, in points with the origin at the bottom left. That is\nthe space `pdf render --box` takes, so a box can be handed straight to it.\n\nAn image painted several times is written once and listed at each placement. Images\nsmaller than --min-size are still listed, with skipped:min-size, so nothing disappears\nsilently.\n\n--timeout defaults to 300000 (5 minutes) here: every picture is decoded and re-encoded.\n\nExamples:\n  cairn pdf images report.pdf --out ./figures\n  cairn pdf images report.pdf --out ./figures --pages 12 --min-size 64\n\nExit codes:\n  0  Images written, or the pages paint none\n  1  Invocation or I/O error, or the input is not a PDF\n  2  An image or a page's content could not be decoded, or any approximation under --strict",
+  )
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfImagesAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("images", file, opts, () => pdfImagesAction(file, opts));
+  });
+
+pdfCommon(pdf.command("render"))
+  .description("Render a page, or a region of it, to PNG")
+  .requiredOption("--page <n>", "1-based page to render")
+  .requiredOption("--out <file>", "PNG file to write")
+  .option(
+    "--box <x0,y0,x1,y1>",
+    "Region in PDF user space (points, origin bottom-left); the whole page by default",
+  )
+  .option("--dpi <n>", "Resolution, 18 to 1200 (default: 150)")
+  .addHelpText(
+    "after",
+    "\nDraws the page with pdf.js onto a canvas and writes a PNG. --box selects a region in PDF\nuser space — points, origin at the bottom left, /Rotate not applied — which is the space\n`pdf images` reports placements in. The region is snapped outward to whole pixels and\nclipped to the page's visible area, and the payload reports the box actually drawn.\n\nThe output is deterministic: the same file and arguments give the same PNG bytes on the\nsame install. The PNG carries no timestamp or text chunk.\n\nRendering needs the optional dependency @napi-rs/canvas, loaded only by this command and\n`pdf ocr`.\n\nExamples:\n  cairn pdf render report.pdf --page 12 --out p12.png\n  cairn pdf render report.pdf --page 12 --box 72,400,540,700 --dpi 300 --out fig-3.png\n\nExit codes:\n  0  PNG written\n  1  Invocation or I/O error, the input is not a PDF, the box misses the page, or the\n     renderer is not installed\n  2  The page did not render completely",
+  )
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfRenderAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("render", file, opts, () => pdfRenderAction(file, opts));
+  });
+
+pdfCommon(pdf.command("ocr"))
+  .description("Recognise text on pages that have no text layer, with word boxes and confidence")
+  .option("--pages <ranges>", "Pages to recognise; by default every page with no text layer")
+  .option("--lang <code>", "Tesseract language code(s), e.g. eng or eng+deu (default: eng)")
+  .option("--dpi <n>", "Resolution pages are rendered at for recognition, 70 to 600 (default: 300)")
+  .option(
+    "--min-confidence <n>",
+    "Report a page whose confidence is below this, 0 to 100 (default: 60)",
+  )
+  .option(
+    "--out <file>",
+    "Also write the full result, words and boxes included, as JSON to this file",
+  )
+  .option("--tesseract <path>", "The tesseract executable; found on PATH by default")
+  .option("--tessdata <dir>", "Tesseract language data directory; the engine's own by default")
+  .option("--strict", "Treat low confidence and an empty page as blocking findings")
+  .addHelpText(
+    "after",
+    "\nRenders each page with no text layer — the pages `pdf text` reports AP050 for — and\nrecognises it with the installed tesseract binary. Nothing is downloaded: the language data\nis whatever the engine has installed, and a missing engine or language is AP470 or AP471.\n\nRecognised text is always marked. Every page carries source:ocr in the payload, and on\nstdout each page is introduced by a `[recognised text: …]` line. It is never merged into a\ntext layer: `pdf text` reads only what the document carries.\n\nWord boxes are in PDF user space, like every other box in this toolset. A page's confidence\nis the mean word confidence weighted by word length.\n\n--timeout defaults to 600000 (10 minutes) here: recognition takes a second or more a page.\n\nExamples:\n  cairn pdf ocr scan.pdf\n  cairn pdf ocr scan.pdf --pages 3-5 --lang eng --out scan.ocr.json\n\nExit codes:\n  0  Recognised, or every page already has a text layer\n  1  Invocation or I/O error, the input is not a PDF, or the engine or language data is missing\n  2  The engine could not read a page, or low confidence or an empty page under --strict",
+  )
+  .action(async (file: string, opts: PdfOptions) => {
+    const { pdfActionBoundary, pdfOcrAction } = await import("./commands/pdf.js");
+    return pdfActionBoundary("ocr", file, opts, () => pdfOcrAction(file, opts));
   });
 
 const qa = program

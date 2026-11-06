@@ -26,7 +26,7 @@ Each command page lives under `commands/<toolset>/`; the top-level commands are 
 | `cairn usage`                                        | Report on Claude Code usage from its own session logs.                 |
 | `cairn archive`                                      | Archive plans, artifacts, and logs into long-term storage.             |
 | `cairn jira`                                         | Work with Jira and Confluence content formats.                         |
-| `cairn pdf`                                          | Read PDF documents: text, structure, embedded files, and Markdown.     |
+| `cairn pdf`                                          | Read PDF documents: text, structure, images, renders, OCR, Markdown.   |
 | `cairn qa`                                           | Run TC-N test-case plans through Cursor, Claude Code, and Codex.       |
 
 ## Script commands
@@ -116,8 +116,9 @@ exit 0 therefore does not mean lossless. See
 ## PDF commands
 
 A PDF has no paragraphs, no headings, and no lists — only glyphs at coordinates — and an assistant
-cannot read one at all. The `pdf` toolset turns one into text, structure, or Markdown, locally and
-deterministically: no credentials, no network, no model call.
+cannot read one at all. The `pdf` toolset turns one into text, structure, Markdown, images, or page
+renders, and recognises scanned pages, locally and deterministically: no credentials, no network, no
+model call.
 
 **It reads; it never writes a PDF.** There is no merge, split, page reorder, form fill, or redact.
 Conversion is lossy on an untagged document and every loss reports an `AP###` code; approximation
@@ -134,6 +135,9 @@ blocks only under `--strict`, so exit 0 does not mean lossless. Start with `pdf 
 | [`pdf to-markdown`](commands/pdf/to-markdown.md) | Convert content to Markdown, reporting what was inferred.          |
 | [`pdf attachments`](commands/pdf/attachments.md) | List the files embedded in a document, and write them out.         |
 | [`pdf forms`](commands/pdf/forms.md)             | List AcroForm fields and their current values.                     |
+| [`pdf images`](commands/pdf/images.md)           | Write each page's raster images, with where they sit.              |
+| [`pdf render`](commands/pdf/render.md)           | Render a page, or a region of it, to PNG.                          |
+| [`pdf ocr`](commands/pdf/ocr.md)                 | Recognise text on pages with no text layer, marked as recognised.  |
 
 ## QA commands
 

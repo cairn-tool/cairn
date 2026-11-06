@@ -32,7 +32,8 @@ src/sqlite-store.ts    generic open + migrate for the two owned SQLite stores
 src/archive/*.ts       artifact sets, tar reading, segments, and the archive index
 src/usage/providers/*.ts  per-LLM log-source profiles
 src/jira/adf/*.ts      ADF content model, both converters, and the AD diagnostic family
-src/pdf/*.ts           the pdfjs boundary, layout inference, and the AP diagnostic family
+src/pdf/*.ts           the pdfjs boundary, layout inference, rendering, OCR, and the AP diagnostic family
+src/pdf/objects/*.ts   the object layer `pdf images` reads through: xref, filters, crypt, content
 src/qa/*.ts            the QA harness: cases, scheduler, TUI, reports, and logs
 src/qa/agents/*.ts     per-backend argv, JSONL normalization, and default models
 src/mapping-quality.ts quality-to-severity, shared by the AB, AD, and AP families
@@ -92,7 +93,9 @@ through `pretest`; `typecheck` was the one entry point that did not.
 - Exit codes: `0` success, `1` usage error, `2` actionable issues found.
 - `md rename-heading`, `md rename-file`, `md toc --write`, `md fix --write`,
   `md check-snippets --write`, `agent convert`, `jira adf to-markdown`/`jira adf from-markdown`
-  with `--output`, `qa run`, and `qa summary` are the commands that write to files.
+  with `--output`, `pdf text`/`pdf to-markdown` with `--output`, `pdf attachments --extract`,
+  `pdf images`, `pdf render`, `pdf ocr --out`, `qa run`, and `qa summary` are the commands that
+  write to files.
 - Every `--format json` payload goes through `jsonPayload` in `src/result.ts`, which is what
   makes `--envelope` reach all of them. Writing `JSON.stringify` inline at a new site silently
   opts that command out.
@@ -775,12 +778,13 @@ outputTokens}` on a `bubbleId:` record is a real per-request figure with no dist
   three families must be documented in `docs/formats/diagnostic-codes.md` or the build fails, and a
   documented code that nothing emits fails it too.
 - **The `pdf` toolset reads and never writes a PDF, and that boundary is load-bearing.** Input is a
-  PDF; output is Markdown, text, or JSON. It buys no writer library in the tree, commands that are
+  PDF; output is Markdown, text, JSON, or images (PNGs `src/pdf/png.ts` encodes, and JPEGs copied
+  out of the document byte for byte). It buys no writer library in the tree, commands that are
   idempotent with respect to their input, and a coherent security posture — "parse hostile input and
   never act on it" is defensible in a way that "parse it and write the result back" is not. `pdf`
   is absent from `servesWorkspace` in `src/cli.ts` and from `COMMAND_OPTIONS`, like `usage` and
   `scripts`: a checked-in config file has no say over a document named on the command line.
-- **All five `pdf` commands declare exit 2, including the three that read as pure inventory.** A PDF
+- **Every `pdf` command declares exit 2, including the ones that read as pure inventory.** A PDF
   fails _per page, not per document_ — an undecodable content stream on page 47 of 300 leaves the
   other 299 good, so the command must emit them and say 47 is missing.
   `tests/unit/contract-schemas.test.ts` requires `stream.findings` to be truthy exactly when exit 2
@@ -823,16 +827,55 @@ outputTokens}` on a `bubbleId:` record is a real per-request figure with no dist
   collisions while planning. Extraction is planned over the whole set before any write, so one
   refused destination means nothing is written at all; `archive extract` sanitizes with
   `path.basename` alone and is not the model.
-- **`pdf audit` and `pdf images` are deferred, and the reason is a measurement rather than a
-  preference.** pdf.js's public API cannot see `/Launch`, `/SubmitForm`, `/ImportData`, or a
-  non-JavaScript `/OpenAction`: `collectActions` filters on `isName(entry.get("S"), "JavaScript")`
-  and `parseDestDictionary` drops `SubmitForm` through its `default:` branch, so a document that
-  launches a process on open and exfiltrates form data audits _clean_. Images likewise arrive already
-  decoded to RGBA, so neither the original bytes nor the filter name is reachable. Both commands need
-  an object-layer reader (a lexer, a brute-force `N G obj` index, and `/ObjStm` inflation — modern
-  producers use object streams heavily, 876 in one real manual). Do not ship either on the public API
-  alone; a security command with silent blind spots is the indistinguishable-from-success failure in
-  the worst possible place.
+- **`pdf audit` is deferred, and the reason is a measurement rather than a preference.** pdf.js's
+  public API cannot see `/Launch`, `/SubmitForm`, `/ImportData`, or a non-JavaScript `/OpenAction`:
+  `collectActions` filters on `isName(entry.get("S"), "JavaScript")` and `parseDestDictionary` drops
+  `SubmitForm` through its `default:` branch, so a document that launches a process on open and
+  exfiltrates form data audits _clean_ through it. A security command with silent blind spots is the
+  indistinguishable-from-success failure in the worst possible place. The object layer that
+  `pdf images` needed now exists (`src/pdf/objects/`), so an audit should be built on it rather than
+  on the public API — but it still needs action-dictionary walking (catalog, pages, annotations,
+  outline items, form fields) that nothing does yet.
+- **`pdf images` reads through `src/pdf/objects/`, never through pdf.js.** pdf.js hands images to
+  its renderer already decoded to RGBA, so the original JPEG bytes, the filter chain, the colour
+  space, and the object number are unreachable through it. The object layer is a lexer and parser
+  (`syntax.ts`), a cross-reference reader that follows `/Prev` and `/XRefStm`, reads xref streams,
+  and falls back to a brute-force `N G obj` scan (`store.ts`), `/ObjStm` inflation, the standard
+  security handler for an **empty** user password only (`crypt.ts`; RC4 is hand-written because
+  OpenSSL 3 dropped it from the default provider), stream filters (`filters.ts`), PDF functions
+  (`functions.ts`; type 4 is _interpreted_ on a bounded stack, never compiled), colour spaces, and a
+  content walker for `q`/`Q`/`cm`/`Do`/`BI` (`content.ts`). CCITT, JBIG2, and JPEG 2000 are decoded
+  by `pdfjs-dist/image_decoders`, whose WebAssembly is read from pdfjs-dist's `wasm/` through the
+  handler hook (`codecs.ts`) because `fetch()` cannot read `file:` URLs. Every decode is bounded by
+  `MAX_IMAGE_BYTES` via zlib's `maxOutputLength`. `tests/helpers/pdf-qpdf-fixtures.ts` holds files
+  qpdf wrote (RC4-40, RC4-128, AES-128, AES-256, object streams) so the decryptor is tested against
+  an independent writer, not against itself. **`getDocument({data})` detaches the bytes**, so
+  `open()` in `src/commands/pdf.ts` hands `images` a private copy taken before pdf.js sees them.
+- **One coordinate space for every box: PDF default user space.** Points, origin bottom-left,
+  `/Rotate` not applied. `pdf images` reports placements in it, `pdf render --box` takes it, and
+  `pdf ocr` reports word boxes in it, so a box from one feeds the next. `render` converts through
+  pdf.js's own viewport (`convertToViewportPoint`/`convertToPdfPoint`) — never a hand-rolled
+  rotation — and reports the box it actually drew after snapping outward to whole pixels.
+- **`@napi-rs/canvas` is an optional dependency, loaded only by `src/pdf/render.ts`.** pdf.js names
+  it as its own Node optional dependency, so it was already in the tree; cairn declares it (exact
+  version) rather than relying on hoisting. No other command may import it: the platform binary is
+  26–34 MB, and its absence must be `AP450` on `render`/`ocr`, not a crash on `pdf text`. The PNG is
+  encoded by `src/pdf/png.ts` from canvas pixels — never `canvas.toBuffer` — so the bytes depend on
+  the pixels alone; determinism is claimed per install, not across platforms or zlib builds.
+  `isEvalSupported: false` is set in `withDocument` so glyph outlines and PostScript functions are
+  interpreted when rendering.
+- **`pdf ocr` spawns the host's `tesseract` binary**, the fourth place cairn runs an external program
+  after `scripts run`, `qa run`, and the Codex registration. The executable comes from `PATH` or
+  `--tesseract`, the argv is fixed (`stdin stdout -l <lang> --dpi <n> --psm 3 -c
+tessedit_create_tsv=1 …`), there is no shell, `--lang` is validated against
+  `^[A-Za-z0-9_]+(\+[A-Za-z0-9_]+)*$` and against `--list-langs`, `OMP_THREAD_LIMIT=1` makes output
+  repeatable, and the child is killed at the run's deadline. `tesseract.js` was rejected because it
+  fetches language data from a CDN by default. **`pdf text` deliberately has no `--ocr`**: its output
+  is a pure function of the document, and recognised text must never share an array with a text
+  layer. The e2e suite covers OCR with a fake engine (a `sh` script printing canned TSV) everywhere,
+  and with the real binary only where one is installed.
+- **`pdf images`, `pdf render`, and `pdf ocr` are CLI-only.** They write files, so
+  `src/serve/pdf-tools.ts` must not expose them, on the same rule that keeps `--extract` off MCP.
 - **The PDF MCP tools live in `src/serve/pdf-tools.ts` and register through `SERVE_TOOLS`.** They are
   confined to `--root` exactly like the Markdown tools, which is a real narrowing accepted on purpose
   rather than adding a second boundary. Nothing there writes — `list_pdf_attachments` inventories and

@@ -78,6 +78,31 @@ export const CODES = {
   attachmentBudgetReached: "AP304",
   formXfa: "AP311",
   formFieldPageUnresolved: "AP312",
+
+  // AP4xx  images, read through the object layer
+  imageUndecodable: "AP400",
+  imageColorConverted: "AP401",
+  imageCmykJpeg: "AP402",
+  imageKeptEncoded: "AP403",
+  imageTruncated: "AP404",
+  imageBudgetReached: "AP405",
+  imagePagesMismatch: "AP406",
+  imageEncryption: "AP407",
+
+  // AP45x  rendering
+  rendererUnavailable: "AP450",
+  renderBoxOutside: "AP451",
+  renderBoxClipped: "AP452",
+  renderTooLarge: "AP453",
+  renderIncomplete: "AP454",
+
+  // AP47x  recognition
+  ocrEngineMissing: "AP470",
+  ocrLanguageMissing: "AP471",
+  ocrPageUnreadable: "AP472",
+  ocrLowConfidence: "AP473",
+  ocrPageHasTextLayer: "AP474",
+  ocrNothingToRecognise: "AP475",
 } as const;
 
 export interface DiagnosticInput {

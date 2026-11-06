@@ -50,7 +50,10 @@ disagree with where the line sits you can move it yourself:
 cairn pdf inspect scan.pdf -fj | jq '[.pages[] | select(.density < 12) | .page]'
 ```
 
-**This toolset does no OCR.** It reports when OCR would be needed and stops there.
+**Recognition is a separate, explicit step.** `pdf text` and `pdf to-markdown` read only the text
+layer and report `AP050` where there is none. [`pdf ocr`](../commands/pdf/ocr.md) recognises those
+pages with the installed Tesseract and marks every word it returns as recognised, so OCR output can
+never be mistaken for the document's own text.
 
 ## Tagged or untagged is the fact that decides everything
 

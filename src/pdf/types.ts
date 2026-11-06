@@ -25,7 +25,16 @@ export interface PdfDiagnostic {
 }
 
 export type PdfCommand =
-  "inspect" | "text" | "outline" | "validate" | "to-markdown" | "attachments" | "forms";
+  | "inspect"
+  | "text"
+  | "outline"
+  | "validate"
+  | "to-markdown"
+  | "attachments"
+  | "forms"
+  | "images"
+  | "render"
+  | "ocr";
 
 /** How much text a page carries, relative to its area. */
 export type TextLayer = "present" | "sparse" | "absent";
@@ -151,6 +160,92 @@ export interface PdfForm {
   fields: PdfFormField[];
 }
 
+/**
+ * One image placement. Emitted by `pdf images`.
+ *
+ * Coordinates are PDF default user space: points, origin at the bottom left of
+ * the page's coordinate system, `/Rotate` not applied — the same space
+ * `pdf render --box` takes, so a placement's `box` can be handed straight to it.
+ */
+export interface PdfImage {
+  page: number;
+  /** 1-based order of placement on the page, in content-stream order. */
+  index: number;
+  /** `12 0 R`, or null for an inline image, which is not an object. */
+  object: string | null;
+  /** The XObject resource name, e.g. `Im1`. */
+  name?: string;
+  inline: boolean;
+  /** Form XObjects entered to reach the image, outermost first. */
+  forms?: string[];
+  /** Pixel size, as declared. */
+  width: number;
+  height: number;
+  /** `DeviceRGB`, `ICCBased(3)`, `Indexed(DeviceRGB,255)`, …; null for a stencil mask. */
+  colorSpace: string | null;
+  components: number;
+  bitsPerComponent: number;
+  /** The filter chain, abbreviations expanded. */
+  filters: string[];
+  imageMask: boolean;
+  mask?: { type: "smask" | "stencil" | "color-key"; object?: string; file?: string };
+  /** The image-space unit square mapped into user space: `[a, b, c, d, e, f]`. */
+  transform: number[];
+  /** `[x0, y0, x1, y1]` bounding the placement in user space. */
+  box: number[];
+  /** Written file, relative to the output directory. Absent when skipped. */
+  file?: string;
+  format?: "png" | "jpeg" | "jp2";
+  bytes?: number;
+  sha256?: string;
+  skipped?: "min-size" | "undecodable";
+}
+
+/** What `pdf render` drew. */
+export interface PdfRenderInfo {
+  page: number;
+  dpi: number;
+  /** Pixel size of the PNG. */
+  width: number;
+  height: number;
+  /** The region drawn, user space, after snapping to whole pixels and clipping to the page. */
+  box: number[];
+  /** The page's visible area (crop box) in user space. */
+  pageBox: number[];
+  rotation: number;
+  /** Absolute path written. */
+  file: string;
+  bytes: number;
+  sha256: string;
+}
+
+export interface PdfOcrWord {
+  text: string;
+  /** 0–100, as the engine reports it. */
+  confidence: number;
+  /** User space, like every other box in this toolset. */
+  box: number[];
+}
+
+/** One recognised page. `source` is always `ocr`: recognised text never masquerades as a text layer. */
+export interface PdfOcrPage {
+  page: number;
+  source: "ocr";
+  /** The page's own text layer, measured before recognition. */
+  textLayer: "present" | "absent";
+  text: string;
+  /** Mean word confidence, weighted by word length; null when nothing was recognised. */
+  confidence: number | null;
+  words: PdfOcrWord[];
+}
+
+export interface PdfOcr {
+  engine: { name: "tesseract"; version: string; languages: string[]; dpi: number; psm: number };
+  /** The confidence floor below which a page is reported. */
+  minConfidence: number;
+  pages: PdfOcrPage[];
+}
+
 export interface PdfResult {
   command: PdfCommand;
   ok: boolean;
@@ -169,9 +264,15 @@ export interface PdfResult {
   attachments?: PdfAttachment[];
   /** forms */
   form?: PdfForm;
+  /** images */
+  images?: PdfImage[];
+  /** render */
+  render?: PdfRenderInfo;
+  /** ocr */
+  ocr?: PdfOcr;
   /** text, to-markdown — present only when `--pages` narrowed the document. */
   selectedPages?: number[];
-  /** Where `--output` wrote. */
+  /** Where `--output` or `--out` wrote: a file, or for `images` the directory. */
   output?: string;
   diagnostics: PdfDiagnostic[];
 }

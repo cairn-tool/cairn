@@ -175,6 +175,9 @@ identifier whichever command surfaces it, or a consumer's suppression list break
 | `AP100`–`AP130` | `pdf validate`                 | structural integrity: xref recovery, fonts, filters, metadata, tagging claims        |
 | `AP200`–`AP240` | `pdf to-markdown`              | reading order, structure inference, and mapping losses                               |
 | `AP300`–`AP330` | `pdf attachments`, `pdf forms` | embedded files, name sanitization, extraction collisions, form fields                |
+| `AP400`–`AP449` | `pdf images`                   | the object layer: undecodable images, colour conversion, budgets, encryption         |
+| `AP450`–`AP469` | `pdf render`, `pdf ocr`        | the renderer: availability, the box, size, incomplete draws                          |
+| `AP470`–`AP499` | `pdf ocr`                      | recognition: the engine, language data, unreadable pages, confidence                 |
 | `AP600`–        | —                              | reserved for a future `pdf audit`                                                    |
 
 The `AD` range is chosen by where the condition is detected, not by which command the user typed:
