@@ -3,7 +3,7 @@
   "specVersion": "1",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "6.4.1"
+    "version": "6.5.0"
   },
   "subject": {
     "name": "cairn",
@@ -373,8 +373,8 @@
     {
       "path": "antigravity/cairn-markdown/skills/markdown-validate/SKILL.md",
       "type": "document",
-      "sha256": "69d842522c0ee4a6e400a2198b2ec948e10c8abc1bf702a2bba6b40f5b138534",
-      "bytes": 4432,
+      "sha256": "f23038cdb94f4ea7ba10fec8a8490c39c15d86e945bca6965f8733ac3d052d3c",
+      "bytes": 4644,
       "mode": "0644",
       "origin": "portable"
     },
@@ -429,8 +429,8 @@
     {
       "path": "antigravity/cairn-pdf/skills/pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "1d5757d539193678dbd5fba560b4b1cddfe0bed948706ddf61dae3d81cc5d837",
-      "bytes": 9952,
+      "sha256": "06f9064a54010d50c0b4953b57b0bfe248a455dfa30a67c678f8e2d35a796485",
+      "bytes": 10684,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1021,8 +1021,8 @@
     {
       "path": "bundles/cairn-markdown/skills/markdown-validate/SKILL.md",
       "type": "document",
-      "sha256": "1561d22d66c7ebb42e7cd0b5152ea253938395be142dc7733aa39c8c8017af73",
-      "bytes": 4445,
+      "sha256": "42dafe8dc3f16cb529fb8d5789b7a7a9a7e57142bc44563ff0a929d15d9a553a",
+      "bytes": 4657,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1085,8 +1085,8 @@
     {
       "path": "bundles/cairn-pdf/skills/pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "1d5757d539193678dbd5fba560b4b1cddfe0bed948706ddf61dae3d81cc5d837",
-      "bytes": 9952,
+      "sha256": "06f9064a54010d50c0b4953b57b0bfe248a455dfa30a67c678f8e2d35a796485",
+      "bytes": 10684,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1693,8 +1693,8 @@
     {
       "path": "claude-code/cairn-markdown/skills/markdown-validate/SKILL.md",
       "type": "document",
-      "sha256": "56276e62d259134b319e5e86973b229ae1ca363b63a201fc3a365d3ddf4899d0",
-      "bytes": 4452,
+      "sha256": "9160bedd1f6de81ecce1db08565bfceb4d6ae40523af189b1e4d08fc8ac88ab3",
+      "bytes": 4664,
       "mode": "0644",
       "origin": "portable"
     },
@@ -1749,8 +1749,8 @@
     {
       "path": "claude-code/cairn-pdf/skills/pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "1d5757d539193678dbd5fba560b4b1cddfe0bed948706ddf61dae3d81cc5d837",
-      "bytes": 9952,
+      "sha256": "06f9064a54010d50c0b4953b57b0bfe248a455dfa30a67c678f8e2d35a796485",
+      "bytes": 10684,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2341,8 +2341,8 @@
     {
       "path": "codex/cairn-markdown/skills/markdown-validate/SKILL.md",
       "type": "document",
-      "sha256": "14a7d7cbd4995f2b02022e8d577e8065f62bba7bebaddd8decc18af0453372d5",
-      "bytes": 4445,
+      "sha256": "7efa57c2304edbb466280673ed0c772ed397e9aa8118e6ffb7f40728c131564b",
+      "bytes": 4657,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2421,8 +2421,8 @@
     {
       "path": "codex/cairn-pdf/skills/pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "1d5757d539193678dbd5fba560b4b1cddfe0bed948706ddf61dae3d81cc5d837",
-      "bytes": 9952,
+      "sha256": "06f9064a54010d50c0b4953b57b0bfe248a455dfa30a67c678f8e2d35a796485",
+      "bytes": 10684,
       "mode": "0644",
       "origin": "portable"
     },
@@ -2925,8 +2925,8 @@
     {
       "path": "cursor/cairn-markdown/agents/cairn-markdown-markdown-auditor.md",
       "type": "document",
-      "sha256": "88a075de8f0a3feee31977ba1e75638be50154ee18ecafb33cd1de9cec4fa0e4",
-      "bytes": 10218,
+      "sha256": "4fac20b872c850ca67a0e805561a9ceb2eff6768d050cb2f1363624a86021a3f",
+      "bytes": 10430,
       "mode": "0644",
       "origin": "portable"
     },
@@ -3013,8 +3013,8 @@
     {
       "path": "cursor/cairn-markdown/skills/cairn-markdown-markdown-validate/SKILL.md",
       "type": "document",
-      "sha256": "c7d22e424f9c34c4ba69ef8c0c4005e3996fa9098455e29d7140c4ba35eaa016",
-      "bytes": 4447,
+      "sha256": "a8de4f60a929e36ee58cc4dcc6dfa29592d2f18d33f2f392e75c22b6dfeb790c",
+      "bytes": 4659,
       "mode": "0644",
       "origin": "portable"
     },
@@ -3069,8 +3069,8 @@
     {
       "path": "cursor/cairn-pdf/skills/cairn-pdf-pdf-read/SKILL.md",
       "type": "document",
-      "sha256": "45b79c9e10a7324f4d4e3c679d1b4001d462da15e268264b91cab388ae584d43",
-      "bytes": 9962,
+      "sha256": "35adf51a69101dc83f137b0c4ff84afcb9670fbca7a8c03e4310aef32d780977",
+      "bytes": 10694,
       "mode": "0644",
       "origin": "portable"
     },
@@ -3301,7 +3301,7 @@
     {
       "path": "release-manifest.json",
       "type": "config",
-      "sha256": "1e79fab61dad20074a32ceda8c8ced143c150d942818eff442615cb72dbf22ae",
+      "sha256": "aea1505d56881ae31dff6741f3896121a40a80c2d9ba9db16d1664f96709af35",
       "bytes": 8531,
       "mode": "0644",
       "origin": "portable"

@@ -79,6 +79,10 @@ Four checks, each independently toggleable with a `--x` / `--no-x` pair:
 Style is off by default because it is opinionated and noisy on documents nobody has linted
 before. Turn it on deliberately, and mention that you did.
 
+Math that uses a project's own control sequences (`\RR`, `\vect{v}`) passes once they are named in
+`.cairn.yml`'s `katex.macros`; a finding for one of them means it is missing there, not that the
+math is wrong.
+
 ```bash
 cairn md lint README.md docs/guide.md          # the three correctness checks
 cairn md lint README.md --style                # add markdownlint

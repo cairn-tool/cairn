@@ -3,10 +3,10 @@
   "marketplace": "cairn",
   "version": "1.2.0",
   "description": "Cairn's own toolsets, as plugins.",
-  "sourceCommit": "a113b1919bdac0f58cb0aae8446048b95a71db47",
+  "sourceCommit": "cc42efb2b9fcbc762b30549f5de06db944d2590a",
   "generator": {
     "name": "@cairn-tool/cairn",
-    "version": "6.4.1"
+    "version": "6.5.0"
   },
   "targets": {
     "claude-code": {
@@ -36,23 +36,23 @@
       "version": "1.1.0",
       "description": "Validate, analyze, and refactor Markdown with the cairn md toolset.",
       "source": "bundles/cairn-markdown",
-      "sourceSha256": "5c1d217cbcb8ff118a81dff04593b2efefd89852c35b9f1d4f32c419a09000a7",
+      "sourceSha256": "22a0f6c47e0c7fc3b2034278502de999912a6c7173cdbda227a500560d19c1e3",
       "targets": {
         "claude-code": {
           "path": "claude-code/cairn-markdown",
-          "sha256": "ccb61bafecdda96f075e120d436950e706431d03bdeb0debe8b2bcb06f75d8be"
+          "sha256": "a231f5c36597b61d54fc4952f939df6f3d04da444963968879ef97d6de7c7041"
         },
         "codex": {
           "path": "codex/cairn-markdown",
-          "sha256": "6e068a76ab0057e7e78012d3f8617f28349a66be4a0e182301edc51434f15450"
+          "sha256": "4a805c81ec1190fbd0db1f66dae2432283bc0918bfc1dd3daa042ff884421b03"
         },
         "cursor": {
           "path": "cursor/cairn-markdown",
-          "sha256": "ceb74f319325d65b33fda408e43082966f58623c08253015a39bced122deed8c"
+          "sha256": "9325617c522ae59e56127e43a00cbb8d08e99652aff4d65976ad6648680e32f9"
         },
         "antigravity": {
           "path": "antigravity/cairn-markdown",
-          "sha256": "5aa39af370924b69327af3efe0121405a856290dffbcb1f4d04808abf5311fb9"
+          "sha256": "73d0e56a6ba086adebb05a5b4ce31afba3f1209c99e0cc582161207e52887e40"
         }
       }
     },
@@ -186,23 +186,23 @@
       "version": "1.1.0",
       "description": "Read PDF documents — text, structure, images, page renders, OCR, and conversion to Markdown.",
       "source": "bundles/cairn-pdf",
-      "sourceSha256": "0206288f8270565cde50a55c407314c6c61ff1b3fc61f709f17efd5f4961d1ed",
+      "sourceSha256": "0fe403691a51dc152be3946ee8eaa7343f49f90f6c0d9097c7552d6aa312abc8",
       "targets": {
         "claude-code": {
           "path": "claude-code/cairn-pdf",
-          "sha256": "583817791ff6b4a59b03e6fc6982f28d4362badc71b440de4bd008f1fea8ad26"
+          "sha256": "d321064398bbe411c0a908afb956c493a931c7bf287cf0dcf280d0774ef46392"
         },
         "codex": {
           "path": "codex/cairn-pdf",
-          "sha256": "f247b3f8429667dc2c2e66d21084a764558f36d80638269cf4c57bb482a04093"
+          "sha256": "ffb5ab509ffea6dee12f10365d1e25de06d8530ada2967f1812e64877a8edf3b"
         },
         "cursor": {
           "path": "cursor/cairn-pdf",
-          "sha256": "424e4309403b208a4ed50d0c9074647d02006f140d443c5bbfa41f9b7b602479"
+          "sha256": "563e11e930961dbfe71bf05bc5dab3011a7c2cef7f5560b1a5505d029be33c49"
         },
         "antigravity": {
           "path": "antigravity/cairn-pdf",
-          "sha256": "679804638ffdee4b180195a8b2b7d88f177e3c6dc9fcc49f51e5ac1800ddab56"
+          "sha256": "04cf308dea170d0f62d296f552cdb6b7cd290294ec66fb539bd7e8cfad2c1dfb"
         }
       }
     },

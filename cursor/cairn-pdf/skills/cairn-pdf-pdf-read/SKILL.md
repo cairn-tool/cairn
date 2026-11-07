@@ -32,8 +32,14 @@ predates that feature — say so and stop rather than guessing at flags. All of 
 | `pdf render <file> --page N --out f.png` | A page, or a region of it (`--box`), as a PNG.                    |
 | `pdf ocr <file>`                         | The text of pages with no text layer, recognised and marked.      |
 
-`-` reads stdin for all of them. `text` and `to-markdown` take `--pages`, `--output`, and
-`--strict`; `images` and `ocr` take `--pages` too.
+`-` reads stdin for all of them. `text` and `to-markdown` take `--pages`, `--output`,
+`--columns`, and `--strict`; `images` and `ocr` take `--pages` too.
+
+Columns are found on each page (`--columns auto`): a title or caption across them is read whole and
+the columns below it in turn, and `pdf text -fj` reports each page's `layout`. If a page still reads
+interleaved, say so and pass `--columns 2` (or `1` to read top to bottom). Symbol and Wingdings
+characters in private use (U+F044 for Δ) are mapped through their fonts and reported as `AP051`;
+`AP052` names the ones left, which a `pdf render` of the page can settle.
 
 If the `cairn` MCP server is available, `inspect_pdf`, `read_pdf_text`, `convert_pdf_to_markdown`,
 `get_pdf_outline`, `list_pdf_attachments`, and `list_pdf_form_fields` do the same work for a PDF
@@ -141,9 +147,12 @@ asks what will be lost, or when explaining a specific finding.
 7. **Converted Markdown lands lint-clean.** The stringify options match cairn's own
    `.markdownlintrc`, so `cairn pdf to-markdown spec.pdf --output docs/spec.md` can be followed
    directly by `cairn md lint docs/spec.md --style`.
-8. **Do not hand-edit converted Markdown to fix a conversion loss silently.** Fix it and say what
+8. **A timeout names its page and the budget needed.** On a long document `AP005` says where the
+   budget ran out and how much the whole needs: rerun with that `--timeout`, or read it in parts
+   with `--pages`. It is not one failure per page.
+9. **Do not hand-edit converted Markdown to fix a conversion loss silently.** Fix it and say what
    you fixed, or report the limitation.
-9. **To get a figure out, render it rather than reconstructing it.** `pdf images` gives each embedded
-   picture and its `box`; a chart drawn as vectors has no image at all, so `pdf render --box` cuts
-   the region out instead. Every box — from `images`, `ocr` words, or one you pass to `render` — is
-   PDF user space: points, origin at the **bottom left**, `/Rotate` not applied.
+10. **To get a figure out, render it rather than reconstructing it.** `pdf images` gives each embedded
+    picture and its `box`; a chart drawn as vectors has no image at all, so `pdf render --box` cuts
+    the region out instead. Every box — from `images`, `ocr` words, or one you pass to `render` — is
+    PDF user space: points, origin at the **bottom left**, `/Rotate` not applied.
