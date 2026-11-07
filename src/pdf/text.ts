@@ -1,4 +1,11 @@
 import type { OpenDocument, PdfPageHandle, PdfTextItem, PdfTextStyle } from "./document.js";
+import {
+  emptyGlyphReport,
+  FONT_PRIVATE_USE,
+  mapGlyphs,
+  SYMBOL_PRIVATE_USE,
+  type GlyphReport,
+} from "./glyphs.js";
 
 /** Two decimal places, applied wherever a float reaches a payload or a compare. */
 export function round2(value: number): number {
@@ -52,6 +59,8 @@ export interface PageRuns {
   rotation: number;
   /** Non-whitespace code points across the whole page, including dropped runs. */
   characters: number;
+  /** Symbol-font glyphs mapped to Unicode on the page, and those left (src/pdf/glyphs.ts). */
+  glyphs?: GlyphReport;
 }
 
 const BOLD = /bold|black|heavy|semibold|demi/i;
@@ -95,7 +104,7 @@ function isTextItem(item: PdfTextItem): boolean {
 export async function extractPage(
   handle: OpenDocument,
   page: number,
-  options: { markedContent?: boolean } = {},
+  options: { markedContent?: boolean; glyphs?: boolean } = {},
 ): Promise<PageRuns> {
   const proxy: PdfPageHandle = await handle.within(() => handle.doc.getPage(page));
   try {
@@ -105,6 +114,8 @@ export async function extractPage(
     );
 
     const runs: PositionedRun[] = [];
+    /** Each run's font, by pdf.js's id for it: kept here, never in a run (see fontKey). */
+    const fontIds: string[] = [];
     let characters = 0;
     // Only `beginMarkedContentProps` carries an id, so the stack records the
     // innermost id-bearing frame and text inherits it.
@@ -160,7 +171,31 @@ export async function extractPage(
         hasEOL: Boolean(item.hasEOL),
         mcid,
       });
+      fontIds.push(item.fontName ?? "");
       index += 1;
+    }
+
+    // Symbol fonts' private-use characters, read through each font's encoding.
+    let glyphs: GlyphReport | undefined;
+    if (options.glyphs && runs.some((run) => SYMBOL_PRIVATE_USE.test(run.text))) {
+      glyphs = emptyGlyphReport();
+      const names = new Map<string, string | undefined>();
+      if (runs.some((run) => FONT_PRIVATE_USE.test(run.text))) {
+        try {
+          await handle.within(() => proxy.getOperatorList());
+          for (const id of new Set(fontIds))
+            try {
+              names.set(id, proxy.commonObjs.get(id)?.name);
+            } catch {
+              // A font the operator list did not load: its characters are reported as unmapped.
+            }
+        } catch {
+          // The page's operators could not be read: nothing is mapped by font, and that is reported.
+        }
+      }
+      runs.forEach((run, at) => {
+        run.text = mapGlyphs(run.text, names.get(fontIds[at]), glyphs!);
+      });
     }
 
     return {
@@ -170,6 +205,7 @@ export async function extractPage(
       height: round2(viewport.height),
       rotation: viewport.rotation,
       characters,
+      ...(glyphs ? { glyphs } : {}),
     };
   } finally {
     // The per-page font and glyph caches. Without this a 900-page document

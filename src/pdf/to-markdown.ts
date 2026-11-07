@@ -15,9 +15,12 @@ import type {
 import { stringifyMarkdown } from "../markdown-stringify.js";
 import { CODES, DiagnosticSink } from "./diagnostics.js";
 import type { OpenDocument, PdfStructNode } from "./document.js";
+import { budgetSpent, DeadlineExceeded } from "./document.js";
 import { blocksFromLayout } from "./layout.js";
+import type { ColumnsOption } from "./columns.js";
 import { blocksFromStruct } from "./struct.js";
 import { extractPage } from "./text.js";
+import { emptyGlyphReport, glyphDiagnostics, mergeGlyphReport } from "./glyphs.js";
 import type { PageRuns } from "./text.js";
 import type { Block, InlineSpan, PdfDiagnostic } from "./types.js";
 
@@ -199,6 +202,8 @@ export interface ConvertOptions {
   /** Pages to emit. Statistics are still computed across the whole document. */
   pages?: number[];
   headingLevels?: Map<string, number>;
+  /** `--columns`: see src/pdf/columns.ts. */
+  columns?: ColumnsOption;
 }
 
 /**
@@ -215,6 +220,7 @@ export async function toMarkdown(
   options: ConvertOptions = {},
 ): Promise<ToMarkdownResult> {
   const sink = new DiagnosticSink();
+  const glyphs = emptyGlyphReport();
   const seen: Normalization = { ligatures: false, controls: false };
   const { doc } = handle;
 
@@ -230,8 +236,13 @@ export async function toMarkdown(
   for (const page of all) {
     let runs: PageRuns;
     try {
-      runs = await extractPage(handle, page, { markedContent: true });
-    } catch {
+      runs = await extractPage(handle, page, { markedContent: true, glyphs: true });
+      mergeGlyphReport(glyphs, runs.glyphs);
+    } catch (error) {
+      if (error instanceof DeadlineExceeded) {
+        sink.add(budgetSpent(handle, page, page - 1, all.length));
+        break;
+      }
       sink.add({
         code: CODES.contentUndecodable,
         quality: "unsupported",
@@ -278,7 +289,10 @@ export async function toMarkdown(
   // applied afterwards, which is what makes a page range a true subset of the
   // full conversion rather than a differently-inferred document.
   const geometric = geometricPages.length
-    ? blocksFromLayout(geometricPages, sink, { headingLevels: options.headingLevels })
+    ? blocksFromLayout(geometricPages, sink, {
+        headingLevels: options.headingLevels,
+        ...(options.columns ? { columns: options.columns } : {}),
+      })
     : [];
   const geometricSelected = geometric.filter((block) =>
     block.provenance.pages.some((page) => selected.has(page)),
@@ -339,5 +353,6 @@ export async function toMarkdown(
 
   const children = blocks.flatMap((block) => toMdast(block, sink, seen));
   const root: Root = { type: "root", children };
+  for (const item of glyphDiagnostics(glyphs)) sink.add(item);
   return { markdown: stringifyMarkdown(root), diagnostics: sink.all(), blocks };
 }

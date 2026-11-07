@@ -804,6 +804,11 @@ pdfCommon(pdf.command("inspect"))
 
 pdfDocument(pdf.command("text"))
   .description("Extract the text layer, page by page")
+  .option(
+    "--columns <mode>",
+    "Reading order: auto finds each page's columns, or a column count (1 reads top to bottom)",
+    "auto",
+  )
   .addHelpText(
     "after",
     "\nExtracts the text a document already carries. It does not recognize text in an image: a\nscanned page has no text layer and reports AP050 rather than returning an empty string with\nno explanation. Run `pdf inspect` first to see which pages have one, and `pdf ocr` to\nrecognise the ones that do not: recognised text is kept apart and never appears here.\n\nPages are separated by a form feed on stdout, as pdftotext does. Under --format json they\nare a per-page array instead, and a page that could not be decoded is absent from it rather\nthan present and empty.\n\nExamples:\n  cairn pdf text report.pdf --pages 1,4-6\n  cairn pdf text scan.pdf --strict     # fail if any page is an image\n\nExit codes:\n  0  Text written to stdout\n  1  Invocation or I/O error, or the input is not a PDF\n  2  A page could not be decoded, or a page has no text layer under --strict",
@@ -838,6 +843,11 @@ pdfCommon(pdf.command("validate"))
 
 pdfDocument(pdf.command("to-markdown"))
   .description("Convert a PDF's content to Markdown, reporting what was inferred")
+  .option(
+    "--columns <mode>",
+    "Reading order on untagged pages: auto finds each page's columns, or a column count",
+    "auto",
+  )
   .addHelpText(
     "after",
     "\nA PDF has no paragraphs, no headings, and no lists — only positioned glyph runs. On an\nuntagged page every block boundary is inferred from geometry and font metrics, so the\nconversion is approximate by construction; a tagged page uses the structure tree instead and\nis close to exact. The path is chosen per page, and AP200 always reports which was used.\n\nRead document.tagged before trusting the structure, and run `pdf inspect` before running\nthis at all.\n\nTabular content is flattened to one paragraph per row and reported. A real table is only\nemitted for a tagged document: a geometric reconstruction gets merged and wrapped cells\nwrong and produces a confidently wrong table that cannot be told from a right one.\n\n--pages restricts which pages are emitted, not what the inference saw — the modal body font\nand repeated-header detection still run over the whole document, so a page range is a true\nsubset of the full conversion.\n\nEmits no frontmatter: a PDF's metadata is `pdf inspect`'s answer.\n\nExit codes:\n  0  Converted; read diagnostics to learn what was inferred or lost\n  1  Invocation or I/O error, or the input is not a PDF\n  2  An error, or any approximation under --strict",

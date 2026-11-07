@@ -1,4 +1,5 @@
 import { CODES, DiagnosticSink } from "./diagnostics.js";
+import { readingOrder, reportLayout, type ColumnsOption } from "./columns.js";
 import type { PageRuns, PositionedRun } from "./text.js";
 import { round2 } from "./text.js";
 import type { Block, InlineSpan } from "./types.js";
@@ -154,87 +155,8 @@ export function removeArtifacts(
 }
 
 /* ------------------------------------------------------------------ *
- * Stage 3 — columns
+ * Stage 3 — columns: src/pdf/columns.ts, shared with `pdf text`
  * ------------------------------------------------------------------ */
-
-/**
- * Splits a page's runs into columns, or reports that it could not.
- *
- * Reading a two-column page top to bottom interleaves the columns into text that
- * reads like prose and is not — a degradation indistinguishable from success, so
- * refusing to look is not the safe option. Looking, with a reported failure
- * mode, is.
- *
- * A gutter is a vertical band at least 3% of the page wide containing no run and
- * spanning at least 70% of the content's height. A candidate is rejected when
- * the resulting sides differ by more than 6:1, which is a hanging indent or a
- * figure rather than a gutter.
- */
-export function splitColumns(
-  runs: PositionedRun[],
-  pageWidth: number,
-  sink: DiagnosticSink,
-  page: number,
-): PositionedRun[][] {
-  if (runs.length < 8) return [runs];
-
-  const minGutter = pageWidth * 0.03;
-  const left = Math.min(...runs.map((run) => run.x));
-  const right = Math.max(...runs.map((run) => run.x + run.width));
-  const top = Math.min(...runs.map((run) => run.y));
-  const bottom = Math.max(...runs.map((run) => run.y));
-  const span = bottom - top;
-
-  // Sample the content band; a column boundary is an x with no ink either side.
-  const step = Math.max(1, Math.floor((right - left) / 200));
-  const occupied: boolean[] = [];
-  for (let x = left; x <= right; x += step) {
-    const index = Math.floor((x - left) / step);
-    occupied[index] = runs.some((run) => run.x <= x && run.x + run.width >= x);
-  }
-
-  const gutters: number[] = [];
-  let runStart = -1;
-  for (let index = 0; index < occupied.length; index += 1) {
-    if (!occupied[index]) {
-      if (runStart === -1) runStart = index;
-      continue;
-    }
-    if (runStart !== -1) {
-      const width = (index - runStart) * step;
-      if (width >= minGutter && runStart > 0)
-        gutters.push(left + (runStart + (index - runStart) / 2) * step);
-      runStart = -1;
-    }
-  }
-
-  if (gutters.length === 0 || gutters.length > 2) {
-    if (gutters.length > 2)
-      sink.add({
-        code: CODES.readingOrderUncertain,
-        quality: "approximate",
-        message: `Found ${gutters.length + 1} candidate columns; the page was read top to bottom instead`,
-        page,
-      });
-    return [runs];
-  }
-
-  const bounds = [left - 1, ...gutters, right + 1];
-  const columns: PositionedRun[][] = [];
-  for (let index = 0; index < bounds.length - 1; index += 1)
-    columns.push(runs.filter((run) => run.x > bounds[index] && run.x <= bounds[index + 1]));
-
-  const sizes = columns.map((column) => column.length).filter((count) => count > 0);
-  if (sizes.length < 2 || Math.max(...sizes) / Math.min(...sizes) > 6 || span <= 0) return [runs];
-
-  sink.add({
-    code: CODES.columnsDetected,
-    quality: "exact",
-    message: `Read as ${columns.length} columns`,
-    page,
-  });
-  return columns.filter((column) => column.length > 0);
-}
 
 /* ------------------------------------------------------------------ *
  * Stage 4 — lines
@@ -331,6 +253,8 @@ function realHyphenations(lines: Line[]): Set<string> {
 export interface LayoutOptions {
   /** Outline titles to level, used to pin heading levels where they agree. */
   headingLevels?: Map<string, number>;
+  /** `--columns`: each page's columns inferred (the default), or as many as asked. */
+  columns?: ColumnsOption;
 }
 
 /**
@@ -374,8 +298,9 @@ export function blocksFromLayout(
   for (const page of pages) {
     const pageRuns = kept.filter((run) => run.page === page.page);
     if (pageRuns.length === 0) continue;
-    for (const column of splitColumns(pageRuns, page.width, sink, page.page))
-      lines.push(...buildLines(column));
+    const order = readingOrder(pageRuns, page.width, options.columns ?? "auto");
+    reportLayout(sink, page.page, order);
+    for (const group of order.groups) lines.push(...buildLines(group));
   }
   if (lines.length === 0) return [];
 

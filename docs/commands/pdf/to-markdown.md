@@ -45,7 +45,8 @@ running this at all.
 
 ## What is inferred on an untagged page
 
-Reading order and columns; line and paragraph boundaries from the modal line spacing; heading level
+Reading order and columns, found as [`pdf text`](text.md#columns) finds them (`--columns`, default
+`auto`); line and paragraph boundaries from the modal line spacing; heading level
 from font size **ranked** against the document's modal body font, never from absolute point sizes;
 list items from a bullet or numeral plus a hanging indent; running headers and footers, by detecting
 repetition at a consistent height across four or more pages; and words split by a line-end hyphen,

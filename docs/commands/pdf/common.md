@@ -33,8 +33,11 @@ A PDF is a container format that usually arrives off a network, so the reader tr
 | Bound            | Default | Raised by     |
 | ---------------- | ------- | ------------- |
 | Input size       | 64 MiB  | `--max-bytes` |
-| Parse wall clock | 30 s    | `--timeout`   |
+| Parse wall clock | 30 s¹   | `--timeout`   |
 | Page count       | 5000    | `--max-pages` |
+
+¹ For `inspect`, `text`, `to-markdown`, and `validate`, which read every page, the default grows to
+50 ms a page past 600 pages. An explicit `--timeout` is the budget whatever the page count.
 
 Symlinks are resolved, and anything that is not a regular file is refused **on the open descriptor**
 rather than on the path, so the file cannot be swapped between the check and the read. A FIFO is

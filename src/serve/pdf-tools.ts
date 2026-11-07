@@ -6,7 +6,10 @@ import { readForm } from "../pdf/forms.js";
 import { documentSummary, inspectDocument } from "../pdf/inspect.js";
 import { readOutline } from "../pdf/outline.js";
 import { MAX_INPUT_BYTES, parsePageRange, readInput } from "../pdf/read.js";
-import { extractPage, runsToText } from "../pdf/text.js";
+import { orderedText, readingOrder, reportLayout } from "../pdf/columns.js";
+import { DiagnosticSink, diagnostic } from "../pdf/diagnostics.js";
+import { emptyGlyphReport, glyphDiagnostics, mergeGlyphReport } from "../pdf/glyphs.js";
+import { extractPage } from "../pdf/text.js";
 import { toMarkdown } from "../pdf/to-markdown.js";
 import type { PdfTextPage } from "../pdf/types.js";
 import { confine, PathRejected, relativeTo } from "./paths.js";
@@ -119,17 +122,30 @@ const readPdfText: ServeTool = {
       const wanted = selected ?? Array.from({ length: handle.doc.numPages }, (_, i) => i + 1);
       const text: PdfTextPage[] = [];
       const diagnostics = [...summary.diagnostics];
+      const layouts = new DiagnosticSink();
+      const glyphs = emptyGlyphReport();
       for (const page of wanted) {
-        const extracted = await extractPage(handle, page);
-        const body = runsToText(extracted.runs);
-        text.push({ page, text: body, characters: extracted.characters });
+        const extracted = await extractPage(handle, page, { glyphs: true });
+        mergeGlyphReport(glyphs, extracted.glyphs);
+        const order = readingOrder(extracted.runs, extracted.width, "auto");
+        reportLayout(layouts, page, order);
+        text.push({
+          page,
+          text: orderedText(order),
+          characters: extracted.characters,
+          layout: order.layout,
+        });
       }
       return {
         file: relativeTo(context.root, file),
         document: summary.document,
         ...(selected ? { selectedPages: selected } : {}),
         text,
-        diagnostics,
+        diagnostics: [
+          ...diagnostics,
+          ...layouts.all(),
+          ...glyphDiagnostics(glyphs).map((item) => diagnostic(item)),
+        ],
       };
     }),
 };

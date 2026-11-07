@@ -1003,6 +1003,114 @@ PDF_FIXTURES.images = imagesSpec();
 PDF_FIXTURES.vector = { pages: [[]], extras: { 0: VECTOR_EXTRAS } };
 PDF_FIXTURES.vectorRotated = { pages: [[]], extras: { 0: VECTOR_EXTRAS }, rotate: 90 };
 
+/**
+ * A page in two columns under a title that runs across both: what reads as
+ * interleaved prose top to bottom, and as two columns in turn read by column.
+ */
+PDF_FIXTURES.twoColumns = {
+  pages: [
+    [
+      {
+        x: 72,
+        y: 740,
+        size: 14,
+        font: "F2",
+        text: "Columns: a title that runs across both of the columns below",
+      },
+      ...Array.from({ length: 14 }, (_, row) => [
+        {
+          x: 72,
+          y: 700 - row * 14,
+          size: BODY,
+          font: "F1",
+          text: `Left ${row}: the first column reads down.`,
+        },
+        {
+          x: 316,
+          y: 700 - row * 14,
+          size: BODY,
+          font: "F1",
+          text: `Right ${row}: the second column after it.`,
+        },
+      ]).flat(),
+    ],
+  ],
+};
+
+/** A ToUnicode map putting each code at U+F000 plus its byte, as Word writes a symbol font's. */
+function privateUseCMap(codes: number[]): Buffer {
+  const hex = (n: number, width: number) => n.toString(16).toUpperCase().padStart(width, "0");
+  return Buffer.from(
+    [
+      "/CIDInit /ProcSet findresource begin",
+      "12 dict begin",
+      "begincmap",
+      "/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def",
+      "/CMapName /Adobe-Identity-UCS def",
+      "/CMapType 2 def",
+      "1 begincodespacerange",
+      "<00> <FF>",
+      "endcodespacerange",
+      `${codes.length} beginbfchar`,
+      ...codes.map((code) => `<${hex(code, 2)}> <F0${hex(code, 2)}>`),
+      "endbfchar",
+      "endcmap",
+      "CMapName currentdict /CMapResource defineresource pop",
+      "end",
+      "end",
+      "",
+    ].join("\n"),
+    "latin1",
+  );
+}
+
+/**
+ * Symbol, Wingdings, and Wingdings 2 characters in private use, as Word
+ * writes them: Δ and • in Symbol, a check mark in Wingdings, and a Wingdings 2
+ * glyph that has no Unicode mapping here.
+ */
+PDF_FIXTURES.symbolFonts = {
+  pages: [
+    [
+      { x: 72, y: 700, size: BODY, font: "F1", text: "Change in velocity:" },
+      { x: 180, y: 700, size: BODY, font: "F3", text: "D" },
+      { x: 190, y: 700, size: BODY, font: "F1", text: "V" },
+      { x: 72, y: 680, size: BODY, font: "F3", text: "\u00b7" },
+      { x: 84, y: 680, size: BODY, font: "F1", text: "A bullet from Symbol" },
+      { x: 72, y: 660, size: BODY, font: "F4", text: "\u00fc" },
+      { x: 84, y: 660, size: BODY, font: "F1", text: "A check mark from Wingdings" },
+      { x: 72, y: 640, size: BODY, font: "F5", text: "P" },
+      { x: 84, y: 640, size: BODY, font: "F1", text: "A Wingdings 2 glyph" },
+    ],
+  ],
+  extend: ({ reserve, add, ref, name }) => {
+    const font = (base: string, codes?: number[]) => {
+      const num = reserve();
+      let cmap: number | undefined;
+      if (codes) {
+        cmap = reserve();
+        add(cmap, {}, privateUseCMap(codes));
+      }
+      add(num, {
+        Type: name("Font"),
+        Subtype: name("Type1"),
+        BaseFont: name(base),
+        ...(codes ? {} : { Encoding: name("WinAnsiEncoding") }),
+        ...(cmap ? { ToUnicode: ref(cmap) } : {}),
+      });
+      return ref(num);
+    };
+    const fonts = {
+      F1: font("Helvetica"),
+      F2: font("Helvetica-Bold"),
+      F3: font("ABCDEE+Symbol", [0x44, 0xb7]),
+      F4: font("Wingdings-Regular", [0xfc]),
+      F5: font("Wingdings2", [0x50]),
+    };
+    return { resources: { 0: { Font: fonts } } };
+  },
+};
+
 /** Every fixture, built. Damaged variants are mutations of `minimal`. */
 export function pdfFixture(key: string): Buffer {
   if (key === "damagedXref") return shiftXrefOffsets(buildPdf(PDF_FIXTURES.minimal), 3);

@@ -97,6 +97,18 @@ export interface PdfTextPage {
   page: number;
   text: string;
   characters: number;
+  /** How the page was read: its columns (src/pdf/columns.ts). */
+  layout?: PdfPageLayout;
+}
+
+/** A page's reading order: the columns it was read in, found or as `--columns` asked. */
+export interface PdfPageLayout {
+  columns: number;
+  method: "auto" | "forced";
+  /** The gutters' x positions in page-upright points, left to right. */
+  gutters: number[];
+  /** Lines read whole across the gutters (a title, a wide caption). */
+  spanning: number;
 }
 
 export interface PdfOutlineEntry {

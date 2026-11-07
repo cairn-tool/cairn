@@ -121,6 +121,18 @@ const TEXT_PAGE = {
     page: { type: "integer", minimum: 1 },
     text: { type: "string" },
     characters: { type: "integer", minimum: 0 },
+    layout: {
+      type: "object",
+      description:
+        "How the page was read: the columns found (method auto) or asked for with --columns (forced), the gutters' x positions in page-upright points, and how many lines crossed them and were read whole. Each stretch between such lines is read column by column.",
+      required: ["columns", "method", "gutters", "spanning"],
+      properties: {
+        columns: { type: "integer", minimum: 1 },
+        method: { enum: ["auto", "forced"] },
+        gutters: { type: "array", items: { type: "number" } },
+        spanning: { type: "integer", minimum: 0 },
+      },
+    },
   },
 };
 

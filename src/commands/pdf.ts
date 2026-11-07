@@ -6,15 +6,17 @@ import { CommandExit, terminate } from "../command-result.js";
 import { BASE_FORMATS } from "../formats.js";
 import { jsonPayload } from "../result.js";
 import type { OutputFormat } from "../types.js";
-import { CODES, diagnostic } from "../pdf/diagnostics.js";
-import { classify, withDocument } from "../pdf/document.js";
+import { CODES, DiagnosticSink, diagnostic } from "../pdf/diagnostics.js";
+import { orderedText, parseColumns, readingOrder, reportLayout } from "../pdf/columns.js";
+import { budgetSpent, classify, DeadlineExceeded, withDocument } from "../pdf/document.js";
 import type { OpenDocument } from "../pdf/document.js";
 import { formatAttachments, readAttachments } from "../pdf/attachments.js";
 import { formatForm, readForm } from "../pdf/forms.js";
 import { documentSummary, inspectDocument } from "../pdf/inspect.js";
 import { formatOutline, readOutline } from "../pdf/outline.js";
 import { MAX_INPUT_BYTES, MAX_INPUT_CEILING, parsePageRange, readInput } from "../pdf/read.js";
-import { extractPage, runsToText } from "../pdf/text.js";
+import { extractPage } from "../pdf/text.js";
+import { emptyGlyphReport, glyphDiagnostics, mergeGlyphReport } from "../pdf/glyphs.js";
 import { toMarkdown } from "../pdf/to-markdown.js";
 import { validateDocument } from "../pdf/validate.js";
 import type {
@@ -56,10 +58,19 @@ export interface PdfOptions {
   tessdata?: string;
   /** `ocr`: the confidence floor below which a page is reported. */
   minConfidence?: string;
+  /** `text`, `to-markdown`: `auto` or a column count (src/pdf/columns.ts). */
+  columns?: string;
 }
 
 /** Some malformed documents make the parser pathologically slow rather than failing. */
 const DEFAULT_TIMEOUT_MS = 30_000;
+/**
+ * The default budget's floor for a command that reads every page: 50 ms a page,
+ * so it grows past 30 s only for a document of more than 600 pages. An explicit
+ * --timeout is the budget whatever the page count.
+ */
+const PER_PAGE_MS = 50;
+const PAGE_WALKS = new Set<PdfCommand>(["inspect", "text", "to-markdown", "validate"]);
 /** Refused before any page is touched, so a hostile page count costs nothing. */
 const DEFAULT_MAX_PAGES = 5_000;
 
@@ -113,8 +124,11 @@ const IMAGES_TIMEOUT_MS = 300_000;
 function limitsFor(
   opts: PdfOptions,
   command?: PdfCommand,
-): { maxBytes: number; timeoutMs: number; maxPages: number } {
+): { maxBytes: number; timeoutMs: number; maxPages: number; perPageMs?: number } {
   return {
+    ...(opts.timeout === undefined && command && PAGE_WALKS.has(command)
+      ? { perPageMs: PER_PAGE_MS }
+      : {}),
     maxBytes: bounded(opts.maxBytes, "--max-bytes", MAX_INPUT_BYTES, MAX_INPUT_CEILING),
     timeoutMs: bounded(
       opts.timeout,
@@ -308,13 +322,17 @@ export async function pdfTextAction(source: string, opts: PdfOptions): Promise<v
   await open(source, "text", opts, async (handle, notices) => {
     const selected = selectPages(handle, source, "text", opts);
     const wanted = selected ?? Array.from({ length: handle.doc.numPages }, (_, index) => index + 1);
+    const columns = parseColumns(opts.columns);
     const summary = await documentSummary(handle);
     const diagnostics: PdfDiagnostic[] = [...notices, ...summary.diagnostics];
+    const layouts = new DiagnosticSink();
+    const glyphs = emptyGlyphReport();
     const text: PdfTextPage[] = [];
 
     for (const page of wanted) {
       try {
-        const runs = await extractPage(handle, page);
+        const runs = await extractPage(handle, page, { glyphs: true });
+        mergeGlyphReport(glyphs, runs.glyphs);
         if (runs.runs.length === 0) {
           diagnostics.push(
             diagnostic({
@@ -328,9 +346,21 @@ export async function pdfTextAction(source: string, opts: PdfOptions): Promise<v
           );
           continue;
         }
-        const body = runsToText(runs.runs);
-        text.push({ page, text: body, characters: runs.characters });
+        const order = readingOrder(runs.runs, runs.width, columns);
+        reportLayout(layouts, page, order);
+        text.push({
+          page,
+          text: orderedText(order),
+          characters: runs.characters,
+          layout: order.layout,
+        });
       } catch (error) {
+        if (error instanceof DeadlineExceeded) {
+          diagnostics.push(
+            diagnostic(budgetSpent(handle, page, wanted.indexOf(page), wanted.length)),
+          );
+          break;
+        }
         // Absent from the payload and reported, rather than present and
         // silently empty: an empty string is indistinguishable from a blank
         // page, and one undecodable page must not lose the other 299.
@@ -341,6 +371,8 @@ export async function pdfTextAction(source: string, opts: PdfOptions): Promise<v
       }
     }
 
+    for (const item of glyphDiagnostics(glyphs)) layouts.add(item);
+    diagnostics.push(...layouts.all());
     const result: PdfResult = {
       command: "text",
       ok: true,
@@ -406,6 +438,7 @@ export async function pdfToMarkdownAction(source: string, opts: PdfOptions): Pro
     const converted = await toMarkdown(handle, {
       ...(selected ? { pages: selected } : {}),
       headingLevels: outline.headingLevels,
+      columns: parseColumns(opts.columns),
     });
     const result: PdfResult = {
       command: "to-markdown",

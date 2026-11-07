@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import path from "node:path";
-import { CODES, diagnostic } from "./diagnostics.js";
+import { CODES, diagnostic, type DiagnosticInput } from "./diagnostics.js";
 import type { PdfDiagnostic } from "./types.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -63,6 +63,14 @@ export interface PdfPageHandle {
   }): Promise<{ items: PdfTextItem[]; styles: Record<string, PdfTextStyle> }>;
   getStructTree(): Promise<PdfStructNode | null>;
   getXfa(): Promise<unknown>;
+  /**
+   * Loads the page's fonts (and its images), which is the only way to learn a
+   * text item's font by name: `getTextContent` names it by an internal id and a
+   * generic CSS family. Called only for a page whose text needs the name.
+   */
+  getOperatorList(): Promise<unknown>;
+  /** The fonts the operator list loaded, by a text item's `fontName`. */
+  commonObjs: { get(id: string): { name?: string } | undefined };
   cleanup(): boolean;
 }
 
@@ -147,6 +155,10 @@ export interface OpenDocument {
   remaining(): number;
   /** Throws {@link DeadlineExceeded} once the budget is spent. */
   check(): void;
+  /** The budget in force, in milliseconds: `--timeout`, or the default grown to the page count. */
+  budgetMs: number;
+  /** Milliseconds since the document began to open. */
+  elapsed(): number;
 }
 
 export interface OpenOptions {
@@ -154,6 +166,14 @@ export interface OpenOptions {
   timeoutMs: number;
   /** Refuse a document with more pages than this before touching any of them. */
   maxPages: number;
+  /**
+   * When the budget is the default rather than one asked for: at least this many
+   * milliseconds a page, once the page count is known. A fixed budget for every
+   * document gives a 1,300-page handbook the time a 30-page paper has, and on a
+   * busy machine it runs out partway (the HIDH, which inspect read for 30 s and
+   * then reported as timed out on each of its last 504 pages).
+   */
+  perPageMs?: number;
 }
 
 /** Raised when the wall-clock budget expires. Classified as `AP005`. */
@@ -162,6 +182,32 @@ export class DeadlineExceeded extends Error {
     super(`Exceeded the ${ms}ms budget`);
     this.name = "DeadlineExceeded";
   }
+}
+
+/**
+ * One AP005 for the pages a spent budget left unread, rather than one per page:
+ * where it ran out, how many pages were not read, and the budget the rate so far
+ * says the whole document needs.
+ */
+export function budgetSpent(
+  handle: OpenDocument,
+  page: number,
+  done: number,
+  total: number,
+): DiagnosticInput {
+  const left = total - done;
+  const rate = done > 0 ? handle.elapsed() / done : handle.elapsed();
+  const needed = Math.ceil((rate * total * 1.25) / 1000) * 1000;
+  return {
+    code: CODES.timedOut,
+    quality: "unsupported",
+    severity: "error",
+    message:
+      `Exceeded the ${handle.budgetMs}ms budget at page ${page}: ${left} of ${total} page(s) were not read. ` +
+      `At ${Math.round(rate)}ms a page so far, the whole document needs about ${needed}ms`,
+    page,
+    remediation: `Raise the budget with --timeout ${needed}, or read it in parts with --pages.`,
+  };
 }
 
 /** Raised when the install is broken, rather than the document. */
@@ -287,10 +333,12 @@ export async function withDocument<T>(
   console.info = capture;
   console.debug = capture;
 
-  const deadline = Date.now() + options.timeoutMs;
+  const started = Date.now();
+  let budget = options.timeoutMs;
+  let deadline = started + budget;
   const within = async <R>(work: () => Promise<R>): Promise<R> => {
     const remaining = deadline - Date.now();
-    if (remaining <= 0) throw new DeadlineExceeded(options.timeoutMs);
+    if (remaining <= 0) throw new DeadlineExceeded(budget);
     let timer: NodeJS.Timeout | undefined;
     try {
       return await Promise.race([
@@ -298,7 +346,7 @@ export async function withDocument<T>(
         new Promise<never>((_, reject) => {
           // unref'd, or the timer itself keeps the event loop alive and the CLI
           // waits out the whole budget after it has already written its output.
-          timer = setTimeout(() => reject(new DeadlineExceeded(options.timeoutMs)), remaining);
+          timer = setTimeout(() => reject(new DeadlineExceeded(budget)), remaining);
           timer.unref();
         }),
       ]);
@@ -352,6 +400,10 @@ export async function withDocument<T>(
 
     if (doc.numPages > options.maxPages)
       throw new PageBudgetExceeded(doc.numPages, options.maxPages);
+    if (options.perPageMs && options.perPageMs * doc.numPages > budget) {
+      budget = options.perPageMs * doc.numPages;
+      deadline = started + budget;
+    }
     void needsPassword;
 
     const permissions = await within(() => doc.getPermissions());
@@ -366,8 +418,12 @@ export async function withDocument<T>(
       within,
       remaining: () => deadline - Date.now(),
       check: () => {
-        if (Date.now() >= deadline) throw new DeadlineExceeded(options.timeoutMs);
+        if (Date.now() >= deadline) throw new DeadlineExceeded(budget);
       },
+      get budgetMs() {
+        return budget;
+      },
+      elapsed: () => Date.now() - started,
     };
     return await body(handle);
   } finally {

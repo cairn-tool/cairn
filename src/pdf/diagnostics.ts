@@ -33,6 +33,8 @@ export const CODES = {
 
   // AP05x  the text layer
   noTextLayer: "AP050",
+  glyphsMapped: "AP051",
+  glyphsUnmapped: "AP052",
 
   // AP08x  the outline
   destinationUnresolved: "AP080",

@@ -403,7 +403,7 @@ command can report them.
 | `AP002` | error    | `pdf` input reader                         | No `%PDF-` signature in the first 1024 bytes. The message names the leading bytes as hex. |
 | `AP003` | error    | `pdf` input reader                         | The input is larger than `--max-bytes`.                                                   |
 | `AP004` | error    | `pdf` input reader                         | The input is missing, unopenable, or not a regular file.                                  |
-| `AP005` | error    | document loader                            | The `--timeout` wall-clock budget expired.                                                |
+| `AP005` | error    | document loader, page walks                | The `--timeout` budget expired; once, at the page it ran out on, with the budget needed.  |
 | `AP006` | error    | `pdf` input reader                         | The input is zero bytes.                                                                  |
 | `AP007` | notice   | `pdf` input reader                         | `%PDF-` was found at a non-zero offset; the leading bytes were ignored, not stripped.     |
 | `AP010` | error    | document loader                            | The document is encrypted and needs a password. This toolset accepts none.                |
@@ -422,6 +422,8 @@ difference between the wrong file and a damaged one.
 | `AP020` | error    | `pdf inspect`, `pdf validate`                           | A page could not be fetched from the page tree, which includes a cycle. |
 | `AP021` | error    | `pdf text`, `pdf validate`, `to-markdown`, `pdf images` | A page's content stream could not be decoded.                           |
 | `AP050` | warning  | `pdf inspect`, `pdf text`, `to-markdown`                | The page carries no text layer, so nothing could be extracted from it.  |
+| `AP051` | notice   | `pdf text`, `to-markdown`                               | Symbol-font glyphs in private use were mapped to Unicode, by font.      |
+| `AP052` | warning  | `pdf text`, `to-markdown`                               | Private-use glyphs were left as they were: their font has no mapping.   |
 
 `AP050` is the finding that makes "does this document need OCR" answerable. It is a warning rather
 than an error because a scanned page is a fact about the document rather than a defect in it; under
@@ -459,27 +461,27 @@ warning and `pdf validate` still exits 0 without `--strict`.
 
 Emitted while converting. `AP200` is always present and names the path each page took.
 
-| Code    | Severity | Emitted by        | Meaning                                                                                     |
-| ------- | -------- | ----------------- | ------------------------------------------------------------------------------------------- |
-| `AP200` | notice   | `pdf to-markdown` | Which path produced the document: the structure tree, geometry, or a mix, with page counts. |
-| `AP201` | warning  | `pdf to-markdown` | The column structure could not be resolved; the page was read top to bottom.                |
-| `AP202` | warning  | `pdf to-markdown` | Tabular content was emitted as one paragraph per row rather than as a table.                |
-| `AP203` | warning  | `pdf to-markdown` | Text at a non-right angle, or vertical text, was excluded from reading order.               |
-| `AP205` | notice   | `pdf to-markdown` | Repeated running headers or footers were detected and dropped.                              |
-| `AP206` | notice   | `pdf to-markdown` | A paragraph continuing across a page break was rejoined.                                    |
-| `AP208` | notice   | `pdf to-markdown` | `--pages` narrowed the output; document-wide inference still used every page.               |
-| `AP210` | notice   | `pdf to-markdown` | A multi-column layout was detected and read column by column.                               |
-| `AP211` | warning  | `pdf to-markdown` | More than six distinct heading sizes; the smallest were collapsed to level 6.               |
-| `AP213` | notice   | `pdf to-markdown` | An ordered list's original numbering is renumbered on output.                               |
-| `AP214` | notice   | `pdf to-markdown` | Words split by a line-end hyphen were rejoined.                                             |
-| `AP216` | warning  | `pdf to-markdown` | A figure's text was emitted; the image itself is not represented.                           |
-| `AP219` | warning  | `pdf to-markdown` | A structure role this tool does not model; its text was emitted as a paragraph.             |
-| `AP220` | warning  | `pdf to-markdown` | A table cell's block content was flattened into inline content.                             |
-| `AP224` | warning  | `pdf to-markdown` | A generic `H` element's level was inferred from font size rather than declared.             |
-| `AP225` | warning  | `pdf to-markdown` | A list's ordered-ness was inferred from its item labels.                                    |
-| `AP230` | warning  | `pdf to-markdown` | Bold and italic are inferred from font names; other inline styling is not represented.      |
-| `AP231` | notice   | `pdf to-markdown` | Typographic ligatures were expanded to their component letters.                             |
-| `AP232` | notice   | `pdf to-markdown` | Control characters in the text layer were removed.                                          |
+| Code    | Severity | Emitted by                    | Meaning                                                                                     |
+| ------- | -------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `AP200` | notice   | `pdf to-markdown`             | Which path produced the document: the structure tree, geometry, or a mix, with page counts. |
+| `AP201` | warning  | `pdf to-markdown`, `pdf text` | The column structure could not be resolved; the page was read top to bottom.                |
+| `AP202` | warning  | `pdf to-markdown`             | Tabular content was emitted as one paragraph per row rather than as a table.                |
+| `AP203` | warning  | `pdf to-markdown`             | Text at a non-right angle, or vertical text, was excluded from reading order.               |
+| `AP205` | notice   | `pdf to-markdown`             | Repeated running headers or footers were detected and dropped.                              |
+| `AP206` | notice   | `pdf to-markdown`             | A paragraph continuing across a page break was rejoined.                                    |
+| `AP208` | notice   | `pdf to-markdown`             | `--pages` narrowed the output; document-wide inference still used every page.               |
+| `AP210` | notice   | `pdf to-markdown`, `pdf text` | A multi-column layout was detected (or asked for) and read column by column.                |
+| `AP211` | warning  | `pdf to-markdown`             | More than six distinct heading sizes; the smallest were collapsed to level 6.               |
+| `AP213` | notice   | `pdf to-markdown`             | An ordered list's original numbering is renumbered on output.                               |
+| `AP214` | notice   | `pdf to-markdown`             | Words split by a line-end hyphen were rejoined.                                             |
+| `AP216` | warning  | `pdf to-markdown`             | A figure's text was emitted; the image itself is not represented.                           |
+| `AP219` | warning  | `pdf to-markdown`             | A structure role this tool does not model; its text was emitted as a paragraph.             |
+| `AP220` | warning  | `pdf to-markdown`             | A table cell's block content was flattened into inline content.                             |
+| `AP224` | warning  | `pdf to-markdown`             | A generic `H` element's level was inferred from font size rather than declared.             |
+| `AP225` | warning  | `pdf to-markdown`             | A list's ordered-ness was inferred from its item labels.                                    |
+| `AP230` | warning  | `pdf to-markdown`             | Bold and italic are inferred from font names; other inline styling is not represented.      |
+| `AP231` | notice   | `pdf to-markdown`             | Typographic ligatures were expanded to their component letters.                             |
+| `AP232` | notice   | `pdf to-markdown`             | Control characters in the text layer were removed.                                          |
 
 `AP200` is a notice rather than an approximation on purpose. Every untagged page is inferred
 throughout, so treating "this page was untagged" as itself blocking would make `--strict` refuse

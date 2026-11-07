@@ -1,5 +1,5 @@
 import { CODES, DiagnosticSink } from "./diagnostics.js";
-import { classify } from "./document.js";
+import { budgetSpent, classify, DeadlineExceeded } from "./document.js";
 import type { OpenDocument, PdfStructNode } from "./document.js";
 import { extractPage, round2 } from "./text.js";
 import type { PdfDiagnostic, PdfDocumentInfo, PdfPageInfo, TextLayer } from "./types.js";
@@ -220,6 +220,10 @@ export async function inspectDocument(
         proxy.cleanup();
       }
     } catch (error) {
+      if (error instanceof DeadlineExceeded) {
+        sink.add(budgetSpent(handle, page, wanted.indexOf(page), wanted.length));
+        break;
+      }
       const classified = await classify(error, page);
       sink.add({ ...classified, quality: "unsupported" });
     }

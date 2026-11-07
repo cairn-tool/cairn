@@ -261,6 +261,56 @@ describe("pdf text", () => {
     expect(JSON.parse(result.stdout).diagnostics[0].code).toBe("AP013");
   });
 
+  it("reads a page's columns in turn under a title across both, and reports the layout", async () => {
+    const file = fixture("twoColumns");
+    const payload = JSON.parse((await run("pdf", "text", file, "-fj")).stdout);
+    validate("pdf-result", payload, "pdf text");
+    const [page] = payload.text;
+    expect(page.layout).toMatchObject({ columns: 2, method: "auto", spanning: 1 });
+    const lines = page.text.split("\n");
+    expect(lines[0]).toMatch(/^Columns: a title/);
+    expect(lines[1]).toBe("Left 0: the first column reads down.");
+    expect(lines[14]).toBe("Left 13: the first column reads down.");
+    expect(lines[15]).toBe("Right 0: the second column after it.");
+    expect(payload.diagnostics.map((item: { code: string }) => item.code)).toContain("AP210");
+
+    const across = JSON.parse((await run("pdf", "text", file, "--columns", "1", "-fj")).stdout);
+    expect(across.text[0].layout).toEqual({
+      columns: 1,
+      method: "forced",
+      gutters: [],
+      spanning: 0,
+    });
+    expect(across.text[0].text.split("\n")[1]).toMatch(/^Left 0: .*Right 0:/);
+
+    const refused = await run("pdf", "text", file, "--columns", "none");
+    expect(refused.exitCode).toBe(1);
+    expect(refused.stderr).toMatch(/--columns/);
+  });
+
+  it("reads to-markdown's columns the same way", async () => {
+    const { stdout } = await run("pdf", "to-markdown", fixture("twoColumns"));
+    expect(stdout.indexOf("Left 13")).toBeLessThan(stdout.indexOf("Right 0"));
+  });
+
+  it("maps symbol fonts' private-use glyphs to Unicode, and reports what it did not", async () => {
+    const payload = JSON.parse((await run("pdf", "text", fixture("symbolFonts"), "-fj")).stdout);
+    validate("pdf-result", payload, "pdf text");
+    const text: string = payload.text[0].text;
+    expect(text).toContain("Change in velocity: ΔV");
+    expect(text).toContain("• A bullet from Symbol");
+    expect(text).toContain("✔ A check mark from Wingdings");
+    expect(text).toContain("\uf050 A Wingdings 2 glyph");
+    const byCode = new Map(
+      payload.diagnostics.map((item: { code: string; message: string }) => [
+        item.code,
+        item.message,
+      ]),
+    );
+    expect(byCode.get("AP051")).toMatch(/Mapped 3 .*Symbol 2, Wingdings 1/);
+    expect(byCode.get("AP052")).toMatch(/Wingdings2 \(U\+F050\)/);
+  });
+
   it("separates pages with a form feed on stdout", async () => {
     const result = await run("pdf", "text", fixture("manyPages"), "--pages", "1,2");
     expect(result.exitCode).toBe(0);
