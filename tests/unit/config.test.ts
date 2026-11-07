@@ -195,6 +195,39 @@ commands:
     ).toThrow("qa.parallel must be an integer >= 1");
   });
 
+  it("loads katex.macros, and rejects a name that is not a control sequence", () => {
+    const config = loadConfig({
+      explicitPath: writeConfig(
+        'version: 1\nkatex:\n  macros:\n    "\\\\RR": "\\\\mathbb{R}"\n    "\\\\vect": "\\\\mathbf{#1}"\n',
+      ),
+      disabled: false,
+    });
+    expect(config.katex.macros).toEqual({ "\\RR": "\\mathbb{R}", "\\vect": "\\mathbf{#1}" });
+    expect(
+      loadConfig({ explicitPath: writeConfig("version: 1\n"), disabled: false }).katex,
+    ).toEqual({
+      macros: {},
+    });
+    expect(() =>
+      loadConfig({
+        explicitPath: writeConfig('version: 1\nkatex:\n  macros:\n    RR: "\\\\mathbb{R}"\n'),
+        disabled: false,
+      }),
+    ).toThrow(/control sequence/);
+    expect(() =>
+      loadConfig({
+        explicitPath: writeConfig('version: 1\nkatex:\n  macros:\n    "\\\\RR": 3\n'),
+        disabled: false,
+      }),
+    ).toThrow(/must be a string/);
+    expect(() =>
+      loadConfig({
+        explicitPath: writeConfig("version: 1\nkatex:\n  delimiters: []\n"),
+        disabled: false,
+      }),
+    ).toThrow();
+  });
+
   it("skips a config under node_modules only when asked", () => {
     const nested = path.join(tmpDir, "node_modules", "pkg");
     fs.mkdirSync(nested, { recursive: true });

@@ -63,4 +63,24 @@ describe("checkKatex", () => {
     checkKatex("/tmp/test.md", content, issues);
     expect(issues).toHaveLength(0);
   });
+
+  it("expands the project's macros, and reports one it does not define", () => {
+    const content = "# Test\n\nThe set $\\RR^3$ and $\\vect{v}$ and $\\nope$.\n";
+    const issues: Issue[] = [];
+    checkKatex("/tmp/test.md", content, issues, undefined, {
+      macros: { "\\RR": "\\mathbb{R}", "\\vect": "\\mathbf{#1}" },
+    });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain("\\nope");
+  });
+
+  it("does not let one expression's \\gdef reach the next one's check", () => {
+    const content = "# Test\n\n$\\gdef\\foo{x}\\foo$ then $\\foo$.\n";
+    const macros = { "\\RR": "\\mathbb{R}" };
+    const issues: Issue[] = [];
+    checkKatex("/tmp/test.md", content, issues, undefined, { macros });
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain("\\foo");
+    expect(macros).toEqual({ "\\RR": "\\mathbb{R}" });
+  });
 });

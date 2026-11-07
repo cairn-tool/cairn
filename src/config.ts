@@ -51,6 +51,8 @@ export interface ResolvedConfig {
   frontmatter: { schema?: string; rules: FrontmatterRulesConfig };
   toc: { files: string[] };
   markdownlint: { config?: string };
+  /** KaTeX settings the math check renders with: the project's own macros (`\\RR: \\mathbb{R}`). */
+  katex: { macros: Record<string, string> };
   urls: {
     ignore: string[];
     ignoreDomains: string[];
@@ -223,6 +225,7 @@ const ROOT_KEYS = new Set([
   "output",
   "checks",
   "markdownlint",
+  "katex",
   "urls",
   "commands",
   "frontmatter",
@@ -610,6 +613,9 @@ export function loadConfig(
   knownKeys(toc, new Set(["files"]), "toc");
   const markdownlint = object(rootObject.markdownlint, "markdownlint");
   knownKeys(markdownlint, new Set(["config"]), "markdownlint");
+  const katexBlock = object(rootObject.katex, "katex");
+  knownKeys(katexBlock, new Set(["macros"]), "katex");
+  const macros = katexMacros(katexBlock.macros);
   const urls = object(rootObject.urls, "urls");
   knownKeys(
     urls,
@@ -764,6 +770,7 @@ export function loadConfig(
     markdownlint: {
       ...(markdownlintPath ? { config: resolveFile(base, markdownlintPath) } : {}),
     },
+    katex: { macros },
     urls: {
       ignore: strings(urls.ignore, "urls.ignore", []),
       ignoreDomains: strings(urls.ignoreDomains, "urls.ignoreDomains", []),
@@ -776,6 +783,25 @@ export function loadConfig(
     commands,
     qa,
   };
+}
+
+/**
+ * `katex.macros`: a mapping from a control sequence (`\\RR`) to its expansion, as KaTeX's
+ * `macros` option takes it. A name must be a backslash and letters (or a single non-letter), the
+ * expansion a string; anything else is an error here rather than a puzzling math finding later.
+ */
+function katexMacros(value: unknown): Record<string, string> {
+  const block = object(value, "katex.macros");
+  const out: Record<string, string> = {};
+  for (const [name, expansion] of Object.entries(block)) {
+    if (!/^\\(?:[A-Za-z]+|[^A-Za-z\s])$/.test(name))
+      throw new Error(
+        `katex.macros.${name} must be named by a control sequence: a backslash and letters, such as \\RR`,
+      );
+    if (typeof expansion !== "string") throw new Error(`katex.macros.${name} must be a string`);
+    out[name] = expansion;
+  }
+  return out;
 }
 
 export function resolveCommandOptions<T extends Record<string, unknown>>(

@@ -1045,6 +1045,24 @@ describe("CLI e2e", () => {
     }
   });
 
+  it("checks math with the project's katex.macros", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "configured-katex-"));
+    try {
+      fs.writeFileSync(path.join(tmpDir, "doc.md"), "# Doc\n\nThe set $\\RR^3$.\n");
+      const without = await runCliIn(tmpDir, "md", "lint", "doc.md");
+      expect(without.exitCode).toBe(2);
+      fs.writeFileSync(
+        path.join(tmpDir, ".cairn.yml"),
+        'version: 1\nkatex:\n  macros:\n    "\\\\RR": "\\\\mathbb{R}"\n',
+      );
+      const { stdout, exitCode } = await runCliIn(tmpDir, "md", "lint", "doc.md");
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain("No issues");
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it("applies configured URL ignore patterns without making requests", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "configured-urls-"));
     try {

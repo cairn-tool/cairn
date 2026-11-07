@@ -28,7 +28,8 @@ export async function lintFile(
   if (options.mermaid ?? active.config.checks.mermaid) {
     await checkMermaid(filePath, content, issues, tree);
   }
-  if (options.katex ?? active.config.checks.katex) checkKatex(filePath, content, issues, tree);
+  if (options.katex ?? active.config.checks.katex)
+    checkKatex(filePath, content, issues, tree, { macros: active.config.katex.macros });
   if (options.references ?? active.config.checks.references) {
     checkReferences(filePath, content, issues, tree);
   }

@@ -32,5 +32,8 @@ intersected with changed and untracked Git files.
 | `--exclude <glob>`                 | `files.exclude`                 | Repeatable Markdown exclude glob; CLI values replace configuration.          |
 | `-h`, `--help`                     | —                               | Show help.                                                                   |
 
+Math is checked with the project's `katex.macros` ([configuration](../../configuration.md#katex-macros)),
+so a document that uses its project's own control sequences is not reported for them.
+
 Exit `0` means all enabled checks pass. Findings are written to stderr and exit `2`.
 Invocation, selection, and configuration failures exit `1`.

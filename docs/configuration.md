@@ -76,6 +76,9 @@ toc:
 markdownlint:
   config: .markdownlintrc # optional markdownlint configuration path
 
+katex:
+  macros: {} # control sequence -> expansion, as KaTeX's macros option takes them
+
 urls:
   ignore: [] # URL minimatch globs
   ignoreDomains: [] # domains and their subdomains
@@ -96,6 +99,25 @@ commands: {} # command-specific defaults; schema documented below
 
 Omitted mappings are treated as empty mappings. Lists must contain strings except the two
 HTTP-status lists. Every boolean field must be a YAML boolean, not a quoted string.
+
+## KaTeX macros
+
+`katex.macros` defines the control sequences a project's math uses, for the KaTeX check of
+`md lint`, `md lint-dir`, and `md audit`. Each key is a control sequence — a backslash and
+letters (`\RR`), or a backslash and one other character — and each value its expansion, with
+`#1`… for arguments, exactly as KaTeX's `macros` option takes them:
+
+```yaml
+katex:
+  macros:
+    "\\RR": "\\mathbb{R}"
+    "\\vect": "\\mathbf{#1}"
+```
+
+YAML needs the backslashes doubled inside double quotes, or a single-quoted string (`'\RR'`).
+A key that is not a control sequence, or a value that is not a string, is a configuration error
+(exit 1). Every expression is checked with its own copy of the macros, so a `\gdef` in one
+expression does not define anything for the next.
 
 ## Script registry
 
